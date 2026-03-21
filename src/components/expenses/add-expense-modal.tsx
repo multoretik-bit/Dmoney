@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Calculator, Wallet as WalletIcon, Tag, ArrowRight } from 'lucide-react';
+import { X, Check, Calculator, Wallet as WalletIcon, Tag, ArrowRight, ChevronDown } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { convertAmount, getExchangeRate } from '@/lib/exchange';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
@@ -106,64 +106,76 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
 
             <div className="flex-1 overflow-y-auto flex flex-col gap-8 hide-scrollbar pb-24">
               {/* Amount Input with Enhanced Preview */}
-              <div className="flex flex-col items-center justify-center p-10 bg-white/2 border border-white/5 rounded-[40px] relative overflow-hidden">
+              <div className="flex flex-col items-center justify-center p-10 bg-white/2 border border-white/5 rounded-[40px] relative overflow-hidden min-h-[280px]">
                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50" />
-                <div className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em] mb-4">Сумма трат</div>
+                <div className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em] mb-8">Сумма трат</div>
                 
-                <div className="flex items-center gap-4">
-                  <select 
-                    className="bg-white/5 px-4 py-2 rounded-xl text-lg font-black outline-none text-accent border border-white/5 appearance-none cursor-pointer"
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                  >
-                    {COMMON_CURRENCIES.map((c: string) => <option key={c} value={c} className="bg-[#0d1117]">{c}</option>)}
-                  </select>
-                  <input 
-                    type="text" 
-                    inputMode="decimal"
-                    className="bg-transparent text-5xl font-black text-center outline-none w-48 text-white placeholder-white/5"
-                    placeholder="0"
-                    value={amountInput}
-                    onChange={(e) => setAmountInput(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-
-                {/* VISIBLE CONVERSION PREVIEW */}
-                {(() => {
-                  const wallet = wallets.find(w => w.id === walletId);
-                  const numericAmount = parseFloat(amountInput) || 0;
-                  if (numericAmount > 0) {
-                    const convertedUSD = convertAmount(numericAmount, currency, 'USD');
-                    const convertedRUB = convertAmount(numericAmount, currency, 'RUB');
-                    const convertedWallet = wallet ? convertAmount(numericAmount, currency, wallet.currency) : null;
-                    
-                    return (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className="mt-6 flex flex-col items-center gap-1.5 bg-accent/5 p-4 rounded-3xl border border-accent/10 w-full"
+                <div className="flex flex-col items-center gap-6 w-full">
+                  <div className="flex items-center justify-center gap-4 w-full">
+                    <div className="relative">
+                      <select 
+                        className="bg-white/5 px-4 h-14 rounded-2xl text-lg font-black outline-none text-accent border border-white/5 appearance-none cursor-pointer pr-10"
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
                       >
-                         <div className="flex items-center gap-2 text-accent">
-                            <ArrowRight size={14} className="opacity-40" />
-                            <span className="text-2xl font-black tracking-tight">
-                              ≈ {convertedUSD.toFixed(2)} USD
-                            </span>
-                         </div>
-                         <div className="flex flex-col items-center gap-0.5 opacity-40">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                              ≈ {Math.floor(convertedRUB).toLocaleString()} RUB
-                            </span>
-                            {wallet && wallet.currency !== 'USD' && wallet.currency !== 'RUB' && (
-                              <span className="text-[8px] font-black uppercase tracking-widest">
-                                {convertedWallet?.toLocaleString()} {wallet.currency} from {wallet.name}
-                              </span>
-                            )}
-                         </div>
-                      </motion.div>
-                    );
-                  }
-                  return null;
-                })()}
+                        {COMMON_CURRENCIES.map((c: string) => <option key={c} value={c} className="bg-[#0d1117]">{c}</option>)}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-accent/40">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+                    <input 
+                      type="text" 
+                      inputMode="decimal"
+                      className="bg-transparent text-6xl font-black text-left outline-none min-w-[120px] max-w-[200px] text-white placeholder-white/5"
+                      placeholder="0"
+                      value={amountInput}
+                      onChange={(e) => setAmountInput(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="h-40 flex items-center justify-center w-full">
+                    {(() => {
+                      const wallet = wallets.find(w => w.id === walletId);
+                      const numericAmount = parseFloat(amountInput) || 0;
+                      if (numericAmount > 0) {
+                        const convertedUSD = convertAmount(numericAmount, currency, 'USD');
+                        const convertedRUB = convertAmount(numericAmount, currency, 'RUB');
+                        const convertedWallet = wallet ? convertAmount(numericAmount, currency, wallet.currency) : null;
+                        
+                        return (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                            className="flex flex-col items-center gap-1.5 bg-accent/5 p-5 rounded-3xl border border-accent/10 w-full"
+                          >
+                             <div className="flex items-center gap-2 text-accent">
+                                <ArrowRight size={14} className="opacity-40" />
+                                <span className="text-3xl font-black tracking-tight">
+                                  ≈ {convertedUSD.toFixed(2)} USD
+                                </span>
+                             </div>
+                             <div className="flex flex-col items-center gap-0.5 opacity-40">
+                                <span className="text-[12px] font-black uppercase tracking-[0.2em]">
+                                  ≈ {Math.floor(convertedRUB).toLocaleString()} RUB
+                                </span>
+                                {wallet && wallet.currency !== 'USD' && wallet.currency !== 'RUB' && (
+                                  <span className="text-[9px] font-black uppercase tracking-widest">
+                                    {convertedWallet?.toLocaleString()} {wallet.currency} from {wallet.name}
+                                  </span>
+                                )}
+                             </div>
+                          </motion.div>
+                        );
+                      }
+                      return (
+                        <div className="text-[10px] font-black uppercase text-white/5 tracking-[0.4em]">
+                          Enter amount
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
               </div>
 
               {/* Category Selection */}
