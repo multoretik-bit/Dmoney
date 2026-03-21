@@ -160,6 +160,15 @@ export function BudgetView() {
     unplannedExpenses.reduce((sum, c) => sum + (spendingByCategory[c.id] || 0), 0),
   [unplannedExpenses, spendingByCategory]);
 
+  const blockSummaries = useMemo(() => {
+    return headCategories.map(head => {
+      const children = categories.filter(c => c.parentId === head.id);
+      const totalLimit = (head.budgetLimit || 0) + children.reduce((sum, c) => sum + (c.budgetLimit || 0), 0);
+      const totalSpent = (spendingByCategory[head.id] || 0) + children.reduce((sum, c) => sum + (spendingByCategory[c.id] || 0), 0);
+      return { id: head.id, name: head.name, color: head.color, limit: totalLimit, spent: totalSpent };
+    });
+  }, [headCategories, categories, spendingByCategory]);
+
   return (
     <div className="flex flex-col min-h-screen pb-40">
       {/* Header Summary - dHabits Minimalist Style */}
@@ -170,12 +179,40 @@ export function BudgetView() {
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 mb-2">
           {currentMonthName}
         </p>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
-          {viewMode === 'execute' 
-            ? `Использовано ${Math.round(overallProgress)}% от лимита` 
-            : `Общий план: $${totalPlanned.toFixed(1)}`
-          }
-        </p>
+
+        {viewMode === 'execute' ? (
+          <div className="w-full px-8 flex flex-col gap-3">
+             <div className="flex justify-between items-end">
+                <div className="flex flex-col items-start">
+                   <span className="text-3xl font-black text-white">${totalSpent.toFixed(1)}</span>
+                   <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Потрачено из ${totalPlanned.toFixed(1)}</span>
+                </div>
+                <span className="text-xl font-black text-accent">{Math.round(overallProgress)}%</span>
+             </div>
+             <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                   initial={{ width: 0 }}
+                   animate={{ width: `${Math.min(100, overallProgress)}%` }}
+                   className={cn("h-full rounded-full", overallProgress > 100 ? "bg-red-500" : "bg-accent")}
+                />
+             </div>
+          </div>
+        ) : (
+          <div className="w-full px-4 flex flex-col gap-4">
+             <div className="flex flex-col items-center">
+                <span className="text-4xl font-black text-white">${totalPlanned.toFixed(1)}</span>
+                <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Общий бюджет</span>
+             </div>
+             <div className="flex overflow-x-auto gap-3 py-2 no-scrollbar px-4">
+                {blockSummaries.map(b => (
+                  <div key={b.id} className="flex-shrink-0 bg-white/5 p-3 px-5 rounded-2xl border border-white/5 flex flex-col items-start gap-1">
+                     <span className="text-[8px] font-black uppercase tracking-widest text-white/20" style={{ color: `${b.color}80` }}>{b.name}</span>
+                     <span className="text-sm font-black text-white">${b.limit.toFixed(0)}</span>
+                  </div>
+                ))}
+             </div>
+          </div>
+        )}
 
         <div className="mt-8 bg-black/40 p-1 rounded-2xl border border-white/5 backdrop-blur-md">
           <button 
@@ -261,12 +298,12 @@ export function BudgetView() {
                           <div 
                             key={sub.id} 
                             style={{ 
-                              borderLeft: `4px solid ${spent > limit && limit > 0 ? '#ef4444' : sub.color}`,
-                              boxShadow: spent > limit && limit > 0 ? '0 0 20px rgba(239,68,68,0.1)' : `0 0 15px ${sub.color}10`
+                              borderLeft: `4px solid ${viewMode === 'execute' && spent > limit && limit > 0 ? '#ef4444' : sub.color}`,
+                              boxShadow: viewMode === 'execute' && spent > limit && limit > 0 ? '0 0 20px rgba(239,68,68,0.1)' : `0 0 15px ${sub.color}10`
                             }}
                             className={cn(
                               "glass-card p-4 flex items-center justify-between group active:scale-[0.99] transition-all relative overflow-hidden",
-                              spent > limit && limit > 0 && "border-l-red-500"
+                              viewMode === 'execute' && spent > limit && limit > 0 && "border-l-red-500"
                             )}
                           >
                             <div className="flex items-center gap-4 flex-1">
@@ -275,20 +312,23 @@ export function BudgetView() {
                                </div>
                                <div className="flex flex-col gap-1 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-base font-black text-white leading-tight">{sub.name}</span>
-                                    {spent > limit && limit > 0 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
+                                    <span className={cn("font-black text-white leading-tight", viewMode === 'plan' ? "text-lg" : "text-base")}>{sub.name}</span>
+                                    {viewMode === 'execute' && spent > limit && limit > 0 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                     <div className="h-1.5 flex-1 bg-white/5 rounded-full overflow-hidden max-w-[120px]">
-                                        <motion.div 
-                                          className="h-full bg-white opacity-40" 
-                                          initial={{ width: 0 }} animate={{ width: `${Math.min(percent, 100)}%` }}
-                                        />
-                                     </div>
-                                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
-                                        {Math.round(percent)}%
-                                     </span>
-                                  </div>
+                                  
+                                  {viewMode === 'execute' && (
+                                    <div className="flex items-center gap-2">
+                                       <div className="h-1.5 flex-1 bg-white/5 rounded-full overflow-hidden max-w-[120px]">
+                                          <motion.div 
+                                            className="h-full bg-white opacity-40" 
+                                            initial={{ width: 0 }} animate={{ width: `${Math.min(percent, 100)}%` }}
+                                          />
+                                       </div>
+                                       <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                                          {Math.round(percent)}%
+                                       </span>
+                                    </div>
+                                  )}
                                 </div>
                             </div>
 
@@ -308,7 +348,13 @@ export function BudgetView() {
                                        <ArrowDown size={12} />
                                      </button>
                                   </div>
-                                  <span className="text-lg font-black text-white">${spent.toFixed(1)}</span>
+                                  
+                                  {viewMode === 'execute' ? (
+                                    <span className="text-lg font-black text-white">${spent.toFixed(1)}</span>
+                                  ) : (
+                                    <span className="text-2xl font-black text-white">${limit.toFixed(0)}</span>
+                                  )}
+
                                   <button 
                                     onClick={() => openEditCategory(sub)}
                                     className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
@@ -316,9 +362,12 @@ export function BudgetView() {
                                     <Edit2 size={14} />
                                   </button>
                                </div>
-                               <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
-                                 из ${limit.toFixed(1)}
-                               </span>
+                               
+                               {viewMode === 'execute' && (
+                                 <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                                   из ${limit.toFixed(1)}
+                                 </span>
+                               )}
                             </div>
                           </div>
                         );
@@ -399,15 +448,18 @@ export function BudgetView() {
                     <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                        {cat.icon}
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-white/40 text-center line-clamp-2">{cat.name}</span>
+                    <div className="flex flex-col items-center gap-1">
+                       <span className="text-[10px] font-black uppercase tracking-wider text-white/40 text-center line-clamp-1">{cat.name}</span>
+                       <span className="text-[9px] font-black text-white/20 tracking-widest">${(cat.budgetLimit || 0).toFixed(0)}</span>
+                    </div>
                  </button>
                ))}
             </div>
           </div>
         )}
 
-        {/* Unplanned Section */}
-        {totalUnplannedSpent > 0 && (
+        {/* Unplanned Section - Only in Execution/Execute mode */}
+        {viewMode === 'execute' && totalUnplannedSpent > 0 && (
           <div className="flex flex-col gap-6">
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Внеплановые траты</span>
             <div className="glass-card rounded-[40px] border-l-4 border-red-500/50 p-8 shadow-xl relative overflow-hidden">
