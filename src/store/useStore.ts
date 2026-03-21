@@ -66,6 +66,7 @@ interface UserState {
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
+  setCategoryLimit: (id: string, limit: number) => void;
   deleteCategory: (id: string) => void;
   
   addPortfolio: (p: Portfolio) => void;
@@ -97,8 +98,7 @@ export const useStore = create<UserState>()(
         { id: '2', name: 'Еда и напитки', icon: '🍔', color: '#f59e0b' },
       ],
       portfolios: [
-        { id: 'p1', name: 'Personal Capital', color: '#3b82f6', icon: '👤' },
-        { id: 'p2', name: 'Business', color: '#8b5cf6', icon: '💼' },
+        { id: 'p1', name: 'Main Capital', color: '#3b82f6', icon: '🏦' },
       ],
       folders: [],
       wallets: [],
@@ -112,6 +112,9 @@ export const useStore = create<UserState>()(
       addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),
       updateCategory: (id, updates) => set((state) => ({
         categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
+      })),
+      setCategoryLimit: (id, limit) => set((state) => ({
+        categories: state.categories.map(c => c.id === id ? { ...c, budgetLimit: limit } : c)
       })),
       deleteCategory: (id) => set((state) => ({
         categories: state.categories.filter(c => c.id !== id && c.parentId !== id)
