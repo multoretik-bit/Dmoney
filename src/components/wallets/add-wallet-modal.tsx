@@ -1,5 +1,7 @@
 'use client';
 
+import { generateUUID } from '@/lib/uuid';
+
 import { useState, useEffect } from 'react';
 import { useStore, Wallet } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -72,7 +74,7 @@ export function AddWalletModal({
       updateWallet(editingWallet.id, walletData);
     } else {
       addWallet({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         ...walletData
       });
     }

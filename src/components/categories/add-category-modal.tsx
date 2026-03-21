@@ -1,5 +1,7 @@
 'use client';
 
+import { generateUUID } from '@/lib/uuid';
+
 import { useState, useEffect } from 'react';
 import { useStore, Category } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,7 +65,7 @@ export function AddCategoryModal({
       });
     } else {
       addCategory({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: name.trim(),
         parentId: parentId || undefined,
         color,

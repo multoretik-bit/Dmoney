@@ -13,7 +13,7 @@ import { AddCategoryModal } from './add-category-modal';
 
 export function CategoriesView() {
   const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences } = useStore();
-  const { baseCurrency } = preferences;
+  const { baseCurrency = 'USD' } = preferences || {};
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
@@ -28,7 +28,7 @@ export function CategoriesView() {
     setIsModalOpen(true);
   };
 
-  const headCategories = categories.filter(c => !c.parentId);
+  const headCategories = (categories || []).filter(c => !c.parentId);
 
   return (
     <div className="p-6 flex flex-col gap-10 bg-[#0d1117] min-h-screen text-white pb-40">
@@ -157,8 +157,8 @@ export function CategoriesView() {
       </div>
 
       <div className="flex flex-col gap-5">
-        {headCategories.map(head => {
-          const subs = categories.filter(c => c.parentId === head.id);
+        {(headCategories || []).map(head => {
+          const subs = (categories || []).filter(c => c.parentId === head.id);
           const isExpanded = expandedHeads[head.id];
 
           return (

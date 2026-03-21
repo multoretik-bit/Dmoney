@@ -16,6 +16,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -81,7 +86,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setUser(null);
   };
 
-  const totalBalance = wallets.reduce((acc, w) => acc + w.balance, 0);
+  const totalBalance = (wallets || []).reduce((acc, w) => acc + (w.balance || 0), 0);
+
+  if (!isHydrated) return null;
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col pt-safe relative">

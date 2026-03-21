@@ -1,5 +1,7 @@
 'use client';
 
+import { generateUUID } from '@/lib/uuid';
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Calculator, Wallet as WalletIcon, Tag, ArrowRight, ChevronDown } from 'lucide-react';
@@ -57,7 +59,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     const exchangeRate = getExchangeRate(currency, wallet.currency);
 
     addExpense({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       originalAmount: numericAmount,
       originalCurrency: currency,
       convertedAmount,

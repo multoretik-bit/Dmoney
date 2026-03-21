@@ -1,5 +1,7 @@
 'use client';
 
+import { generateUUID } from '@/lib/uuid';
+
 import { useState, useEffect } from 'react';
 import { useStore, Portfolio, Folder } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,7 +41,7 @@ export function AddPortfolioModal({
     if (editingPortfolio) {
       updatePortfolio(editingPortfolio.id, { name: name.trim(), color, icon });
     } else {
-      addPortfolio({ id: crypto.randomUUID(), name: name.trim(), color, icon });
+      addPortfolio({ id: generateUUID(), name: name.trim(), color, icon });
     }
     
     onClose();
@@ -124,7 +126,7 @@ export function AddFolderModal({
     if (editingFolder) {
       updateFolder(editingFolder.id, { name: name.trim(), color });
     } else {
-      addFolder({ id: crypto.randomUUID(), portfolioId, name: name.trim(), color });
+      addFolder({ id: generateUUID(), portfolioId, name: name.trim(), color });
     }
     
     onClose();
