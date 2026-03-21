@@ -224,23 +224,27 @@ export function ExpensesView() {
                     <motion.div 
                       key={exp.id} 
                       initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                      className="bg-[#1c2128] p-6 rounded-[32px] flex items-center justify-between border border-white/5 shadow-xl group hover:border-white/10 transition-all border-l-4"
-                      style={{ borderLeftColor: cat.color }}
+                      className="p-6 rounded-[32px] flex items-center justify-between border-2 shadow-xl group relative overflow-hidden transition-all"
+                      style={{ 
+                        backgroundColor: cat.color,
+                        borderColor: cat.color
+                      }}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
-                          {cat.icon}
+                      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                      <div className="relative z-10 flex items-center gap-4">
+                        <div className="w-12 h-12 bg-black/20 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                          <span className="filter brightness-50 contrast-150">{cat.icon}</span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-white/90 group-hover:text-white transition-colors">{cat.name}</span>
-                          <span className="text-[10px] font-black text-white/20 uppercase tracking-tighter">
+                          <span className="font-bold text-white group-hover:text-white transition-colors">{cat.name}</span>
+                          <span className="text-[10px] font-black text-white/40 uppercase tracking-tighter">
                             {format(new Date(exp.date), 'HH:mm')}
                           </span>
                         </div>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-xl font-black text-white">-${exp.originalAmount.toLocaleString()}</span>
-                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{exp.originalCurrency}</span>
+                      <div className="relative z-10 flex flex-col items-end">
+                        <span className="text-xl font-black text-white">-${exp.originalAmount.toFixed(1)}</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">{exp.originalCurrency}</span>
                       </div>
                     </motion.div>
                   );

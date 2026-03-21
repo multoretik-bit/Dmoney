@@ -80,19 +80,23 @@ export function WalletsView() {
             onClick={() => setSelectedPortfolioId(p.id)}
             className={cn(
               "flex-shrink-0 w-[240px] h-48 rounded-[40px] p-8 flex flex-col justify-between snap-center transition-all border-4 shadow-2xl relative overflow-hidden group",
-              selectedPortfolioId === p.id ? "border-white scale-100" : "border-transparent opacity-60 scale-[0.95]"
+              selectedPortfolioId === p.id ? "scale-100 opacity-100" : "opacity-40 scale-[0.95] grayscale-[0.5]"
             )}
-            style={{ backgroundColor: p.color }}
+            style={{ 
+              backgroundColor: p.color,
+              borderColor: selectedPortfolioId === p.id ? 'white' : 'transparent'
+            }}
           >
-             <div className="flex flex-col items-start gap-1">
+             <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+             <div className="relative z-10 flex flex-col items-start gap-1">
                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{p.name}</span>
                <span className="text-4xl font-black text-white leading-tight">
                  ${getPortfolioBalance(p.id).toFixed(1)}
                </span>
              </div>
-             <div className="flex items-center gap-2">
-                <span className="text-2xl opacity-80">{p.icon}</span>
-                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest bg-black/20 px-2 py-1 rounded-full">
+             <div className="relative z-10 flex items-center gap-2">
+                <span className="text-2xl filter brightness-50 contrast-125">{p.icon}</span>
+                <div className="text-[10px] font-black text-white/60 uppercase tracking-widest bg-black/30 px-2 py-1 rounded-full backdrop-blur-sm">
                   {wallets.filter(w => w.portfolioId === p.id).length} Acc
                 </div>
              </div>
@@ -155,21 +159,24 @@ export function WalletsView() {
                   <div className="flex items-center group">
                     <button 
                        onClick={() => toggleFolder(folder.id)}
-                       className="flex-1 flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 rounded-2xl transition-all border border-transparent"
-                       style={folder.color ? { borderColor: `${folder.color}20`, backgroundColor: `${folder.color}05` } : {}}
+                       className="flex-1 flex items-center justify-between p-4 rounded-2xl transition-all border-2 relative overflow-hidden group"
+                       style={{ 
+                         backgroundColor: folder.color || '#1c2128',
+                         borderColor: folder.color || 'transparent'
+                       }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                      <div className="relative z-10 flex items-center gap-3">
                          <div 
-                           className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg"
-                           style={{ backgroundColor: folder.color ? `${folder.color}20` : 'rgba(0, 191, 165, 0.2)', color: folder.color || '#00bfa5' }}
+                           className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg bg-black/10"
                          >
-                            <FolderIcon size={18} />
+                            <FolderIcon size={18} className="filter brightness-50 contrast-150" style={{ color: folder.color }} />
                          </div>
-                         <span className="text-xs font-black uppercase tracking-widest text-white/60">{folder.name}</span>
+                         <span className="text-xs font-black uppercase tracking-widest text-white">{folder.name}</span>
                       </div>
-                      <div className="flex items-center gap-4">
-                         <span className="text-[10px] font-bold text-white/10">{folderWallets.length} accounts</span>
-                         {isExpanded ? <ChevronDown size={16} className="text-white/20" /> : <ChevronRight size={16} className="text-white/20" />}
+                      <div className="relative z-10 flex items-center gap-4">
+                         <span className="text-[10px] font-bold text-white/40">{folderWallets.length} accounts</span>
+                         {isExpanded ? <ChevronDown size={16} className="text-white/40" /> : <ChevronRight size={16} className="text-white/40" />}
                       </div>
                     </button>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
@@ -241,27 +248,30 @@ function WalletCard({
   return (
     <motion.div 
       layout
-      className="bg-[#1c2128] rounded-[32px] p-6 flex items-center gap-5 border border-white/5 shadow-xl group relative overflow-hidden active:scale-[0.98] transition-all"
+      className="rounded-[32px] p-6 flex items-center gap-5 shadow-xl group relative overflow-hidden active:scale-[0.98] transition-all border-2"
+      style={{ 
+        backgroundColor: wallet.color || '#3b82f6',
+        borderColor: wallet.color || '#3b82f6'
+      }}
     >
+      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+      
       <div 
-        className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-white shadow-lg relative overflow-hidden"
-        style={{ backgroundColor: wallet.color || '#3b82f6' }}
+        className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-lg relative overflow-hidden bg-black/10"
       >
-        <div className="absolute inset-0 bg-white/10 flex items-center justify-center">
-            <span className="text-2xl">{wallet.icon || '💳'}</span>
-        </div>
+        <span className="text-2xl filter brightness-50 contrast-150">{wallet.icon || '💳'}</span>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center min-w-0">
+      <div className="relative z-10 flex-1 flex flex-col justify-center min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] truncate">{wallet.name}</span>
-          <div className="w-1 h-1 rounded-full bg-accent/30" />
+          <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] truncate">{wallet.name}</span>
+          <div className="w-1 h-1 rounded-full bg-white/20" />
         </div>
         <div className="flex flex-col">
           <span className="text-2xl font-black text-white leading-tight">
              ${balanceInUSD.toFixed(1)}
           </span>
-          <span className="text-[9px] font-black text-accent/50 uppercase tracking-widest">
+          <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
              {wallet.balance.toFixed(1)} {wallet.currency}
           </span>
         </div>

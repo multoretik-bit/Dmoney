@@ -234,12 +234,19 @@ export function BudgetView() {
                              const isEditing = editingLimitId === sub.id;
 
                              return (
-                               <div key={sub.id} className="flex flex-col gap-3">
-                                  <div className="flex justify-between items-center">
+                               <div 
+                                 key={sub.id} 
+                                 className="flex flex-col gap-3 p-5 rounded-3xl border-2 shadow-lg relative overflow-hidden active:scale-[0.98] transition-all"
+                                 style={{ backgroundColor: sub.color, borderColor: sub.color }}
+                               >
+                                  <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                                  <div className="flex justify-between items-center relative z-10">
                                      <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base border" style={{ backgroundColor: `${sub.color}20`, borderColor: `${sub.color}40`, color: sub.color }}>{sub.icon}</div>
-                                        <span className="text-sm font-bold text-white/80">{sub.name}</span>
-                                        {spent > limit && limit > 0 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-black/20 border-2" style={{ borderColor: 'transparent' }}>
+                                          <span className="filter brightness-50 contrast-150">{sub.icon}</span>
+                                        </div>
+                                        <span className="text-base font-bold text-white">{sub.name}</span>
+                                        {spent > limit && limit > 0 && <AlertCircle size={14} className="text-white animate-pulse" />}
                                      </div>
                                      <div className="flex items-center gap-2">
                                         {viewMode === 'plan' ? (
@@ -248,19 +255,16 @@ export function BudgetView() {
                                               type="number"
                                               value={limit}
                                               onChange={(e) => setCategoryLimit(sub.id, parseFloat(e.target.value) || 0)}
-                                              className="bg-white/5 border border-white/10 rounded-lg w-20 px-2 py-1 text-xs font-black text-right outline-none focus:border-accent/50"
+                                              className="bg-black/20 border border-white/20 rounded-lg w-20 px-2 py-1 text-xs font-black text-right outline-none text-white focus:border-white/40"
                                             />
                                             <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">USD</span>
                                           </div>
                                         ) : (
                                           <div className="flex flex-col items-end">
-                                            <span className={cn(
-                                              "text-sm font-black transition-colors",
-                                              spent > limit && limit > 0 ? "text-red-500" : "text-white"
-                                            )}>
+                                            <span className="text-sm font-black text-white">
                                               ${spent.toFixed(1)}
                                             </span>
-                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
+                                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
                                               из ${limit.toFixed(1)}
                                             </span>
                                           </div>
@@ -268,9 +272,9 @@ export function BudgetView() {
                                      </div>
                                   </div>
                                   {viewMode === 'execute' && (
-                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden relative">
+                                    <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden relative z-10">
                                        <motion.div 
-                                         className={cn("h-full rounded-full", spent > limit ? "bg-red-500" : "bg-accent")} 
+                                         className="h-full bg-white shadow-[0_0_10px_white]" 
                                          initial={{ width: 0 }} animate={{ width: `${Math.min(percent, 100)}%` }}
                                          transition={{ duration: 1, ease: "easeOut" }}
                                        />

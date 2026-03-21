@@ -90,13 +90,22 @@ export function AddCategoryModal({
 
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-8 pb-4">
              <div className="flex flex-col gap-3">
-               <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-2">Name</label>
-               <input 
-                  className="bg-black/20 p-6 rounded-3xl text-xl font-black text-white outline-none border border-white/5 focus:border-white/10 transition-all"
-                  placeholder="E.g. Rent, Food, Home..."
-                  value={name} onChange={e => setName(e.target.value)}
-                  autoFocus
-               />
+                <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-2">Preview & Name</label>
+                <div className="flex gap-4">
+                  <div 
+                    className="w-20 h-20 rounded-3xl flex items-center justify-center text-3xl shadow-2xl border-4 transition-all shrink-0 relative overflow-hidden"
+                    style={{ backgroundColor: color, borderColor: color }}
+                  >
+                    <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                    <span className="relative z-10 filter brightness-50 contrast-150">{icon}</span>
+                  </div>
+                  <input 
+                    className="flex-1 bg-black/20 p-6 rounded-3xl text-xl font-black text-white outline-none border border-white/5 focus:border-white/10 transition-all"
+                    placeholder="E.g. Rent, Food, Home..."
+                    value={name} onChange={e => setName(e.target.value)}
+                    autoFocus
+                  />
+                </div>
              </div>
 
              <div className="flex flex-col gap-3">
