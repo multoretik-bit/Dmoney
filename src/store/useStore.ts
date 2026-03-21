@@ -56,6 +56,7 @@ interface UserState {
   addWallet: (wallet: Wallet) => void;
   updateWallet: (id: string, updates: Partial<Wallet>) => void;
   updateWalletBalance: (walletId: string, amountChange: number) => void;
+  deleteWallet: (id: string) => void;
   addExpense: (expense: Expense) => void;
 }
 
@@ -98,6 +99,10 @@ export const useStore = create<UserState>()(
       })),
       updateWalletBalance: (walletId, amountChange) => set((state) => ({
         wallets: state.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance + amountChange } : w)
+      })),
+      deleteWallet: (id) => set((state) => ({
+        wallets: state.wallets.filter(w => w.id !== id),
+        expenses: state.expenses.filter(e => e.walletId !== id)
       })),
       addExpense: (expense) => set((state) => {
         const updatedWallets = state.wallets.map(w => {

@@ -1,5 +1,5 @@
-// Mock Exchange Rates against USD as base 1
-const MOCK_RATES: Record<string, number> = {
+// Real Exchange Rates using open.er-api.com
+let cachedRates: Record<string, number> = {
   USD: 1,
   EUR: 0.92,
   RUB: 92.5,
@@ -9,10 +9,29 @@ const MOCK_RATES: Record<string, number> = {
   GEL: 2.67
 };
 
+let lastFetch = 0;
+const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+
+export async function fetchLatestRates() {
+  const now = Date.now();
+  if (now - lastFetch < CACHE_DURATION) return cachedRates;
+
+  try {
+    const response = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await response.json();
+    if (data && data.rates) {
+      cachedRates = data.rates;
+      lastFetch = now;
+    }
+  } catch (error) {
+    console.error('Failed to fetch rates:', error);
+  }
+  return cachedRates;
+}
+
 export function getExchangeRate(fromCurrency: string, toCurrency: string): number {
-  const fromRate = MOCK_RATES[fromCurrency] || 1;
-  const toRate = MOCK_RATES[toCurrency] || 1;
-  // Convert from first to USD, then from USD to target
+  const fromRate = cachedRates[fromCurrency] || 1;
+  const toRate = cachedRates[toCurrency] || 1;
   return toRate / fromRate;
 }
 
@@ -20,4 +39,9 @@ export function convertAmount(amount: number, fromCurrency: string, toCurrency: 
   if (fromCurrency === toCurrency) return amount;
   const rate = getExchangeRate(fromCurrency, toCurrency);
   return amount * rate;
+}
+
+// Initial fetch attempt (silent)
+if (typeof window !== 'undefined') {
+  fetchLatestRates();
 }
