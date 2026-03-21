@@ -84,7 +84,7 @@ export function AddWalletModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          className="fixed inset-0 z-[160] flex items-end justify-center bg-black/80 backdrop-blur-sm px-4 pb-4"
+          className="fixed inset-0 z-[160] flex flex-col items-center justify-end bg-black/80 backdrop-blur-sm px-4 pb-4"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >

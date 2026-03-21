@@ -75,7 +75,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/80 backdrop-blur-md px-4 pb-4"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-end bg-black/80 backdrop-blur-md px-4 pb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -135,24 +135,30 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                   const numericAmount = parseFloat(amountInput) || 0;
                   if (numericAmount > 0) {
                     const convertedUSD = convertAmount(numericAmount, currency, 'USD');
+                    const convertedRUB = convertAmount(numericAmount, currency, 'RUB');
                     const convertedWallet = wallet ? convertAmount(numericAmount, currency, wallet.currency) : null;
                     
                     return (
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className="mt-6 flex flex-col items-center gap-1"
+                        className="mt-6 flex flex-col items-center gap-1.5 bg-accent/5 p-4 rounded-3xl border border-accent/10 w-full"
                       >
                          <div className="flex items-center gap-2 text-accent">
                             <ArrowRight size={14} className="opacity-40" />
-                            <span className="text-xl font-black tracking-tight">
+                            <span className="text-2xl font-black tracking-tight">
                               ≈ {convertedUSD.toFixed(2)} USD
                             </span>
                          </div>
-                         {wallet && wallet.currency !== 'USD' && (
-                           <span className="text-[9px] font-black uppercase text-white/20 tracking-widest">
-                             {convertedWallet?.toLocaleString()} {wallet.currency} from {wallet.name}
-                           </span>
-                         )}
+                         <div className="flex flex-col items-center gap-0.5 opacity-40">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                              ≈ {Math.floor(convertedRUB).toLocaleString()} RUB
+                            </span>
+                            {wallet && wallet.currency !== 'USD' && wallet.currency !== 'RUB' && (
+                              <span className="text-[8px] font-black uppercase tracking-widest">
+                                {convertedWallet?.toLocaleString()} {wallet.currency} from {wallet.name}
+                              </span>
+                            )}
+                         </div>
                       </motion.div>
                     );
                   }

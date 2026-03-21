@@ -50,7 +50,7 @@ export function AddPortfolioModal({
   return (
     <AnimatePresence>
       <motion.div 
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md px-6"
+        className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md px-6"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
@@ -135,7 +135,7 @@ export function AddFolderModal({
   return (
     <AnimatePresence>
       <motion.div 
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md px-6"
+        className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md px-6"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
