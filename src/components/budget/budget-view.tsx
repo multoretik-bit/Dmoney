@@ -144,6 +144,16 @@ export function BudgetView() {
     return categories.filter(c => !plannedIds.has(c.id) && (spendingByCategory[c.id] || 0) > 0);
   }, [categories, spendingByCategory]);
 
+  const unusedCategories = useMemo(() => {
+    const plannedIds = new Set(categories.filter(c => c.budgetLimit && c.budgetLimit > 0).map(c => c.id));
+    return categories.filter(c => {
+      if (plannedIds.has(c.id)) return false;
+      const hasSubItems = categories.some(child => child.parentId === c.id);
+      // It's "unused" if it's a category (not a block container) and has no limit
+      return !hasSubItems;
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories]);
+
   const totalUnplannedSpent = useMemo(() => 
     unplannedExpenses.reduce((sum, c) => sum + (spendingByCategory[c.id] || 0), 0),
   [unplannedExpenses, spendingByCategory]);
@@ -365,6 +375,30 @@ export function BudgetView() {
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 group-hover:text-accent transition-colors">Создать новый блок</span>
           </button>
         </div>
+
+        {/* Unused / Hidden Categories section */}
+        {unusedCategories.length > 0 && (
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between px-2">
+               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Неиспользуемые категории</span>
+               <span className="text-[10px] font-black text-white/10">{unusedCategories.length}</span>
+            </div>
+            <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar">
+               {unusedCategories.map(cat => (
+                 <button 
+                  key={cat.id} 
+                  onClick={() => openEditCategory(cat)}
+                  className="flex-shrink-0 w-32 glass-card rounded-3xl p-5 border border-white/5 flex flex-col items-center gap-3 active:scale-95 transition-all"
+                 >
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                       {cat.icon}
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white/40 text-center line-clamp-2">{cat.name}</span>
+                 </button>
+               ))}
+            </div>
+          </div>
+        )}
 
         {/* Unplanned Section */}
         {totalUnplannedSpent > 0 && (
