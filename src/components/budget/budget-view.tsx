@@ -27,6 +27,13 @@ export function BudgetView() {
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
   const [isSelectingExisting, setIsSelectingExisting] = useState<string | null>(null); // blockId
 
+  const currentMonthStr = useMemo(() => new Date().toISOString().substring(0, 7), []);
+  const currentMonthName = useMemo(() => new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }), []);
+
+  const currentMonthExpenses = useMemo(() => 
+    expenses.filter(e => e.date.startsWith(currentMonthStr)),
+  [expenses, currentMonthStr]);
+
   const openAddBlock = () => {
     setEditingCategory(null);
     setInitialParentId(undefined);
@@ -51,7 +58,15 @@ export function BudgetView() {
   };
 
   // Group categories into "Blocks"
-  const headCategories = useMemo(() => categories.filter(c => !c.parentId), [categories]);
+  const headCategories = useMemo(() => {
+    return categories.filter(c => {
+      if (c.parentId) return false;
+      const hasLimit = (c.budgetLimit || 0) > 0;
+      const hasChildren = categories.some(child => child.parentId === c.id);
+      const hasSpending = spendingByCategory[c.id] > 0;
+      return hasLimit || hasChildren || hasSpending;
+    });
+  }, [categories, spendingByCategory]);
   
   const categoriesByBlock = useMemo(() => {
     const map: Record<string, Category[]> = {};
@@ -76,11 +91,11 @@ export function BudgetView() {
   // Spending calculations
   const spendingByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    expenses.forEach(e => {
+    currentMonthExpenses.forEach(e => {
       map[e.categoryId] = (map[e.categoryId] || 0) + e.convertedAmount;
     });
     return map;
-  }, [expenses]);
+  }, [currentMonthExpenses]);
 
   const totalPlanned = useMemo(() => 
     categories.reduce((sum, c) => sum + (c.budgetLimit || 0), 0), 
@@ -109,6 +124,9 @@ export function BudgetView() {
         <h1 className="text-3xl font-black text-white px-6">
           {viewMode === 'execute' ? 'Траты и Бюджет' : 'Планирование'}
         </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 mb-2">
+          {currentMonthName}
+        </p>
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
           {viewMode === 'execute' 
             ? `Использовано ${Math.round(overallProgress)}% от лимита` 
@@ -179,11 +197,13 @@ export function BudgetView() {
                         return (
                           <div 
                             key={sub.id} 
+                            style={{ 
+                              borderLeft: `4px solid ${spent > limit && limit > 0 ? '#ef4444' : sub.color}`,
+                              boxShadow: spent > limit && limit > 0 ? '0 0 20px rgba(239,68,68,0.1)' : `0 0 15px ${sub.color}10`
+                            }}
                             className={cn(
                               "glass-card p-4 flex items-center justify-between group active:scale-[0.99] transition-all relative overflow-hidden",
-                              spent > limit && limit > 0 
-                                ? "border-l-4 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]" 
-                                : (catIndex % 3 === 0 ? "neon-border-blue" : catIndex % 3 === 1 ? "neon-border-purple" : "neon-border-green")
+                              spent > limit && limit > 0 && "border-l-red-500"
                             )}
                           >
                             <div className="flex items-center gap-4 flex-1">
