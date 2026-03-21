@@ -117,35 +117,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </div>
           )}
           
-          <div className="flex items-center gap-1 bg-black/40 p-1 rounded-2xl border border-white/5 shadow-inner">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-xl">
-               <div className="w-4 h-4 bg-accent rounded-full flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
-               </div>
-               <span className="text-sm font-black text-accent">{totalBalance.toFixed(1)}</span>
-            </div>
-            
-            <button className="p-2 text-white/40 hover:text-white transition-colors">
-              <Settings size={20} />
-            </button>
-            
-            {user ? (
-              <button 
-                onClick={handleLogout}
-                className="p-2 text-white/40 hover:text-red-500 transition-colors"
-              >
-                <LogOut size={20} />
-              </button>
-            ) : (
-              <button 
-                onClick={() => setIsAuthOpen(true)}
-                className="p-2 text-white/40 hover:text-accent transition-colors"
-              >
-                <UserIcon size={20} />
-              </button>
-            )}
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-xl">
+                <div className="w-4 h-4 bg-accent rounded-full flex items-center justify-center">
+                   <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                </div>
+                <span className="text-sm font-black text-accent">{totalBalance.toFixed(1)}</span>
+             </div>
           </div>
-        </div>
       </header>
 
       <main className="flex-1 w-full max-w-5xl mx-auto relative pb-32 overflow-x-hidden pt-24 px-6">
