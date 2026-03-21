@@ -60,24 +60,30 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return () => clearTimeout(timeoutId);
   }, [user, categories, portfolios, folders, wallets, expenses, preferences, pushData]);
 
-  // Real-time pull from Supabase
+  // Real-time pull from Supabase with debounce
   useEffect(() => {
     if (!user) return;
+
+    let pullTimeout: NodeJS.Timeout;
 
     const channel = supabase
       .channel('db-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public' },
-        async () => {
-          setSyncStatus('syncing');
-          await pullData();
-          setSyncStatus('synced');
+        () => {
+          clearTimeout(pullTimeout);
+          pullTimeout = setTimeout(async () => {
+            setSyncStatus('syncing');
+            await pullData();
+            setSyncStatus('synced');
+          }, 500); // 500ms debounce for incoming changes
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(pullTimeout);
       supabase.removeChannel(channel);
     };
   }, [user, pullData]);

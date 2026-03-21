@@ -131,7 +131,7 @@ export const useStore = create<UserState>()(
           await supabase.from('categories').upsert({
              id: category.id,
              user_id: user.id,
-             parent_id: category.parentId,
+             parent_id: category.parentId || null,
              name: category.name,
              icon: category.icon,
              color: category.color,
@@ -153,7 +153,7 @@ export const useStore = create<UserState>()(
             await supabase.from('categories').upsert({
               id: cat.id,
               user_id: state.user.id,
-              parent_id: cat.parentId,
+              parent_id: cat.parentId || null,
               name: cat.name,
               icon: cat.icon,
               color: cat.color,
@@ -216,20 +216,18 @@ export const useStore = create<UserState>()(
 
         set({ categories: updatedCategories });
         
-        // Push all updated siblings to Supabase
+        // Push all updated siblings to Supabase in a single batch
         if (state.user) {
-           await Promise.all(updatedWithNewOrders.map(s => 
-              supabase.from('categories').upsert({
-                 id: s.id,
-                 user_id: state.user!.id,
-                 parent_id: s.parentId,
-                 name: s.name,
-                 icon: s.icon,
-                 color: s.color,
-                 budget_limit: s.budgetLimit,
-                 sort_order: s.sortOrder
-              })
-           ));
+           await supabase.from('categories').upsert(updatedWithNewOrders.map(s => ({
+              id: s.id,
+              user_id: state.user!.id,
+              parent_id: s.parentId || null,
+              name: s.name,
+              icon: s.icon,
+              color: s.color,
+              budget_limit: s.budgetLimit,
+              sort_order: s.sortOrder
+           })));
         }
       },
 
@@ -377,7 +375,7 @@ export const useStore = create<UserState>()(
                supabase.from('categories').upsert(state.categories.map(c => ({
                   id: c.id,
                   user_id: user.id,
-                  parent_id: c.parentId,
+                  parent_id: c.parentId || null,
                   name: c.name,
                   icon: c.icon,
                   color: c.color,
