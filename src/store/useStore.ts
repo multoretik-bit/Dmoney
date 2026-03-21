@@ -63,9 +63,11 @@ interface UserState {
   wallets: Wallet[];
   expenses: Expense[];
   user: User | null;
+  isAuthModalOpen: boolean;
 
   // Actions
   setUser: (user: User | null) => void;
+  setAuthModalOpen: (open: boolean) => void;
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => void;
@@ -110,8 +112,10 @@ export const useStore = create<UserState>()(
       wallets: [],
       expenses: [],
       user: null,
+      isAuthModalOpen: false,
 
       setUser: (user) => set({ user }),
+      setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
       addSavedColor: (color) => set((state) => {
         if (state.preferences.savedColors.includes(color)) return state;

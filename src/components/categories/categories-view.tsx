@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { AddCategoryModal } from './add-category-modal';
 
 export function CategoriesView() {
-  const { user, setUser, pullData, pushData, categories, preferences, updatePreferences } = useStore();
+  const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences } = useStore();
   const { baseCurrency } = preferences;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -98,8 +98,16 @@ export function CategoriesView() {
              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-white/20 mb-2">
                 <UserIcon size={32} />
              </div>
-             <p className="font-black text-white/40 uppercase tracking-widest text-xs">Вы не вошли в аккаунт</p>
-             <p className="text-white/20 text-xs px-10">Войдите, чтобы синхронизировать данные между устройствами.</p>
+             <div className="flex flex-col gap-2">
+               <p className="font-black text-white/40 uppercase tracking-widest text-xs">Вы не вошли в аккаунт</p>
+               <p className="text-white/20 text-[10px] px-10">Войдите, чтобы синхронизировать данные между устройствами.</p>
+             </div>
+             <button 
+               onClick={() => setAuthModalOpen(true)}
+               className="w-full h-16 bg-accent text-white rounded-[24px] shadow-2xl shadow-accent/20 transition-all active:scale-95 font-black uppercase tracking-widest flex items-center justify-center gap-3"
+             >
+               Войти в аккаунт
+             </button>
           </div>
         )}
       </section>

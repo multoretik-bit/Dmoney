@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, setUser, pullData, pushData, wallets, 
-    categories, portfolios, folders, expenses, preferences 
+    categories, portfolios, folders, expenses, preferences,
+    isAuthModalOpen, setAuthModalOpen
   } = useStore();
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
@@ -132,7 +132,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       
       <BottomNav />
       
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   );
 }
