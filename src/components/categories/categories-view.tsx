@@ -176,12 +176,8 @@ export function CategoriesView() {
                 {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
               </button>
 
-              <AnimatePresence>
                 {isExpanded && (
-                  <motion.div 
-                    initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                    className="flex flex-col gap-3 overflow-hidden px-6"
-                  >
+                  <div className="flex flex-col gap-3 px-6">
                     {subs.map(sub => (
                       <div key={sub.id} className="p-5 bg-white/2 rounded-2xl flex items-center justify-between border border-white/5">
                          <div className="flex items-center gap-4">
@@ -197,9 +193,8 @@ export function CategoriesView() {
                     >
                       + Add subcategory
                     </button>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
             </div>
           );
         })}

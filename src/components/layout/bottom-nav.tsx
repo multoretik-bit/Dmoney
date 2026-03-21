@@ -44,11 +44,7 @@ export function BottomNav() {
                   {item.label}
                 </span>
                 {isActive && (
-                  <motion.div 
-                    layoutId="nav-bg"
-                    className="absolute -inset-1 bg-accent/5 rounded-2xl -z-10"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
+                  <div className="absolute -inset-1 bg-accent/5 rounded-2xl -z-10" />
                 )}
               </div>
             </Link>

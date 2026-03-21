@@ -254,7 +254,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                         </div>
                         <div className="flex flex-col items-start min-w-0">
                           <span className={cn("text-sm font-black uppercase tracking-tighter truncate w-full", walletId === w.id ? "text-white" : "text-white/40")}>{w.name}</span>
-                          <span className="text-[10px] font-black opacity-20 tracking-widest leading-none mt-1">{w.balance.toFixed(1)} {w.currency}</span>
+                          <span className="text-[10px] font-black opacity-20 tracking-widest leading-none mt-1">{Number(w.balance || 0).toFixed(1)} {w.currency}</span>
                         </div>
                       </button>
                     ))}

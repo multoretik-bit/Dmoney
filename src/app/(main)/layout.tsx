@@ -86,9 +86,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setUser(null);
   };
 
-  const totalBalance = (wallets || []).reduce((acc, w) => acc + (w.balance || 0), 0);
-
-  if (!isHydrated) return null;
+  const totalBalance = (wallets || []).reduce((acc, w) => acc + Number(w.balance || 0), 0);
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col pt-safe relative">
