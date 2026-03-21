@@ -168,11 +168,7 @@ export function BudgetView() {
               onClick={openAddBlock}
               className="text-accent text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-all"
             >
-              <Plus size={12} strokeWidth={4} /> ADD BLOCK
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-4">
+              <Plus size={12} strokeWidth={4} />          <div className="flex flex-col gap-4">
             {headCategories.map(head => {
               const subCats = categoriesByBlock[head.id] || [];
               const isExpanded = expandedBlocks.includes(head.id);
@@ -182,20 +178,24 @@ export function BudgetView() {
               const blockPercent = blockPlanned > 0 ? (blockSpent / blockPlanned) * 100 : 0;
 
               return (
-                <div key={head.id} className="bg-[#1c2128] rounded-[40px] border border-white/5 overflow-hidden shadow-xl">
+                <div 
+                  key={head.id} 
+                  className="rounded-[40px] border-2 shadow-2xl overflow-hidden active:scale-[0.99] transition-all relative"
+                  style={{ backgroundColor: head.color, borderColor: head.color }}
+                >
+                  <div className="absolute inset-0 bg-black/10 pointer-events-none" />
                   {/* Block Header */}
                   <div 
                     onClick={() => toggleBlock(head.id)}
-                    className="p-6 flex items-center justify-between cursor-pointer active:bg-white/5 transition-colors"
+                    className="p-6 flex items-center justify-between cursor-pointer relative z-10"
                   >
                     <div className="flex items-center gap-4">
-                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg relative border-2" style={{ backgroundColor: `${head.color}30`, borderColor: `${head.color}60`, color: head.color }}>
-                          {head.icon}
-                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl pointer-events-none" />
+                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg relative border-2 bg-black/20" style={{ borderColor: 'transparent' }}>
+                          <span className="filter brightness-50 contrast-150">{head.icon}</span>
                        </div>
                        <div className="flex flex-col">
-                          <span className="text-lg font-black tracking-tight">{head.name}</span>
-                          <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                          <span className="text-lg font-black tracking-tight text-white">{head.name}</span>
+                          <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">
                             {viewMode === 'execute' 
                               ? `$${blockSpent.toFixed(1)} / $${blockPlanned.toFixed(1)}` 
                               : `$${blockPlanned.toFixed(1)} в плане`
@@ -204,18 +204,21 @@ export function BudgetView() {
                        </div>
                     </div>
                     <div className="flex items-center gap-4">
-                       <div className="w-10 h-10 rounded-full border-2 border-white/5 flex items-center justify-center relative">
+                       <div className="w-10 h-10 rounded-full border-2 border-white/20 flex items-center justify-center relative">
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                             <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                             <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="8" />
                              <circle 
-                               cx="50" cy="50" r="40" fill="none" stroke={head.color} strokeWidth="8" 
-                               strokeDasharray="251" strokeDashoffset={251 - (251 * Math.min(blockPercent, 100)) / 100}
-                               strokeLinecap="round"
+                                cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="8" 
+                                strokeDasharray="251" strokeDashoffset={251 - (251 * Math.min(blockPercent, 100)) / 100}
+                                strokeLinecap="round"
                              />
                           </svg>
                           <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{Math.round(blockPercent)}%</span>
                        </div>
-                       {isExpanded ? <ChevronDown size={20} className="text-white/20" /> : <ChevronRight size={20} className="text-white/20" />}
+                       {isExpanded ? <ChevronDown size={20} className="text-white/40" /> : <ChevronRight size={20} className="text-white/40" />}
+                    </div>
+                  </div>
+ />}
                     </div>
                   </div>
 
