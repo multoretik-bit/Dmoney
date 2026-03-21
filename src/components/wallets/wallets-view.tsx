@@ -2,39 +2,36 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, CreditCard, Trash2, Edit2, Wallet as WalletIcon } from 'lucide-react';
-import { useStore, WalletType, Wallet } from '@/store/useStore';
+import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus } from 'lucide-react';
+import { useStore, Wallet } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
+import { AddPortfolioModal, AddFolderModal } from './portfolio-folder-modals';
 import { convertAmount } from '@/lib/exchange';
 
 export function WalletsView() {
-  const { wallets, updateWallet, deleteWallet, preferences } = useStore();
+  const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, preferences } = useStore();
   const { baseCurrency } = preferences;
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState<WalletType | 'total'>('total');
+  
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>(portfolios[0]?.id || '');
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
 
-  const filteredWallets = selectedType === 'total' 
-    ? wallets 
-    : wallets.filter(w => w.type === selectedType);
+  const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId) || portfolios[0];
+  
+  const portfolioWallets = wallets.filter(w => w.portfolioId === (selectedPortfolio?.id || ''));
+  const portfolioFolders = folders.filter(f => f.portfolioId === (selectedPortfolio?.id || ''));
 
-  const totalNetWorth = wallets.reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
-  const spendingTotal = wallets.filter(w => w.type === 'spending').reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
-  const savingsTotal = wallets.filter(w => w.type === 'saving').reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
-  const debtTotal = wallets.filter(w => w.type === 'debt').reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
+  const toggleFolder = (id: string) => {
+    setExpandedFolders(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+  };
 
-  const carouselCards = [
-    { title: 'Total net worth', amount: totalNetWorth, type: 'total', color: 'from-[#ff75c3] via-[#ff4b91] to-[#ff2a6d]' },
-    { title: 'Spending wallets', amount: spendingTotal, type: 'spending', color: 'from-[#3b82f6] to-[#2563eb]' },
-    { title: 'Debt wallets', amount: debtTotal, type: 'debt', color: 'from-[#ef4444] to-[#dc2626]' },
-    { title: 'Savings wallets', amount: savingsTotal, type: 'saving', color: 'from-[#10b981] to-[#059669]' },
-  ];
-
-  const handleDelete = (id: string) => {
-    // In a real app we'd trigger a store action. 
-    // Assuming useStore has deleteWallet or we'll add it.
-    // Let's just use updateWallet for now if we don't have deleteWallet.
-    // Wait, let's call it deleteWallet and hope it exists or add it.
+  const getPortfolioBalance = (pId: string) => {
+    return wallets
+      .filter(w => w.portfolioId === pId)
+      .reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
   };
 
   return (
@@ -42,111 +39,191 @@ export function WalletsView() {
       <header className="pt-8 flex justify-between items-center px-4">
         <div className="flex flex-col">
           <h1 className="text-2xl font-black tracking-tight text-white/90">My Capitals</h1>
-          <span className="text-[10px] font-black uppercase text-accent tracking-[0.3em]">Portfolios & Accounts</span>
+          <span className="text-[10px] font-black uppercase text-accent tracking-[0.3em]">Managed Portfolios</span>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)} 
-          className="w-14 h-14 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center text-white active:scale-90 transition-all shadow-xl border border-white/5"
+          onClick={() => setIsPortfolioModalOpen(true)} 
+          className="w-12 h-12 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/5"
         >
-          <Plus size={28} />
+          <Plus size={24} />
         </button>
       </header>
 
-      {/* Horizontal Carousel */}
+      {/* Capitals Carousel */}
       <div className="flex gap-6 overflow-x-auto hide-scrollbar snap-x -mx-6 px-6 pb-4">
-        {carouselCards.map((card) => (
+        {portfolios.map((p) => (
           <motion.button 
-            key={card.type}
-            onClick={() => setSelectedType(card.type as any)}
+            key={p.id}
+            onClick={() => setSelectedPortfolioId(p.id)}
             className={cn(
-              "flex-shrink-0 w-[320px] h-52 rounded-[48px] p-10 flex flex-col justify-between snap-center transition-all border-4 shadow-[0_20px_40px_rgba(0,0,0,0.3)]",
-              selectedType === card.type ? "border-white" : "border-transparent opacity-80 scale-[0.98]",
-              `bg-gradient-to-br ${card.color}`
+              "flex-shrink-0 w-[280px] h-48 rounded-[40px] p-8 flex flex-col justify-between snap-center transition-all border-4 shadow-2xl relative overflow-hidden",
+              selectedPortfolioId === p.id ? "border-white scale-100" : "border-transparent opacity-60 scale-[0.95]"
             )}
+            style={{ backgroundColor: p.color }}
           >
              <div className="flex flex-col items-start gap-1">
-               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/60">{card.title}</span>
-               <span className="text-[44px] font-black text-white leading-tight">${Math.floor(card.amount).toLocaleString()}</span>
+               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{p.name}</span>
+               <span className="text-4xl font-black text-white leading-tight">
+                 ${Math.floor(getPortfolioBalance(p.id)).toLocaleString()}
+               </span>
              </div>
-             <div className="flex gap-2">
-                {carouselCards.map((c) => (
-                  <div key={c.type} className={cn("w-2 h-2 rounded-full transition-all", c.type === card.type ? "bg-white w-6" : "bg-white/30")} />
-                ))}
+             <div className="flex items-center gap-2">
+                <span className="text-2xl opacity-80">{p.icon}</span>
+                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest bg-black/20 px-2 py-1 rounded-full">
+                  {wallets.filter(w => w.portfolioId === p.id).length} Acc
+                </div>
              </div>
+             
+             <button 
+               onClick={(e) => { e.stopPropagation(); deletePortfolio(p.id); }}
+               className="absolute top-6 right-6 p-2 bg-black/20 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+             >
+               <Trash2 size={14} className="text-white/40" />
+             </button>
           </motion.button>
         ))}
+        
+        <button 
+          onClick={() => setIsPortfolioModalOpen(true)}
+          className="flex-shrink-0 w-[280px] h-48 rounded-[40px] border-4 border-dashed border-white/5 flex flex-col items-center justify-center gap-4 bg-white/2 hover:bg-white/5 transition-all snap-center opacity-40 hover:opacity-100"
+        >
+          <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center"><Plus size={24} /></div>
+          <span className="text-[10px] font-black uppercase tracking-widest">New Capital</span>
+        </button>
       </div>
 
-      {/* Wallet List */}
-      <div className="flex flex-col gap-5 mt-4">
-        <div className="flex justify-between items-center px-4">
-           <div className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em]">Active Accounts</div>
-           <div className="text-[10px] font-black uppercase text-accent tracking-[0.2em]">{filteredWallets.length} items</div>
-        </div>
-
-        {filteredWallets.length === 0 ? (
-          <div className="text-center text-white/10 py-24 font-black uppercase tracking-[0.3em] text-xs bg-white/2 border border-dashed border-white/5 rounded-[40px] flex flex-col items-center gap-4">
-            <WalletIcon size={40} className="text-white/5" />
-            No accounts in this category
+      {/* Wallet List with Folders */}
+      {selectedPortfolio && (
+        <div className="flex flex-col gap-6 mt-2">
+          <div className="flex justify-between items-center px-4">
+            <div className="flex items-center gap-6">
+               <h3 className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em]">Structure</h3>
+               <button 
+                onClick={() => setIsFolderModalOpen(true)}
+                className="flex items-center gap-2 text-white/40 text-[9px] font-black uppercase tracking-widest p-2 hover:bg-white/5 rounded-xl transition-all"
+               >
+                 <FolderPlus size={14} /> Folder
+               </button>
+            </div>
+             <button 
+              onClick={() => setIsWalletModalOpen(true)}
+              className="flex items-center gap-2 text-accent text-[10px] font-black uppercase tracking-widest p-2 hover:bg-accent/10 rounded-xl transition-all"
+             >
+               <Plus size={14} strokeWidth={4} /> Account
+             </button>
           </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <AnimatePresence mode="popLayout">
-              {filteredWallets.map((w, index) => {
-                const balanceInUSD = convertAmount(w.balance, w.currency, baseCurrency);
-                return (
-                  <motion.div 
-                    key={w.id}
-                    layout
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ x: 20, opacity: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-[#1c2128] rounded-[48px] p-8 flex items-center justify-between group border border-white/5 shadow-2xl hover:bg-[#252a33] transition-all relative overflow-hidden active:scale-[0.98]"
-                  >
-                    <div className="flex flex-col gap-1 z-10">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.2em]">{w.name}</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                      </div>
-                      {/* PRIMARY: USD */}
-                      <span className="text-4xl font-black text-white leading-none">
-                         ${Math.floor(balanceInUSD).toLocaleString()}
-                      </span>
-                      {/* SECONDARY: Original Currency (Hidden by default, shown as "local") */}
-                      <span className="text-[10px] font-black text-accent mt-2 uppercase tracking-widest opacity-60">
-                         {w.balance.toLocaleString()} {w.currency} (Local)
-                      </span>
-                    </div>
 
-                    <div className="flex items-center gap-4 z-10">
-                       <div 
-                        className="w-16 h-16 rounded-[28px] flex items-center justify-center text-white shadow-2xl transition-all"
-                        style={{ backgroundColor: w.color || '#3b82f6', boxShadow: `0 12px 24px ${w.color}40` }}
+          <div className="flex flex-col gap-4 px-2">
+            {portfolioFolders.map(folder => {
+              const isExpanded = expandedFolders.includes(folder.id);
+              const folderWallets = portfolioWallets.filter(w => w.folderId === folder.id);
+              
+              return (
+                <div key={folder.id} className="flex flex-col gap-3">
+                  <div className="flex items-center group">
+                    <button 
+                       onClick={() => toggleFolder(folder.id)}
+                       className="flex-1 flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 rounded-2xl transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent">
+                            <FolderIcon size={18} />
+                         </div>
+                         <span className="text-xs font-black uppercase tracking-widest text-white/60">{folder.name}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                         <span className="text-[10px] font-bold text-white/10">{folderWallets.length} accounts</span>
+                         {isExpanded ? <ChevronDown size={16} className="text-white/20" /> : <ChevronRight size={16} className="text-white/20" />}
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => deleteFolder(folder.id)}
+                      className="w-12 h-12 flex items-center justify-center text-red-500/0 group-hover:text-red-500/40 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                        className="flex flex-col gap-3 pl-4 overflow-hidden border-l-2 border-white/5 ml-4"
                       >
-                        <span className="text-3xl">{w.icon || '💳'}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Hover Actions (Edit/Delete) - Semi-visible in Buddy style? */}
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center gap-2 pr-6 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-[#1c2128] via-[#1c2128] to-transparent pl-20 pointer-events-none group-hover:pointer-events-auto">
-                       <button className="p-4 bg-white/5 rounded-2xl hover:bg-white/10 active:scale-90 transition-all"><Edit2 size={18} /></button>
-                       <button 
-                         onClick={() => deleteWallet(w.id)}
-                         className="p-4 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500/20 active:scale-90 transition-all"
-                       >
-                         <Trash2 size={18} />
-                       </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                        {folderWallets.map(w => (
+                          <WalletCard key={w.id} wallet={w} baseCurrency={baseCurrency} onDelete={() => deleteWallet(w.id)} />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+
+            {/* Uncategorized Wallets */}
+            {portfolioWallets.filter(w => !w.folderId).map(w => (
+              <WalletCard key={w.id} wallet={w} baseCurrency={baseCurrency} onDelete={() => deleteWallet(w.id)} />
+            ))}
+            
+            {portfolioFolders.length === 0 && portfolioWallets.length === 0 && (
+              <div className="text-center text-white/5 py-20 font-black uppercase tracking-[0.3em] text-[10px]">
+                Empty structure
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
+      
+      <AddPortfolioModal isOpen={isPortfolioModalOpen} onClose={() => setIsPortfolioModalOpen(false)} />
+      <AddFolderModal isOpen={isFolderModalOpen} onClose={() => setIsFolderModalOpen(false)} portfolioId={selectedPortfolioId} />
+      <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} />
+    </div>
+  );
+}
+
+function WalletCard({ wallet, baseCurrency, onDelete }: { wallet: Wallet; baseCurrency: string; onDelete: () => void }) {
+  const balanceInUSD = convertAmount(wallet.balance, wallet.currency, baseCurrency);
+  
+  return (
+    <motion.div 
+      layout
+      className="bg-[#1c2128] rounded-[32px] p-6 flex items-center gap-5 border border-white/5 shadow-xl group relative overflow-hidden active:scale-[0.98] transition-all"
+    >
+      {/* ICON ON LEFT AS REQUESTED */}
+      <div 
+        className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-white shadow-lg relative overflow-hidden"
+        style={{ backgroundColor: wallet.color || '#3b82f6' }}
+      >
+        <div className="absolute inset-0 bg-white/10 flex items-center justify-center">
+            <span className="text-2xl">{wallet.icon || '💳'}</span>
+        </div>
       </div>
 
-      <AddWalletModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-    </div>
+      <div className="flex-1 flex flex-col justify-center min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] truncate">{wallet.name}</span>
+          <div className="w-1 h-1 rounded-full bg-accent/30" />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-2xl font-black text-white leading-tight">
+             ${Math.floor(balanceInUSD).toLocaleString()}
+          </span>
+          <span className="text-[9px] font-black text-accent/50 uppercase tracking-widest">
+             {wallet.balance.toLocaleString()} {wallet.currency}
+          </span>
+        </div>
+      </div>
+
+      {/* ACTIONS ON RIGHT, NOT OVERLAPPING */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+         <button className="p-3 hover:bg-white/5 rounded-xl transition-colors"><Edit2 size={16} className="text-white/20" /></button>
+         <button 
+           onClick={(e) => { e.stopPropagation(); onDelete(); }}
+           className="p-3 hover:bg-red-500/10 rounded-xl transition-colors group/del"
+         >
+           <Trash2 size={16} className="text-red-500/40 group-hover/del:text-red-500" />
+         </button>
+      </div>
+    </motion.div>
   );
 }
