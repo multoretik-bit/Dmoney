@@ -10,8 +10,7 @@ import { cn } from '@/lib/utils';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { CurrencyPicker } from '@/components/ui/currency-picker';
-
-const WALLET_ICONS = ['💳', '💰', '🏦', '💎', '📈', '🏠', '🚗', '🛒', '🎮', '✈️', '🍎', '🍺', '💼', '🎁', '📱'];
+import { IconPicker } from '@/components/ui/icon-picker';
 
 export function AddWalletModal({ 
   isOpen, 
@@ -136,21 +135,7 @@ export function AddWalletModal({
               {/* ColorPicker Integration */}
               <ColorPicker color={color} onChange={setColor} />
 
-              {/* Icon Picker */}
-              <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-1">Icon</label>
-                <div className="grid grid-cols-5 gap-2 bg-white/5 p-4 rounded-3xl border border-white/5">
-                   {WALLET_ICONS.map(i => (
-                     <button 
-                       key={i} onClick={() => setIcon(i)}
-                       className={cn("h-12 rounded-xl flex items-center justify-center text-2xl transition-all border-2", icon === i ? "bg-white/10 border-white" : "bg-transparent border-transparent opacity-40")}
-                       style={icon === i ? { color } : {}}
-                     >
-                       {i}
-                     </button>
-                   ))}
-                </div>
-              </div>
+              <IconPicker icon={icon} onChange={setIcon} />
 
               <div className="bg-white/5 p-6 rounded-[32px] border border-white/5 flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
