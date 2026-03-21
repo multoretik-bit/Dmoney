@@ -77,7 +77,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     <AnimatePresence>
       {isOpen && (
         <motion.div 
-          className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/70 backdrop-blur-md"
+          className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/70 backdrop-blur-md px-4 pb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -86,7 +86,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
           }}
         >
           <motion.div 
-            className="bg-card w-full h-[85vh] rounded-t-[40px] flex flex-col p-8 shadow-2xl relative"
+            className="bg-card w-full max-w-xl max-h-[90vh] rounded-[40px] flex flex-col p-8 shadow-2xl relative border border-white/10"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
