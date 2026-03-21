@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { Settings, User as UserIcon, LogOut, Wallet, CircleDollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { convertAmount } from '@/lib/exchange';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, setUser, pullData, pushData, wallets, 
@@ -86,7 +87,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setUser(null);
   };
 
-  const totalBalance = (wallets || []).reduce((acc, w) => acc + Number(w.balance || 0), 0);
+  const totalBalance = (wallets || []).reduce((acc, w) => 
+    acc + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency), 0
+  );
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col pt-safe relative">
@@ -126,7 +129,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <div className="w-4 h-4 bg-accent rounded-full flex items-center justify-center">
                    <div className="w-1.5 h-1.5 bg-white rounded-full" />
                 </div>
-                <span className="text-sm font-black text-accent">{totalBalance.toFixed(1)}</span>
+                <span className="text-sm font-black text-accent">{totalBalance.toFixed(1)} {preferences.baseCurrency}</span>
              </div>
           </div>
       </header>
