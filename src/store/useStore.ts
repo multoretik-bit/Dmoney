@@ -19,6 +19,7 @@ export interface Category {
   name: string;
   icon: string;
   color: string;
+  budgetLimit?: number; // Target limit for this category
 }
 
 export interface Wallet {
@@ -64,6 +65,7 @@ interface UserState {
   addCategoryFolder: (folder: CategoryFolder) => void;
   addCategory: (category: Category) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
+  setCategoryLimit: (id: string, limit: number) => void;
   deleteCategory: (id: string) => void;
   addWallet: (wallet: Wallet) => void;
   updateWallet: (id: string, updates: Partial<Wallet>) => void;
@@ -102,6 +104,9 @@ export const useStore = create<UserState>()(
       addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),
       updateCategory: (id, updates) => set((state) => ({
         categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
+      })),
+      setCategoryLimit: (id: string, limit: number) => set((state) => ({
+        categories: state.categories.map(c => c.id === id ? { ...c, budgetLimit: limit } : c)
       })),
       deleteCategory: (id) => set((state) => ({
         categories: state.categories.filter(c => c.id !== id)
