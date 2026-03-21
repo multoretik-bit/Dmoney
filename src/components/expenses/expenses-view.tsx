@@ -112,6 +112,38 @@ export function ExpensesView() {
                   ${totalSpentToday.toLocaleString()}
                 </span>
               </div>
+
+              {/* Monthly Spending Chart (Strip) */}
+              <div className="h-16 flex items-end justify-between gap-1 mt-6 px-1">
+                {eachDayOfInterval({ 
+                  start: startOfMonth(currentMonth), 
+                  end: endOfMonth(currentMonth) 
+                }).map((date, i) => {
+                  const dayTotal = expenses
+                    .filter(e => isSameDay(new Date(e.date), date))
+                    .reduce((sum, e) => sum + e.convertedAmount, 0);
+                  
+                  // Scale logic: find max in month or use a reasonable cap
+                  const monthMax = Math.max(...eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) }).map(d => 
+                    expenses.filter(e => isSameDay(new Date(e.date), d)).reduce((sum, e) => sum + e.convertedAmount, 0)
+                  ), 10);
+                  
+                  const height = (dayTotal / monthMax) * 100;
+                  const isSelected = isSameDay(date, selectedDate);
+                  const isToday = isSameDay(date, new Date());
+
+                  return (
+                    <div 
+                      key={i} 
+                      className={cn(
+                        "flex-1 rounded-full transition-all duration-500",
+                        isSelected ? "bg-white" : isToday ? "bg-accent" : "bg-white/10"
+                      )}
+                      style={{ height: `${Math.max(height, 4)}%`, minWidth: '2px' }}
+                    />
+                  );
+                })}
+              </div>
               
               <AnimatePresence>
                 {isSummaryExpanded && dayExpenses.length > 0 && (

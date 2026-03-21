@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useStore, Wallet } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Globe, Check, LayoutGrid, FolderIcon } from 'lucide-react';
+import { X, Globe, Check, LayoutGrid, FolderIcon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { ColorPicker } from '@/components/ui/color-picker';
+import { CurrencyPicker } from '@/components/ui/currency-picker';
 
 const WALLET_ICONS = ['💳', '💰', '🏦', '💎', '📈', '🏠', '🚗', '🛒', '🎮', '✈️', '🍎', '🍺', '💼', '🎁', '📱'];
 
@@ -29,6 +30,7 @@ export function AddWalletModal({
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const [icon, setIcon] = useState('💳');
   const [color, setColor] = useState(preferences.savedColors[0]);
+  const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
 
   useEffect(() => {
     if (editingWallet) {
@@ -163,12 +165,20 @@ export function AddWalletModal({
                 <div className="grid grid-cols-2 gap-4">
                    <div className="flex flex-col gap-2">
                      <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Currency</label>
-                     <select 
-                       className="bg-transparent text-lg font-black text-white outline-none appearance-none"
-                       value={currency} onChange={e => setCurrency(e.target.value)}
+                     <button 
+                       type="button"
+                       onClick={() => setIsCurrencyPickerOpen(true)}
+                       className="bg-transparent text-lg font-black text-white outline-none flex items-center justify-between group"
                      >
-                       {COMMON_CURRENCIES.map(c => <option key={c} value={c} className="bg-[#0d1117]">{c}</option>)}
-                     </select>
+                       {currency}
+                       <ChevronDown size={14} className="text-white/20 group-hover:text-accent transition-colors" />
+                     </button>
+                     <CurrencyPicker 
+                        isOpen={isCurrencyPickerOpen} 
+                        onClose={() => setIsCurrencyPickerOpen(false)} 
+                        selectedCurrency={currency}
+                        onSelect={setCurrency}
+                     />
                    </div>
                    <div className="flex flex-col gap-2 border-l border-white/5 pl-4">
                      <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Balance</label>

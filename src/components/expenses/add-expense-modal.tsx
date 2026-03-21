@@ -7,6 +7,7 @@ import { useStore } from '@/store/useStore';
 import { convertAmount, getExchangeRate } from '@/lib/exchange';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
+import { CurrencyPicker } from '@/components/ui/currency-picker';
 
 export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { addExpense, preferences, wallets, categories, expenses } = useStore();
@@ -16,6 +17,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
   const [currency, setCurrency] = useState('USD');
   const [categoryId, setCategoryId] = useState('');
   const [walletId, setWalletId] = useState('');
+  const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
 
   // Auto-select logic
   useEffect(() => {
@@ -112,18 +114,14 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                 
                 <div className="flex flex-col items-center gap-6 w-full">
                   <div className="flex items-center justify-center gap-4 w-full">
-                    <div className="relative">
-                      <select 
-                        className="bg-white/5 px-4 h-14 rounded-2xl text-lg font-black outline-none text-accent border border-white/5 appearance-none cursor-pointer pr-10"
-                        value={currency}
-                        onChange={(e) => setCurrency(e.target.value)}
-                      >
-                        {COMMON_CURRENCIES.map((c: string) => <option key={c} value={c} className="bg-[#0d1117]">{c}</option>)}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-accent/40">
-                        <ChevronDown size={14} />
-                      </div>
-                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setIsCurrencyPickerOpen(true)}
+                      className="bg-white/5 px-4 h-14 rounded-2xl text-lg font-black outline-none text-accent border border-white/5 flex items-center gap-2 group hover:bg-white/10 transition-all"
+                    >
+                      {currency}
+                      <ChevronDown size={14} className="text-accent/40 group-hover:text-accent transition-colors" />
+                    </button>
                     <input 
                       type="text" 
                       inputMode="decimal"
@@ -134,6 +132,13 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                       autoFocus
                     />
                   </div>
+
+                  <CurrencyPicker 
+                    isOpen={isCurrencyPickerOpen} 
+                    onClose={() => setIsCurrencyPickerOpen(false)} 
+                    selectedCurrency={currency}
+                    onSelect={setCurrency}
+                  />
 
                   <div className="h-40 flex items-center justify-center w-full">
                     {(() => {
