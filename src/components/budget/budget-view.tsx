@@ -114,32 +114,46 @@ export function BudgetView() {
         </div>
 
         <div className="flex flex-col items-center gap-2 relative z-10">
-          <div className="relative w-48 h-48 flex items-center justify-center">
+          <div className="relative w-56 h-56 flex items-center justify-center">
              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="12" />
+                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="10" />
                 <motion.circle 
-                  cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="12" 
-                  strokeDasharray="276" initial={{ strokeDashoffset: 276 }} animate={{ strokeDashoffset: 276 - (276 * Math.min(overallProgress, 100)) / 100 }}
+                  cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="10" 
+                  strokeDasharray="276" 
+                  initial={{ strokeDashoffset: 276 }} 
+                  animate={{ 
+                    strokeDashoffset: viewMode === 'plan' ? 0 : 276 - (276 * Math.min(overallProgress, 100)) / 100,
+                    opacity: viewMode === 'plan' ? 0.2 : 1
+                  }}
                   strokeLinecap="round" className={cn(overallProgress > 100 ? "text-red-500" : "text-accent")}
                   transition={{ duration: 1.5, ease: "easeOut" }}
                 />
              </svg>
              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-black">{Math.round(overallProgress)}%</span>
-                <span className="text-[9px] font-black uppercase tracking-widest text-white/20">Spending</span>
+                {viewMode === 'execute' ? (
+                  <>
+                    <span className="text-3xl font-black">${totalSpent.toLocaleString()}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Потрачено</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl font-black">${totalPlanned.toLocaleString()}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/20">В плане</span>
+                  </>
+                )}
              </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-8 mt-4 w-full max-w-xs">
+          <div className="grid grid-cols-2 gap-8 mt-2 w-full max-w-xs">
             <div className="flex flex-col items-center">
-              <span className="text-white/20 text-[10px] font-black uppercase tracking-widest">Planned</span>
-              <span className="text-xl font-black">${totalPlanned.toLocaleString()}</span>
+              <span className="text-white/20 text-[9px] font-black uppercase tracking-widest">{viewMode === 'execute' ? 'Осталось' : 'Бюджет'}</span>
+              <span className={cn("text-lg font-black", viewMode === 'execute' && totalPlanned - totalSpent < 0 ? "text-red-500" : "text-white")}>
+                ${Math.abs(totalPlanned - totalSpent).toLocaleString()}
+              </span>
             </div>
             <div className="flex flex-col items-center border-l border-white/5">
-              <span className="text-white/20 text-[10px] font-black uppercase tracking-widest">Spent</span>
-              <span className={cn("text-xl font-black", totalSpent > totalPlanned ? "text-red-500" : "text-white")}>
-                ${totalSpent.toLocaleString()}
-              </span>
+              <span className="text-white/20 text-[9px] font-black uppercase tracking-widest">Прогресс</span>
+              <span className="text-lg font-black">{Math.round(overallProgress)}%</span>
             </div>
           </div>
         </div>
@@ -182,7 +196,10 @@ export function BudgetView() {
                        <div className="flex flex-col">
                           <span className="text-lg font-black tracking-tight">{head.name}</span>
                           <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
-                            ${blockSpent.toLocaleString()} / ${blockPlanned.toLocaleString()}
+                            {viewMode === 'execute' 
+                              ? `$${blockSpent.toLocaleString()} / $${blockPlanned.toLocaleString()}` 
+                              : `$${blockPlanned.toLocaleString()} в плане`
+                            }
                           </span>
                        </div>
                     </div>
@@ -233,15 +250,20 @@ export function BudgetView() {
                                               onChange={(e) => setCategoryLimit(sub.id, parseFloat(e.target.value) || 0)}
                                               className="bg-white/5 border border-white/10 rounded-lg w-20 px-2 py-1 text-xs font-black text-right outline-none focus:border-accent/50"
                                             />
-                                            <span className="text-[10px] font-black text-white/20">USD</span>
+                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">USD</span>
                                           </div>
                                         ) : (
-                                          <span className={cn(
-                                            "text-xs font-black",
-                                            spent > limit && limit > 0 ? "text-red-500" : "text-white/40"
-                                          )}>
-                                            ${spent.toLocaleString()} / ${limit.toLocaleString()}
-                                          </span>
+                                          <div className="flex flex-col items-end">
+                                            <span className={cn(
+                                              "text-sm font-black transition-colors",
+                                              spent > limit && limit > 0 ? "text-red-500" : "text-white"
+                                            )}>
+                                              ${spent.toLocaleString()}
+                                            </span>
+                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
+                                              из ${limit.toLocaleString()}
+                                            </span>
+                                          </div>
                                         )}
                                      </div>
                                   </div>
