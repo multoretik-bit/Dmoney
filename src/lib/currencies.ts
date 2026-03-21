@@ -7,6 +7,8 @@ export const CURRENCIES = [
   { code: 'TRY', symbol: '₺', name: 'Turkish Lira' },
 ];
 
+export const COMMON_CURRENCIES = ['USD', 'EUR', 'RUB', 'KZT', 'GEL', 'TRY'];
+
 export async function convertCurrency(amount: number, from: string, to: string): Promise<number> {
   if (from === to) return amount;
   try {

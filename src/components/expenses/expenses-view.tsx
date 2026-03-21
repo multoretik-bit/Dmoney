@@ -44,7 +44,7 @@ export function ExpensesView() {
                       <div>
                         <div className="font-semibold text-white">{cat.name}</div>
                         <div className="text-xs text-textMuted mt-0.5">
-                          {format(new Date(exp.date), 'dd MMM HH:mm', { locale: ru })} {exp.note && `• ${exp.note}`}
+                          {format(new Date(exp.date), 'dd MMM HH:mm', { locale: ru })}
                         </div>
                       </div>
                     </div>

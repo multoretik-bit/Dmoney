@@ -42,7 +42,6 @@ export interface Expense {
   categoryId: string;
   walletId: string;
   date: string;
-  note?: string;
 }
 
 export interface UserPreferences {
@@ -60,6 +59,7 @@ interface UserState {
 
   // Actions
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
+  addSavedColor: (color: string) => void;
   addWalletFolder: (folder: WalletFolder) => void;
   addCategoryFolder: (folder: CategoryFolder) => void;
   addCategory: (category: Category) => void;
@@ -76,7 +76,7 @@ export const useStore = create<UserState>()(
     (set) => ({
       preferences: {
         baseCurrency: 'USD',
-        savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6'],
+        savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
       },
       walletFolders: [
         { id: 'default', name: 'Личное', order: 0 }
@@ -93,6 +93,10 @@ export const useStore = create<UserState>()(
       expenses: [],
 
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
+      addSavedColor: (color) => set((state) => {
+        if (state.preferences.savedColors.includes(color)) return state;
+        return { preferences: { ...state.preferences, savedColors: [...state.preferences.savedColors, color] } };
+      }),
       addWalletFolder: (folder) => set((state) => ({ walletFolders: [...state.walletFolders, folder] })),
       addCategoryFolder: (folder) => set((state) => ({ categoryFolders: [...state.categoryFolders, folder] })),
       addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),

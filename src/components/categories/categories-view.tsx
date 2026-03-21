@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronRight, FolderPlus } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag } from 'lucide-react';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { IconPicker } from '@/components/ui/icon-picker';
+import { cn } from '@/lib/utils';
 
 function AddCategoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { addCategory, categoryFolders } = useStore();
@@ -27,54 +28,79 @@ function AddCategoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <motion.div 
-        className="fixed inset-0 z-[100] flex items-end bg-black/60 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
+      {isOpen && (
         <motion.div 
-          className="bg-card w-full h-[80vh] rounded-t-3xl flex flex-col p-6 shadow-2xl relative"
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
+          className="fixed inset-0 z-[100] flex items-end bg-black/70 backdrop-blur-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={(e) => {
+             if (e.target === e.currentTarget) onClose();
+          }}
         >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Новая категория</h2>
-            <button onClick={onClose} className="p-2 bg-background rounded-full">
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto flex flex-col gap-6 hide-scrollbar pb-20">
-            <input 
-              className="bg-background p-4 rounded-xl outline-none" 
-              placeholder="Название (например, Продукты)" 
-              value={name} onChange={e => setName(e.target.value)} 
-            />
-
-            {categoryFolders.length > 0 && (
-              <select 
-                className="bg-background p-4 rounded-xl outline-none" 
-                value={folderId} onChange={e => setFolderId(e.target.value)}
+          <motion.div 
+            className="bg-card w-full h-[80vh] rounded-t-[40px] flex flex-col p-8 shadow-2xl relative"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 250 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center text-accent">
+                   <Tag size={24} />
+                 </div>
+                 <h2 className="text-2xl font-bold">Новая категория</h2>
+              </div>
+              <button 
+                type="button"
+                onClick={onClose} 
+                className="p-3 bg-background border border-white/5 rounded-full active:scale-95 text-textMuted"
               >
-                {categoryFolders.map(f => <option key={f.id} value={f.id}>Папка: {f.name}</option>)}
-              </select>
-            )}
+                <X size={20} />
+              </button>
+            </div>
 
-            <ColorPicker color={color} onChange={setColor} />
-            <IconPicker icon={icon} onChange={setIcon} />
-          </div>
+            <div className="flex-1 overflow-y-auto flex flex-col gap-8 hide-scrollbar pb-24">
+              <div className="flex flex-col gap-2">
+                <div className="text-sm text-textMuted font-medium px-1">Название</div>
+                <input 
+                  className="bg-background p-5 rounded-2xl outline-none border border-transparent focus:border-accent transition-all text-lg font-medium" 
+                  placeholder="Например, Продукты" 
+                  value={name} onChange={e => setName(e.target.value)} 
+                />
+              </div>
 
-          <button onClick={handleSave} disabled={!name} className="absolute bottom-6 left-6 right-6 h-14 bg-accent hover:bg-accent/90 disabled:opacity-50 text-white font-bold rounded-2xl z-50 shadow-lg">
-            Добавить
-          </button>
+              {categoryFolders.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm text-textMuted font-medium px-1">Папка</div>
+                  <select 
+                    className="bg-background p-5 rounded-2xl outline-none border border-transparent focus:border-accent" 
+                    value={folderId} onChange={e => setFolderId(e.target.value)}
+                  >
+                    {categoryFolders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <ColorPicker color={color} onChange={setColor} />
+              <IconPicker icon={icon} onChange={setIcon} />
+            </div>
+
+            <button 
+              type="button"
+              onClick={handleSave} 
+              disabled={!name}
+              className="absolute bottom-8 left-8 right-8 h-16 bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-lg font-bold rounded-3xl z-[110] shadow-2xl shadow-accent/20 transition-all active:scale-[0.98]"
+            >
+              Создать категорию
+            </button>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 }
@@ -99,85 +125,91 @@ export function CategoriesView() {
   const COMMON_CURRENCIES = ['USD', 'EUR', 'RUB', 'KZT', 'GBP', 'TRY', 'GEL'];
 
   return (
-    <div className="p-4 flex flex-col gap-6">
-      <header className="pt-8 pb-4 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Настройки</h1>
-          <p className="text-sm text-textMuted mt-1">Категории и предпочтения</p>
-        </div>
+    <div className="p-6 flex flex-col gap-8">
+      <header className="pt-8 pb-4">
+        <h1 className="text-4xl font-bold tracking-tight">Настройки</h1>
+        <p className="text-sm text-textMuted mt-1">Персонализация и валюты</p>
       </header>
 
       {/* Preferences / Base Currency Selection */}
-      <div className="bg-card rounded-3xl p-5 shadow-lg flex flex-col gap-4 border border-white/5">
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col">
-            <span className="font-semibold text-white">Базовая валюта</span>
-            <span className="text-xs text-textMuted">В ней будет считаться общий баланс и бюджет</span>
+      <section className="bg-card rounded-[32px] p-6 shadow-xl border border-white/5 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <span className="font-bold text-lg text-white">Основная валюта</span>
+            <span className="text-xs text-textMuted max-w-[200px]">В этой валюте будет считаться твой бюджет и баланс по всем счетам.</span>
           </div>
           <select 
-            className="bg-background px-4 py-2 rounded-xl outline-none border border-transparent focus:border-accent text-accent font-bold"
+            className="bg-background px-4 py-3 rounded-2xl outline-none border border-transparent focus:border-accent text-accent font-black shadow-inner"
             value={baseCurrency}
             onChange={(e) => updatePreferences({ baseCurrency: e.target.value })}
           >
             {COMMON_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-      </div>
+      </section>
 
       <div className="flex justify-between items-center mt-4">
-        <h2 className="text-xl font-bold">Категории</h2>
-        <div className="flex gap-2">
-          <button onClick={handleAddFolder} className="w-10 h-10 bg-card rounded-2xl flex items-center justify-center text-textMuted active:scale-95">
+        <h2 className="text-2xl font-bold">Категории</h2>
+        <div className="flex gap-3">
+          <button onClick={handleAddFolder} className="w-10 h-10 bg-card rounded-xl flex items-center justify-center text-textMuted active:scale-95 border border-white/5">
             <FolderPlus size={20} />
           </button>
-          <button onClick={() => setIsModalOpen(true)} className="w-10 h-10 bg-card rounded-2xl flex items-center justify-center text-accent shadow-lg active:scale-95">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <button onClick={() => setIsModalOpen(true)} className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center text-white shadow-lg active:scale-95">
+            <Plus size={22} strokeWidth={3} />
           </button>
         </div>
       </div>
 
-      {categoryFolders.map(folder => {
-        const folderCategories = categories.filter(c => c.folderId === folder.id);
-        const isExpanded = expandedFolders[folder.id] !== false; // Default true
+      <div className="flex flex-col gap-8 pb-32">
+        {categoryFolders.map(folder => {
+          const folderCategories = categories.filter(c => c.folderId === folder.id);
+          const isExpanded = expandedFolders[folder.id] !== false; // Default true
 
-        return (
-          <div key={folder.id} className="flex flex-col gap-4">
-            <button 
-              onClick={() => toggleFolder(folder.id)}
-              className="flex items-center gap-2 text-textMuted hover:text-white transition-colors px-2"
-            >
-              {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-              <span className="font-semibold text-lg">{folder.name}</span>
-              <span className="ml-auto bg-card px-2 py-0.5 rounded-full text-xs">{folderCategories.length}</span>
-            </button>
+          return (
+            <div key={folder.id} className="flex flex-col gap-5">
+              <button 
+                type="button"
+                onClick={() => toggleFolder(folder.id)}
+                className="flex items-center gap-3 text-textMuted hover:text-white transition-colors group"
+              >
+                <div className="w-7 h-7 rounded-lg bg-card flex items-center justify-center transition-colors group-hover:bg-accent/10">
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </div>
+                <span className="font-bold text-lg tracking-tight">{folder.name}</span>
+                <span className="bg-card px-2 py-0.5 rounded-full text-[10px] font-black">{folderCategories.length}</span>
+              </button>
 
-            <AnimatePresence>
-              {isExpanded && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-4 gap-3 overflow-hidden"
-                >
-                  {folderCategories.map(c => (
-                    <div key={c.id} className="flex flex-col items-center gap-2 p-3 bg-card rounded-2xl shadow-sm border border-transparent" style={{ borderColor: `${c.color}30` }}>
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${c.color}20`, color: c.color }}>
-                        {c.icon}
-                      </div>
-                      <span className="text-xs truncate w-full text-center text-textMuted">{c.name}</span>
-                    </div>
-                  ))}
-                  {folderCategories.length === 0 && (
-                    <div className="col-span-4 text-center text-xs text-textMuted py-4">Папка пуста</div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        );
-      })}
-
-      <div className="h-24" /> {/* Spacer for bottom nav */}
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="grid grid-cols-4 gap-3 overflow-hidden"
+                  >
+                    {folderCategories.map(c => (
+                      <motion.div 
+                        key={c.id} 
+                        layout
+                        className="flex flex-col items-center gap-2 p-4 bg-card rounded-[24px] shadow-sm border border-white/5 active:scale-95 transition-transform"
+                      >
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner bg-background/40">
+                          {c.icon}
+                        </div>
+                        <span className="text-[10px] font-bold truncate w-full text-center text-textMuted tracking-tight uppercase">{c.name}</span>
+                        <div className="w-4 h-1 rounded-full" style={{ backgroundColor: c.color }} />
+                      </motion.div>
+                    ))}
+                    {folderCategories.length === 0 && (
+                      <div className="col-span-4 text-center text-xs text-textMuted py-4 bg-background/20 rounded-2xl border border-dashed border-white/5">Папка пуста</div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+      </div>
 
       <AddCategoryModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
