@@ -1,0 +1,39 @@
+  ▲ Next.js 14.2.3
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+> [PWA] Compile server
+> [PWA] Compile server
+> [PWA] Compile client (static)
+> [PWA] Auto register service worker with: C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next-pwa\register.js
+> [PWA] Service worker: C:\Users\ТИВИЩКА\Downloads\dmoney\public\sw.js
+> [PWA]   url: /sw.js
+> [PWA]   scope: /
+Failed to compile.
+
+src\app\layout.tsx
+An error occurred in `next/font`.
+
+Error: Cannot find module 'autoprefixer'
+Require stack:
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\config\blocks\css\index.js
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\config\index.js
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack-config.js
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\plugins\next-trace-entrypoints-plugin.js
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\collect-build-traces.js
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\index.js
+- C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\cli\next-build.js
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1456:15)
+    at C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\server\require-hook.js:55:36
+    at require.resolve (node:internal/modules/helpers:163:19)
+    at loadPlugin (C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:49:32)
+    at C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:157:56
+    at Array.map (<anonymous>)
+    at getPostCssPlugins (C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\config\blocks\css\plugins.js:157:47)
+    at async C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\config\blocks\css\index.js:124:36
+    at async C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\build\webpack\loaders\next-font-loader\index.js:86:33
+    at async Span.traceAsyncFn (C:\Users\ТИВИЩКА\Downloads\dmoney\node_modules\next\dist\trace\trace.js:154:20)
+
+
+> Build failed because of webpack errors

@@ -6,14 +6,9 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { AddExpenseModal } from './add-expense-modal';
 
-const categoryMap: Record<string, { icon: string; name: string }> = {
-  '1': { icon: '🍔', name: 'Еда' },
-  '2': { icon: '🚕', name: 'Транспорт' },
-  '3': { icon: '🏠', name: 'Жильё' },
-};
-
 export function ExpensesView() {
-  const { expenses, baseCurrency } = useStore();
+  const { expenses, preferences, categories } = useStore();
+  const { baseCurrency } = preferences;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Calculate totals
@@ -39,11 +34,11 @@ export function ExpensesView() {
           ) : (
             <div className="flex flex-col gap-5">
               {expenses.slice().reverse().map((exp) => {
-                const cat = categoryMap[exp.categoryId] || { icon: '🔹', name: 'Другое' };
+                const cat = categories.find(c => c.id === exp.categoryId) || { icon: '🔹', name: 'Другое', color: '#888' };
                 return (
                   <div key={exp.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-xl">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>
                         {cat.icon}
                       </div>
                       <div>
@@ -53,8 +48,15 @@ export function ExpensesView() {
                         </div>
                       </div>
                     </div>
-                    <div className="font-semibold text-lg">
-                      -{exp.amount} {exp.currency}
+                    <div className="text-right">
+                      <div className="font-semibold text-lg text-white">
+                        -{exp.originalAmount} {exp.originalCurrency}
+                      </div>
+                      {exp.originalCurrency !== baseCurrency && (
+                        <div className="text-xs text-textMuted">
+                          ~{exp.convertedAmount.toFixed(2)} {baseCurrency}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

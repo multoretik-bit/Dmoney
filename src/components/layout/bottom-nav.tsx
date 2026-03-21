@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CreditCard, PieChart, Wallet } from 'lucide-react';
+import { CreditCard, PieChart, Wallet, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 const NAV_ITEMS = [
   { href: '/expenses', label: 'Траты', icon: CreditCard },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
+  { href: '/categories', label: 'Категории', icon: Tags },
   { href: '/wallets', label: 'Кошельки', icon: Wallet },
 ];
 
@@ -17,7 +18,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-t border-white/5 pb-safe">
-      <div className="flex justify-around items-center h-20 px-6 max-w-md mx-auto">
+      <div className="flex justify-around items-center h-20 px-4 max-w-md mx-auto">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
