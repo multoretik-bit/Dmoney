@@ -99,18 +99,21 @@ export function WalletsView() {
              </div>
              
              {/* CRUD Actions for Portfolios */}
-             <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+             <div className={cn(
+               "absolute top-6 right-6 flex items-center gap-2 transition-opacity z-30",
+               selectedPortfolioId === p.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+             )}>
                <button 
-                 onClick={(e) => { e.stopPropagation(); handleEditPortfolio(p); }}
-                 className="p-2.5 bg-black/20 hover:bg-black/40 rounded-xl transition-all"
+                 onClick={(e) => { e.stopPropagation(); console.log('Edit clicked', p.name); handleEditPortfolio(p); }}
+                 className="p-3 bg-black/40 hover:bg-black/60 rounded-xl transition-all border border-white/10 active:scale-95"
                >
-                 <Edit2 size={14} className="text-white/60" />
+                 <Edit2 size={16} className="text-white" />
                </button>
                <button 
-                 onClick={(e) => { e.stopPropagation(); deletePortfolio(p.id); }}
-                 className="p-2.5 bg-black/20 hover:bg-red-500/40 rounded-xl transition-all"
+                 onClick={(e) => { e.stopPropagation(); console.log('Delete clicked', p.id); deletePortfolio(p.id); }}
+                 className="p-3 bg-black/40 hover:bg-red-500/60 rounded-xl transition-all border border-white/10 active:scale-95"
                >
-                 <Trash2 size={14} className="text-white/60" />
+                 <Trash2 size={16} className="text-white" />
                </button>
              </div>
           </motion.div>
