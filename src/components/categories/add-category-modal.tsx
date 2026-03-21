@@ -58,7 +58,7 @@ export function AddCategoryModal({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
     
     // Calculate next sort order if new
@@ -68,7 +68,7 @@ export function AddCategoryModal({
       : 0;
 
     if (editingCategory) {
-      updateCategory(editingCategory.id, { 
+      await updateCategory(editingCategory.id, { 
         name: name.trim(), 
         parentId: parentId || undefined, 
         color, 
@@ -76,7 +76,7 @@ export function AddCategoryModal({
         budgetLimit: hideBudgetLimit ? (editingCategory.budgetLimit || 0) : (parseFloat(budgetLimit) || 0)
       });
     } else {
-      addCategory({
+      await addCategory({
         id: generateUUID(),
         name: name.trim(),
         parentId: parentId || undefined,

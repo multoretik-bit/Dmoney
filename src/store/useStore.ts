@@ -65,6 +65,7 @@ interface UserState {
   expenses: Expense[];
   user: User | null;
   isAuthModalOpen: boolean;
+  isReordering: boolean;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -115,6 +116,7 @@ export const useStore = create<UserState>()(
       expenses: [],
       user: null,
       isAuthModalOpen: false,
+      isReordering: false,
 
       setUser: (user) => set({ user }),
       setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
@@ -128,7 +130,7 @@ export const useStore = create<UserState>()(
         set((state) => ({ categories: [...state.categories, category] }));
         const { user } = useStore.getState();
         if (user) {
-          await supabase.from('categories').upsert({
+          const { error } = await supabase.from('categories').upsert({
              id: category.id,
              user_id: user.id,
              parent_id: category.parentId || null,
@@ -137,7 +139,8 @@ export const useStore = create<UserState>()(
              color: category.color,
              budget_limit: category.budgetLimit,
              sort_order: category.sortOrder
-          });
+          }, { onConflict: 'id' });
+          if (error) console.error('❌ Sync error (addCategory):', error);
         }
       },
 
@@ -150,7 +153,8 @@ export const useStore = create<UserState>()(
         if (state.user) {
           const cat = state.categories.find(c => c.id === id);
           if (cat) {
-            await supabase.from('categories').upsert({
+            console.log('📤 Updating category in Supabase:', cat.name);
+            const { error } = await supabase.from('categories').upsert({
               id: cat.id,
               user_id: state.user.id,
               parent_id: cat.parentId || null,
@@ -159,7 +163,8 @@ export const useStore = create<UserState>()(
               color: cat.color,
               budget_limit: cat.budgetLimit,
               sort_order: cat.sortOrder
-            });
+            }, { onConflict: 'id' });
+            if (error) console.error('❌ Sync error (updateCategory):', error);
           }
         }
       },
@@ -180,54 +185,63 @@ export const useStore = create<UserState>()(
 
       updateCategoryOrder: async (id, direction) => {
         const state = useStore.getState();
-        const category = state.categories.find(c => c.id === id);
-        if (!category) return;
+        if (state.isReordering) return;
+        set({ isReordering: true });
 
-        // Get siblings and sort them by current order (or index as tie-breaker)
-        const siblings = state.categories
-          .filter(c => (c.parentId || undefined) === (category.parentId || undefined))
-          .sort((a, b) => {
-             if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-             return a.id.localeCompare(b.id); // Tie-breaker
+        try {
+          const category = state.categories.find(c => c.id === id);
+          if (!category) return;
+
+          // Get siblings and sort them by current order (or index as tie-breaker)
+          const siblings = state.categories
+            .filter(c => (c.parentId || undefined) === (category.parentId || undefined))
+            .sort((a, b) => {
+               if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+               return a.id.localeCompare(b.id); // Tie-breaker
+            });
+
+          const currentIndex = siblings.findIndex(s => s.id === id);
+          const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+          if (newIndex < 0 || newIndex >= siblings.length) return;
+
+          // Create a new array of siblings with swapped items
+          const newSiblings = [...siblings];
+          const temp = newSiblings[currentIndex];
+          newSiblings[currentIndex] = newSiblings[newIndex];
+          newSiblings[newIndex] = temp;
+
+          // Assign clean sort orders 0, 1, 2...
+          const updatedWithNewOrders = newSiblings.map((s, idx) => ({
+             ...s,
+             sortOrder: idx
+          }));
+
+          // Merge back into main categories list
+          const updatedCategories = state.categories.map(c => {
+             const updatedSibling = updatedWithNewOrders.find(u => u.id === c.id);
+             return updatedSibling || c;
           });
 
-        const currentIndex = siblings.findIndex(s => s.id === id);
-        const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-        if (newIndex < 0 || newIndex >= siblings.length) return;
-
-        // Create a new array of siblings with swapped items
-        const newSiblings = [...siblings];
-        const temp = newSiblings[currentIndex];
-        newSiblings[currentIndex] = newSiblings[newIndex];
-        newSiblings[newIndex] = temp;
-
-        // Assign clean sort orders 0, 1, 2...
-        const updatedWithNewOrders = newSiblings.map((s, idx) => ({
-           ...s,
-           sortOrder: idx
-        }));
-
-        // Merge back into main categories list
-        const updatedCategories = state.categories.map(c => {
-           const updatedSibling = updatedWithNewOrders.find(u => u.id === c.id);
-           return updatedSibling || c;
-        });
-
-        set({ categories: updatedCategories });
-        
-        // Push all updated siblings to Supabase in a single batch
-        if (state.user) {
-           await supabase.from('categories').upsert(updatedWithNewOrders.map(s => ({
-              id: s.id,
-              user_id: state.user!.id,
-              parent_id: s.parentId || null,
-              name: s.name,
-              icon: s.icon,
-              color: s.color,
-              budget_limit: s.budgetLimit,
-              sort_order: s.sortOrder
-           })));
+          set({ categories: updatedCategories });
+          
+          // Push all updated siblings to Supabase in a single batch
+          if (state.user) {
+             console.log('📤 Updating sequence in Supabase...', updatedWithNewOrders.map(s => s.name));
+             const { error } = await supabase.from('categories').upsert(updatedWithNewOrders.map(s => ({
+                id: s.id,
+                user_id: state.user!.id,
+                parent_id: s.parentId || null,
+                name: s.name,
+                icon: s.icon,
+                color: s.color,
+                budget_limit: s.budgetLimit,
+                sort_order: s.sortOrder
+             })), { onConflict: 'id' });
+             if (error) console.error('❌ Sync error (updateCategoryOrder):', error);
+          }
+        } finally {
+          set({ isReordering: false });
         }
       },
 
@@ -305,15 +319,18 @@ export const useStore = create<UserState>()(
             supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
           ]);
 
-          if (cats.data) set({ categories: cats.data.map((c: any) => ({
-            id: c.id,
-            parentId: c.parent_id || undefined,
-            name: c.name,
-            icon: c.icon,
-            color: c.color,
-            budgetLimit: c.budget_limit,
-            sortOrder: c.sort_order || 0
-          })) });
+          if (cats.data) {
+            console.log(`📥 Fetched ${cats.data.length} categories from Supabase`);
+            set({ categories: cats.data.map((c: any) => ({
+              id: c.id,
+              parentId: c.parent_id || undefined,
+              name: c.name,
+              icon: c.icon,
+              color: c.color,
+              budgetLimit: c.budget_limit,
+              sortOrder: c.sort_order || 0
+            })) });
+          }
 
           if (ports.data) set({ portfolios: ports.data.map((p: any) => ({
             id: p.id,
