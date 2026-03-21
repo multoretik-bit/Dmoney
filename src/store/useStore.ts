@@ -1,34 +1,23 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export interface WalletFolder {
-  id: string;
-  name: string;
-  order: number;
-}
-
-export interface CategoryFolder {
-  id: string;
-  name: string;
-  order: number;
-}
+export type WalletType = 'spending' | 'saving' | 'debt';
 
 export interface Category {
   id: string;
-  folderId: string;
+  parentId?: string; // NULL if it's a Head Category
   name: string;
   icon: string;
   color: string;
-  budgetLimit?: number; // Target limit for this category
+  budgetLimit?: number;
 }
 
 export interface Wallet {
   id: string;
-  folderId?: string;
   name: string;
   currency: string;
-  balance: number; // Stored in its own currency
-  type: 'cash' | 'bank' | 'crypto';
+  balance: number;
+  type: WalletType;
   icon?: string;
   color?: string;
 }
@@ -37,9 +26,9 @@ export interface Expense {
   id: string;
   originalAmount: number;
   originalCurrency: string;
-  convertedAmount: number; // Amount in the user's baseCurrency
-  walletAmount: number; // Amount actually deducted from the wallet in the wallet's currency
-  exchangeRate: number; // Resulting rate for UI display if needed
+  convertedAmount: number;
+  walletAmount: number;
+  exchangeRate: number;
   categoryId: string;
   walletId: string;
   date: string;
@@ -52,8 +41,6 @@ export interface UserPreferences {
 
 interface UserState {
   preferences: UserPreferences;
-  walletFolders: WalletFolder[];
-  categoryFolders: CategoryFolder[];
   categories: Category[];
   wallets: Wallet[];
   expenses: Expense[];
@@ -61,8 +48,6 @@ interface UserState {
   // Actions
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   addSavedColor: (color: string) => void;
-  addWalletFolder: (folder: WalletFolder) => void;
-  addCategoryFolder: (folder: CategoryFolder) => void;
   addCategory: (category: Category) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
   setCategoryLimit: (id: string, limit: number) => void;
@@ -80,16 +65,13 @@ export const useStore = create<UserState>()(
         baseCurrency: 'USD',
         savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
       },
-      walletFolders: [
-        { id: 'default', name: 'Личное', order: 0 }
-      ],
-      categoryFolders: [
-        { id: 'default', name: 'Основные', order: 0 }
-      ],
       categories: [
-        { id: '1', folderId: 'default', name: 'Еда', icon: '🍔', color: '#f59e0b' },
-        { id: '2', folderId: 'default', name: 'Транспорт', icon: '🚕', color: '#3b82f6' },
-        { id: '3', folderId: 'default', name: 'Жильё', icon: '🏠', color: '#8b5cf6' },
+        { id: '1', name: 'Дом', icon: '🏠', color: '#8b5cf6' }, // Head
+        { id: '1-1', parentId: '1', name: 'Оплата квартиры', icon: '🔑', color: '#8b5cf6' },
+        { id: '1-2', parentId: '1', name: 'Интернет и телефон', icon: '📱', color: '#8b5cf6' },
+        { id: '2', name: 'Еда и напитки', icon: '🍔', color: '#f59e0b' }, // Head
+        { id: '2-1', parentId: '2', name: 'Продукты', icon: '🛒', color: '#f59e0b' },
+        { id: '2-2', parentId: '2', name: 'Рестораны', icon: '🍕', color: '#f59e0b' },
       ],
       wallets: [],
       expenses: [],
@@ -99,8 +81,6 @@ export const useStore = create<UserState>()(
         if (state.preferences.savedColors.includes(color)) return state;
         return { preferences: { ...state.preferences, savedColors: [...state.preferences.savedColors, color] } };
       }),
-      addWalletFolder: (folder) => set((state) => ({ walletFolders: [...state.walletFolders, folder] })),
-      addCategoryFolder: (folder) => set((state) => ({ categoryFolders: [...state.categoryFolders, folder] })),
       addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),
       updateCategory: (id, updates) => set((state) => ({
         categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
@@ -109,7 +89,7 @@ export const useStore = create<UserState>()(
         categories: state.categories.map(c => c.id === id ? { ...c, budgetLimit: limit } : c)
       })),
       deleteCategory: (id) => set((state) => ({
-        categories: state.categories.filter(c => c.id !== id)
+        categories: state.categories.filter(c => c.id !== id && c.parentId !== id)
       })),
       addWallet: (wallet) => set((state) => ({ wallets: [...state.wallets, wallet] })),
       updateWallet: (id, updates) => set((state) => ({

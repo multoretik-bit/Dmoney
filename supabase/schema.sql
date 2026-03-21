@@ -13,6 +13,7 @@ CREATE TABLE accounts (
 CREATE TABLE categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+  parent_id UUID REFERENCES categories(id) ON DELETE CASCADE, -- Nested categories
   name TEXT NOT NULL,
   icon TEXT,
   color TEXT,
@@ -27,8 +28,7 @@ CREATE TABLE wallets (
   name TEXT NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   balance NUMERIC DEFAULT 0.0,
-  type TEXT CHECK (type IN ('cash', 'bank', 'crypto')) DEFAULT 'cash',
-  folder_name TEXT,
+  type TEXT CHECK (type IN ('spending', 'saving', 'debt')) DEFAULT 'spending',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

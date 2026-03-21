@@ -135,8 +135,8 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                 </div>
               </div>
 
-              {/* Category Grid */}
-              <div className="flex flex-col gap-4">
+              {/* Category Grid (Grouped) */}
+              <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-2 px-1">
                   <Tag size={14} className="text-accent" />
                   <div className="text-sm text-textMuted font-bold uppercase tracking-wider">Категория</div>
@@ -146,22 +146,47 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                     Сначала создайте категории
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-3">
-                    {categories.map(c => (
-                      <button 
-                        key={c.id} 
-                        type="button"
-                        onClick={() => setCategoryId(c.id)}
-                        className={cn(
-                          "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all border-2",
-                          categoryId === c.id ? "border-white shadow-lg" : "bg-card border-transparent opacity-60"
-                        )}
-                        style={{ backgroundColor: c.color }}
-                      >
-                        <div className="text-2xl drop-shadow-md">{c.icon}</div>
-                        <span className="text-[10px] font-black uppercase truncate w-full text-center text-white">{c.name}</span>
-                      </button>
-                    ))}
+                  <div className="flex flex-col gap-8">
+                    {categories.filter(c => !c.parentId).map(head => {
+                      const subs = categories.filter(c => c.parentId === head.id);
+                      return (
+                        <div key={head.id} className="flex flex-col gap-3">
+                          <div className="flex items-center gap-2 px-1">
+                             <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">{head.name}</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-3">
+                            {/* Head category itself can be selected */}
+                            <button 
+                              type="button"
+                              onClick={() => setCategoryId(head.id)}
+                              className={cn(
+                                "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all border-2",
+                                categoryId === head.id ? "border-white shadow-lg" : "bg-card border-transparent opacity-60"
+                              )}
+                              style={{ backgroundColor: head.color }}
+                            >
+                              <div className="text-2xl drop-shadow-md">{head.icon}</div>
+                              <span className="text-[10px] font-black uppercase truncate w-full text-center text-white">Все</span>
+                            </button>
+                            {subs.map(sub => (
+                              <button 
+                                key={sub.id} 
+                                type="button"
+                                onClick={() => setCategoryId(sub.id)}
+                                className={cn(
+                                  "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all border-2",
+                                  categoryId === sub.id ? "border-white shadow-lg" : "bg-card border-transparent opacity-60"
+                                )}
+                                style={{ backgroundColor: sub.color }}
+                              >
+                                <div className="text-2xl drop-shadow-md">{sub.icon}</div>
+                                <span className="text-[10px] font-black uppercase truncate w-full text-center text-white">{sub.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
