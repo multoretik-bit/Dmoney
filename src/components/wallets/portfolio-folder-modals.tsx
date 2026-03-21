@@ -39,7 +39,7 @@ export function AddPortfolioModal({
     if (editingPortfolio) {
       updatePortfolio(editingPortfolio.id, { name: name.trim(), color, icon });
     } else {
-      addPortfolio({ id: Date.now().toString(), name: name.trim(), color, icon });
+      addPortfolio({ id: crypto.randomUUID(), name: name.trim(), color, icon });
     }
     
     onClose();
@@ -124,7 +124,7 @@ export function AddFolderModal({
     if (editingFolder) {
       updateFolder(editingFolder.id, { name: name.trim(), color });
     } else {
-      addFolder({ id: Date.now().toString(), portfolioId, name: name.trim(), color });
+      addFolder({ id: crypto.randomUUID(), portfolioId, name: name.trim(), color });
     }
     
     onClose();

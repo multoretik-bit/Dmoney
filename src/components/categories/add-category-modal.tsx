@@ -63,7 +63,7 @@ export function AddCategoryModal({
       });
     } else {
       addCategory({
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: name.trim(),
         parentId: parentId || undefined,
         color,

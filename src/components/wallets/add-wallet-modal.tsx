@@ -72,7 +72,7 @@ export function AddWalletModal({
       updateWallet(editingWallet.id, walletData);
     } else {
       addWallet({
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         ...walletData
       });
     }

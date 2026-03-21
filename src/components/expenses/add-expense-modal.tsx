@@ -57,7 +57,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     const exchangeRate = getExchangeRate(currency, wallet.currency);
 
     addExpense({
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       originalAmount: numericAmount,
       originalCurrency: currency,
       convertedAmount,

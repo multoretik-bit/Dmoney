@@ -10,12 +10,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { 
-    user, setUser, pullData, pushData, wallets, 
+  const { user, setUser, pullData, pushData, wallets, 
     categories, portfolios, folders, expenses, preferences 
   } = useStore();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -41,8 +41,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!user) return;
     
-    const timeoutId = setTimeout(() => {
-      pushData();
+    const timeoutId = setTimeout(async () => {
+      setSyncStatus('syncing');
+      try {
+        await pushData();
+        setSyncStatus('synced');
+      } catch {
+        setSyncStatus('error');
+      }
     }, 2000); // 2 second debounce
 
     return () => clearTimeout(timeoutId);
@@ -57,8 +63,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       .on(
         'postgres_changes',
         { event: '*', schema: 'public' },
-        () => {
-          pullData();
+        async () => {
+          setSyncStatus('syncing');
+          await pullData();
+          setSyncStatus('synced');
         }
       )
       .subscribe();
@@ -91,9 +99,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         <div className="flex items-center gap-3">
           {user && (
-            <div className="hidden sm:flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Synced</span>
+            <div className={cn(
+              "hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all duration-500",
+              syncStatus === 'syncing' ? "bg-accent/10 border-accent/20" : 
+              syncStatus === 'error' ? "bg-red-500/10 border-red-500/20" : "bg-white/5 border-white/5"
+            )}>
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                syncStatus === 'syncing' ? "bg-accent animate-pulse" :
+                syncStatus === 'synced' ? "bg-emerald-500" :
+                syncStatus === 'error' ? "bg-red-500" : "bg-white/20"
+              )} />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                {syncStatus === 'syncing' ? 'Syncing...' : 
+                 syncStatus === 'error' ? 'Sync Error' : 'Cloud Synced'}
+              </span>
             </div>
           )}
           

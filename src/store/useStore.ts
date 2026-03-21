@@ -99,12 +99,12 @@ export const useStore = create<UserState>()(
         savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
       },
       categories: [
-        { id: '1', name: 'Дом', icon: '🏠', color: '#8b5cf6' },
-        { id: '1-1', parentId: '1', name: 'Оплата квартиры', icon: '🔑', color: '#8b5cf6' },
-        { id: '2', name: 'Еда и напитки', icon: '🍔', color: '#f59e0b' },
+        { id: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Дом', icon: '🏠', color: '#8b5cf6' },
+        { id: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', parentId: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Оплата квартиры', icon: '🔑', color: '#8b5cf6' },
+        { id: 'f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f', name: 'Еда и напитки', icon: '🍔', color: '#f59e0b' },
       ],
       portfolios: [
-        { id: 'p1', name: 'Main Capital', color: '#3b82f6', icon: '🏦' },
+        { id: '7d8e9f0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a', name: 'Main Capital', color: '#3b82f6', icon: '🏦' },
       ],
       folders: [],
       wallets: [],
@@ -173,6 +173,7 @@ export const useStore = create<UserState>()(
         if (!user) return;
 
         try {
+          console.log('🔄 Pulling data from Supabase...');
           // Fetch all in parallel
           const [cats, ports, folds, walls, exps, prefs] = await Promise.all([
             supabase.from('categories').select('*'),
@@ -234,8 +235,9 @@ export const useStore = create<UserState>()(
             savedColors: prefs.data.saved_colors || []
           }});
 
+          console.log('✅ Data pulled successfully');
         } catch (error) {
-          console.error('Error pulling data:', error);
+          console.error('❌ Error pulling data:', error);
         }
       },
 
@@ -246,6 +248,7 @@ export const useStore = create<UserState>()(
          const state = useStore.getState();
          
          try {
+            console.log('☁️ Pushing data to Supabase...');
             await Promise.all([
                supabase.from('categories').upsert(state.categories.map(c => ({
                   id: c.id,
@@ -300,8 +303,9 @@ export const useStore = create<UserState>()(
                   updated_at: new Date().toISOString()
                })
             ]);
+            console.log('✅ Data pushed successfully');
          } catch (error) {
-            console.error('Error pushing data:', error);
+            console.error('❌ Error pushing data:', error);
          }
       }
     }),
