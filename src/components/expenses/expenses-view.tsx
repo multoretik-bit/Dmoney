@@ -1,237 +1,229 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore, Category } from '@/store/useStore';
-import { format, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
+import { useStore, Category, Expense } from '@/store/useStore';
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  isSameDay, 
+  eachDayOfInterval, 
+  startOfWeek, 
+  endOfWeek,
+  addMonths,
+  subMonths
+} from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { AddExpenseModal } from './add-expense-modal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function ExpensesView() {
   const { expenses, preferences, categories } = useStore();
   const { baseCurrency } = preferences;
-  const [activeTab, setActiveTab] = useState<'overview' | 'spending' | 'list'>('spending');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'heads' | 'subs'>('heads');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
 
-  // Head categories
-  const headCategories = categories.filter(c => !c.parentId);
+  const dayExpenses = expenses.filter(e => isSameDay(new Date(e.date), selectedDate));
+  const totalSpentToday = dayExpenses.reduce((sum, e) => sum + e.convertedAmount, 0);
 
-  const [activeCategory, setActiveCategory] = useState<Category | null>(headCategories[0] || null);
+  // Group daily expenses by category
+  const groupedExpenses = dayExpenses.reduce((acc, exp) => {
+    const cat = categories.find(c => c.id === exp.categoryId) || { id: 'other', name: 'Other', icon: '🔹', color: '#888' };
+    if (!acc[cat.id]) {
+      acc[cat.id] = { category: cat, items: [], total: 0 };
+    }
+    acc[cat.id].items.push(exp);
+    acc[cat.id].total += exp.convertedAmount;
+    return acc;
+  }, {} as Record<string, { category: any, items: Expense[], total: number }>);
 
-  // Calculate spending per head category (including subcategories)
-  const headCategorySpending = headCategories.map(head => {
-    const spent = expenses.filter(e => {
-      const cat = categories.find(c => c.id === e.categoryId);
-      return cat?.id === head.id || cat?.parentId === head.id;
-    }).reduce((sum, e) => sum + e.convertedAmount, 0);
-    return { ...head, spent };
-  }).filter(h => h.spent > 0);
+  // Calendar logic
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(monthStart);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const totalSpent = headCategorySpending.reduce((sum, h) => sum + h.spent, 0);
-
-  // Donut SVG logic
-  let currentOffset = 0;
-  const segments = headCategorySpending.map(h => {
-    const percentage = totalSpent > 0 ? (h.spent / totalSpent) * 100 : 0;
-    const dashArray = `${percentage * 2.51} 251.2`;
-    const offset = -currentOffset;
-    currentOffset += percentage;
-    return { ...h, dashArray, offset };
-  });
-
-  const displayCategory = activeCategory || headCategories[0];
-  const displaySpent = headCategorySpending.find(h => h.id === displayCategory?.id)?.spent || 0;
+  const getDaySpendingStatus = (date: Date) => {
+    const dayTotal = expenses
+      .filter(e => isSameDay(new Date(e.date), date))
+      .reduce((sum, e) => sum + e.convertedAmount, 0);
+    
+    if (dayTotal === 0) return null;
+    if (dayTotal > 100) return 'hight'; // Just a placeholder logic
+    return 'lite';
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0d1117] text-white pb-32">
       <header className="p-6 pt-12 flex flex-col gap-6">
         <div className="flex justify-between items-center px-2">
-           <div className="flex items-center gap-2">
-              <button onClick={() => setCurrentMonth(prev => new Date(prev.setMonth(prev.getMonth() - 1)))} className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-all active:scale-95 text-white/40"><ChevronLeft size={18} /></button>
-              <div className="flex flex-col items-center">
-                <span className="text-xl font-black uppercase tracking-widest leading-none">{format(currentMonth, 'MMMM yyyy', { locale: ru })}</span>
-                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">{expenses.length} TRNS</span>
+           <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setCurrentMonth(prev => subMonths(prev, 1))} 
+                className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-all active:scale-95 text-white/40"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex flex-col items-center min-w-[120px]">
+                <span className="text-xl font-black uppercase tracking-widest leading-none">
+                  {format(currentMonth, 'MMMM', { locale: ru })}
+                </span>
+                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">
+                  {format(currentMonth, 'yyyy')}
+                </span>
               </div>
-              <button onClick={() => setCurrentMonth(prev => new Date(prev.setMonth(prev.getMonth() + 1)))} className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-all active:scale-95 text-white/40"><ChevronRight size={18} /></button>
+              <button 
+                onClick={() => setCurrentMonth(prev => addMonths(prev, 1))} 
+                className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-all active:scale-95 text-white/40"
+              >
+                <ChevronRight size={18} />
+              </button>
            </div>
-           <button onClick={() => setIsModalOpen(true)} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all active:scale-95"><Plus size={24} /></button>
-        </div>
-
-        <div className="bg-white/5 p-1 rounded-2xl flex">
-          {(['overview', 'spending', 'list'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "flex-1 py-4 text-[10px] font-black uppercase tracking-[0.25em] rounded-xl transition-all",
-                activeTab === tab ? "bg-white text-black shadow-lg" : "text-white/40"
-              )}
-            >
-              {tab}
-            </button>
-          ))}
+           <button 
+            onClick={() => setIsModalOpen(true)} 
+            className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all active:scale-95 border border-white/5 shadow-xl"
+           >
+             <Plus size={24} />
+           </button>
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 hide-scrollbar flex flex-col gap-8 pb-32">
-        {activeTab === 'spending' && (
-           <>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-[#1c2128] p-5 rounded-[32px] border border-white/5 flex flex-col items-center gap-1 shadow-2xl">
-                    <span className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none">Income</span>
-                    <span className="text-sm font-black text-[#00bfa5] leading-none">+$0</span>
-                </div>
-                <div className="bg-[#1c2128] p-5 rounded-[32px] border border-white/5 flex flex-col items-center gap-1 shadow-2xl">
-                    <span className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none">Expenses</span>
-                    <span className="text-sm font-black text-[#ff4b91] leading-none">-${totalSpent.toLocaleString()}</span>
-                </div>
-                <div className="bg-[#1c2128] p-5 rounded-[32px] border border-white/5 flex flex-col items-center gap-1 shadow-2xl">
-                    <span className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none">Left</span>
-                    <span className="text-sm font-black text-white leading-none">${(0 - totalSpent).toLocaleString()}</span>
-                </div>
+        {/* Spent Today Card */}
+        <div className="flex flex-col gap-4">
+           <button 
+             onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+             className="bg-[#1c2128] rounded-[40px] p-8 border border-white/5 flex flex-col gap-2 shadow-2xl relative overflow-hidden group active:scale-[0.98] transition-all"
+           >
+              <div className="absolute top-0 right-0 p-6 text-white/10 transition-transform group-hover:scale-110">
+                {isSummaryExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
               </div>
-
-              {/* Center Donut Chart */}
-              <div className="relative w-80 h-80 mx-auto flex items-center justify-center">
-                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                   <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
-                   {segments.map((seg) => (
-                     <motion.circle 
-                       key={seg.id}
-                       initial={{ strokeDasharray: "0 251.2" }}
-                       animate={{ strokeDasharray: seg.dashArray }}
-                       cx="50" cy="50" r="40" fill="none" stroke={seg.color} strokeWidth="10" 
-                       strokeDashoffset={seg.offset * 2.51} strokeLinecap="round" 
-                       className="cursor-pointer transition-all hover:stroke-[12px]"
-                       onClick={() => setActiveCategory(seg)}
-                     />
-                   ))}
-                 </svg>
-                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none">
-                    <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center text-3xl shadow-xl">{displayCategory?.icon || '📦'}</div>
-                    <span className="text-xs font-black uppercase text-white/40 tracking-widest">{displayCategory?.name || 'Total'}</span>
-                    <span className="text-4xl font-black text-white leading-none">${displaySpent.toLocaleString()}</span>
-                 </div>
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">
+                {isSameDay(selectedDate, new Date()) ? 'Траты за сегодня' : `Траты за ${format(selectedDate, 'd MMMM', { locale: ru })}`}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-white leading-none">
+                  ${totalSpentToday.toLocaleString()}
+                </span>
               </div>
+              
+              <AnimatePresence>
+                {isSummaryExpanded && dayExpenses.length > 0 && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-3"
+                  >
+                    {Object.values(groupedExpenses).map(({ category, total }) => (
+                      <div key={category.id} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full">
+                        <span className="text-xs">{category.icon}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">${total.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+           </button>
+        </div>
 
-              {/* Category List */}
-              <div className="flex flex-col gap-4">
-                <div className="flex bg-white/5 p-1 rounded-2xl w-fit">
-                   <button 
-                     onClick={() => setViewMode('heads')}
-                     className={cn("px-4 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all", viewMode === 'heads' ? "bg-white/10 text-white" : "text-white/20")}
-                   >Head Categories</button>
-                   <button 
-                     onClick={() => setViewMode('subs')}
-                     className={cn("px-4 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all", viewMode === 'subs' ? "bg-white/10 text-white" : "text-white/20")}
-                   >Categories</button>
-                </div>
-                
-                <div className="flex flex-col gap-3">
-                  {(viewMode === 'heads' ? headCategories : categories.filter(c => c.parentId)).map(cat => {
-                    const spent = expenses
-                      .filter(e => {
-                        if (viewMode === 'heads') {
-                          const expenseCat = categories.find(c => c.id === e.categoryId);
-                          return expenseCat?.id === cat.id || expenseCat?.parentId === cat.id;
-                        }
-                        return e.categoryId === cat.id;
-                      })
-                      .reduce((sum, e) => sum + e.convertedAmount, 0);
+        {/* Calendar Grid */}
+        <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 shadow-2xl">
+          <div className="grid grid-cols-7 gap-y-4 text-center">
+            {['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].map(d => (
+              <span key={d} className="text-[8px] font-black text-white/20 tracking-widest uppercase mb-2">{d}</span>
+            ))}
+            {calendarDays.map((date, i) => {
+              const isSelected = isSameDay(date, selectedDate);
+              const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+              const hasSpending = getDaySpendingStatus(date);
+              const isToday = isSameDay(date, new Date());
 
-                    return (
-                      <motion.div 
-                        key={cat.id} 
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                        className="bg-[#1c2128] p-6 rounded-[32px] flex items-center justify-between border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
-                        onClick={() => setActiveCategory(cat)}
-                      >
-                         <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-[22px] flex items-center justify-center text-2xl shadow-lg border border-white/5" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
-                              {cat.icon}
-                            </div>
-                            <span className="font-black uppercase tracking-widest text-sm opacity-80 group-hover:opacity-100 transition-opacity">{cat.name}</span>
-                         </div>
-                         <div className="flex items-center gap-4">
-                           <span className="text-lg font-black">${spent.toLocaleString()}</span>
-                           <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center text-white/20 group-hover:text-white/40"><ChevronRight size={16} /></div>
-                         </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-           </>
-        )}
+              return (
+                <button 
+                  key={i} 
+                  onClick={() => setSelectedDate(date)}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center h-12 rounded-2xl transition-all active:scale-90",
+                    isSelected ? "bg-white shadow-[0_10px_20px_rgba(255,255,255,0.1)] scale-110 z-10" : "hover:bg-white/5"
+                  )}
+                >
+                  <span className={cn(
+                    "text-[10px] font-black transition-colors",
+                    isSelected ? "text-black" : isCurrentMonth ? "text-white/60" : "text-white/10",
+                    isToday && !isSelected && "text-accent"
+                  )}>
+                    {format(date, 'd')}
+                  </span>
+                  {hasSpending && (
+                    <div className={cn(
+                      "absolute bottom-2 w-1 h-1 rounded-full",
+                      isSelected ? "bg-black/20" : "bg-accent shadow-[0_0_8px_white]"
+                    )} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-        {activeTab === 'overview' && (
-           <div className="flex flex-col gap-8">
-              <div className="bg-[#1c2128] rounded-[40px] p-8 border border-white/5 h-64 flex flex-col justify-between shadow-2xl">
-                 <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                       <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Expenses</span>
-                       <span className="text-3xl font-black text-white">${totalSpent.toLocaleString()}</span>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                       <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-accent" />
-                          <span className="text-[8px] font-bold text-white/40 uppercase">This period</span>
-                       </div>
-                    </div>
-                 </div>
-                 <div className="w-full h-24 bg-white/5 rounded-2xl flex items-center justify-center text-white/10 font-black italic">CHART ANIMATION</div>
-              </div>
-
-              <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 shadow-2xl">
-                <div className="grid grid-cols-7 gap-y-6 text-center">
-                  {['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'].map(d => (
-                    <span key={d} className="text-[8px] font-black text-white/20 tracking-widest uppercase">{d}</span>
-                  ))}
-                  {Array.from({ length: 30 }).map((_, i) => (
-                    <div key={i} className="flex flex-col items-center gap-1">
-                      <span className="text-[10px] font-black text-white/40">{i+1}</span>
-                      {i % 4 === 0 && <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_white]" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
+        {/* Selected Day Transactions */}
+        <div className="flex flex-col gap-4">
+           <div className="flex items-center gap-2 px-2">
+              <CalendarIcon size={12} className="text-white/20" />
+              <span className="text-[10px] font-black uppercase text-white/20 tracking-widest">
+                Transactions • {dayExpenses.length}
+              </span>
            </div>
-        )}
-
-        {activeTab === 'list' && (
-           <div className="flex flex-col gap-4">
-              {expenses.length === 0 ? (
-                <div className="text-center text-white/20 py-20 font-black uppercase tracking-widest">No transactions</div>
+           
+           <div className="flex flex-col gap-3">
+              {dayExpenses.length === 0 ? (
+                <div className="text-center text-white/10 py-12 bg-white/2 rounded-[32px] border border-dashed border-white/5 font-black uppercase text-[10px] tracking-widest">
+                  Нет транзакций
+                </div>
               ) : (
-                expenses.map(exp => {
+                dayExpenses.map(exp => {
                   const cat = categories.find(c => c.id === exp.categoryId) || { icon: '🔹', name: 'Other', color: '#888' };
                   return (
-                    <div key={exp.id} className="bg-[#1c2128] p-6 rounded-[32px] flex items-center justify-between border border-white/5 shadow-xl">
+                    <motion.div 
+                      key={exp.id} 
+                      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                      className="bg-[#1c2128] p-6 rounded-[32px] flex items-center justify-between border border-white/5 shadow-xl group hover:border-white/10 transition-all border-l-4"
+                      style={{ borderLeftColor: cat.color }}
+                    >
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl">{cat.icon}</div>
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                          {cat.icon}
+                        </div>
                         <div className="flex flex-col">
-                          <span className="font-bold">{cat.name}</span>
-                          <span className="text-[10px] font-black text-white/20 uppercase tracking-tighter">{format(new Date(exp.date), 'dd MMM, HH:mm', { locale: ru })}</span>
+                          <span className="font-bold text-white/90 group-hover:text-white transition-colors">{cat.name}</span>
+                          <span className="text-[10px] font-black text-white/20 uppercase tracking-tighter">
+                            {format(new Date(exp.date), 'HH:mm')}
+                          </span>
                         </div>
                       </div>
-                      <span className="text-xl font-black">-{exp.originalAmount} {exp.originalCurrency}</span>
-                    </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-xl font-black text-white">-${exp.originalAmount.toLocaleString()}</span>
+                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{exp.originalCurrency}</span>
+                      </div>
+                    </motion.div>
                   );
                 })
               )}
            </div>
-        )}
+        </div>
       </div>
 
+      {/* Floating Add Button */}
       <button 
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-32 right-8 w-20 h-20 bg-white rounded-full flex items-center justify-center text-black shadow-[0_20px_40px_rgba(255,255,255,0.15)] active:scale-90 transition-all z-40"
+        className="fixed bottom-32 right-8 w-20 h-20 bg-white rounded-full flex items-center justify-center text-black shadow-[0_20px_40px_rgba(255,255,255,0.25)] active:scale-90 hover:scale-105 transition-all z-40 border-8 border-[#0d1117]"
       >
-        <Plus size={36} strokeWidth={3} />
+        <Plus size={36} strokeWidth={4} />
       </button>
 
       <AddExpenseModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
