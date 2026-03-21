@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore, Category } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw, Edit2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { IconPicker } from '@/components/ui/icon-picker';
@@ -17,6 +17,7 @@ export function CategoriesView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [expandedHeads, setExpandedHeads] = useState<Record<string, boolean>>({});
 
   const toggleHead = (id: string) => {
@@ -24,7 +25,14 @@ export function CategoriesView() {
   };
 
   const openAddSub = (id: string) => {
+    setEditingCategory(null);
     setInitialParentId(id);
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (cat: any) => {
+    setEditingCategory(cat);
+    setInitialParentId(cat.parentId);
     setIsModalOpen(true);
   };
 
@@ -173,7 +181,15 @@ export function CategoriesView() {
                    </div>
                    <span className="text-lg font-black tracking-tight">{head.name}</span>
                 </div>
-                {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
+                 <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); openEdit(head); }}
+                      className="p-2.5 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
+                 </div>
               </button>
 
                 {isExpanded && (
@@ -184,14 +200,22 @@ export function CategoriesView() {
                            <span className="text-xl">{sub.icon}</span>
                            <span className="font-bold text-white/70">{sub.name}</span>
                          </div>
-                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
+                         <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => openEdit(sub)}
+                              className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
+                         </div>
                       </div>
                     ))}
                     <button 
                       onClick={() => openAddSub(head.id)}
                       className="p-5 bg-white/5 rounded-[24px] border border-dashed border-white/10 text-[10px] font-black uppercase tracking-widest text-white/20 hover:bg-white/10 transition-all"
                     >
-                      + Add subcategory
+                      + Добавить подкатегорию
                     </button>
                   </div>
                 )}
@@ -202,8 +226,9 @@ export function CategoriesView() {
 
       <AddCategoryModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => { setIsModalOpen(false); setEditingCategory(null); }} 
         initialParentId={initialParentId}
+        editingCategory={editingCategory}
       />
     </div>
   );

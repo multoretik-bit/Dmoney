@@ -18,13 +18,14 @@ import { AddExpenseModal } from '../expenses/add-expense-modal';
 import { AddCategoryModal } from '../categories/add-category-modal';
 
 export function BudgetView() {
-  const { categories, expenses, setCategoryLimit, preferences } = useStore();
+  const { categories, expenses, setCategoryLimit, updateCategory, preferences } = useStore();
   const [viewMode, setViewMode] = useState<'plan' | 'execute'>('execute');
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>([]);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
+  const [isSelectingExisting, setIsSelectingExisting] = useState<string | null>(null); // blockId
 
   const openAddBlock = () => {
     setEditingCategory(null);
@@ -59,6 +60,18 @@ export function BudgetView() {
     });
     return map;
   }, [categories, headCategories]);
+  
+  const orphanCategories = useMemo(() => 
+    categories.filter(c => !c.parentId), 
+  [categories]);
+
+  const addExistingToBlock = (categoryId: string, blockId: string) => {
+    const cat = categories.find(c => c.id === categoryId);
+    if (cat) {
+      updateCategory(cat.id, { ...cat, parentId: blockId });
+    }
+    setIsSelectingExisting(null);
+  };
 
   // Spending calculations
   const spendingByCategory = useMemo(() => {
@@ -214,12 +227,42 @@ export function BudgetView() {
                         );
                       })}
                       
-                      <button 
-                         onClick={() => openAddCategory(head.id)}
-                         className="h-16 border-2 border-dashed border-white/5 rounded-[32px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/10 hover:text-white/40 hover:bg-white/5 transition-all"
-                      >
-                        <Plus size={14} strokeWidth={4} /> Добавить в {head.name}
-                      </button>
+                      <div className="flex gap-3">
+                        <button 
+                           onClick={() => openAddCategory(head.id)}
+                           className="flex-1 h-16 border-2 border-dashed border-white/5 rounded-[32px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/10 hover:text-white/40 hover:bg-white/5 transition-all"
+                        >
+                          <Plus size={14} strokeWidth={4} /> Добавить новую
+                        </button>
+                        <button 
+                           onClick={() => setIsSelectingExisting(isSelectingExisting === head.id ? null : head.id)}
+                           className="flex-1 h-16 border-2 border-dashed border-white/5 rounded-[32px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/10 hover:text-white/40 hover:bg-white/5 transition-all"
+                        >
+                          <ChevronDown size={14} className={cn("transition-transform", isSelectingExisting === head.id && "rotate-180")} /> Выбрать существующую
+                        </button>
+                      </div>
+
+                      {isSelectingExisting === head.id && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                          className="bg-black/20 rounded-[32px] p-4 flex flex-col gap-2 border border-white/5"
+                        >
+                          {orphanCategories.filter(c => c.id !== head.id).length === 0 ? (
+                            <span className="text-[10px] font-black uppercase text-white/10 text-center py-4">Нет доступных категорий</span>
+                          ) : (
+                            orphanCategories.filter(c => c.id !== head.id).map(c => (
+                              <button 
+                                key={c.id} 
+                                onClick={() => addExistingToBlock(c.id, head.id)}
+                                className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all group"
+                              >
+                                <span>{c.icon}</span>
+                                <span className="text-sm font-bold text-white/60 group-hover:text-white">{c.name}</span>
+                              </button>
+                            ))
+                          )}
+                        </motion.div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

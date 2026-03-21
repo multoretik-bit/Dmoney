@@ -29,6 +29,7 @@ export function AddCategoryModal({
   const [parentId, setParentId] = useState<string | undefined>(undefined);
   const [color, setColor] = useState(preferences.savedColors[0]);
   const [icon, setIcon] = useState('🎯');
+  const [budgetLimit, setBudgetLimit] = useState('0');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -37,11 +38,13 @@ export function AddCategoryModal({
       setParentId(editingCategory.parentId);
       setColor(editingCategory.color);
       setIcon(editingCategory.icon);
+      setBudgetLimit(editingCategory.budgetLimit?.toString() || '0');
     } else {
       setName('');
       setParentId(initialParentId);
       setColor(preferences.savedColors[0]);
       setIcon('🎯');
+      setBudgetLimit('0');
     }
     setShowDeleteConfirm(false);
   }, [editingCategory, initialParentId, isOpen, preferences.savedColors]);
@@ -61,7 +64,8 @@ export function AddCategoryModal({
         name: name.trim(), 
         parentId: parentId || undefined, 
         color, 
-        icon 
+        icon,
+        budgetLimit: parseFloat(budgetLimit) || 0
       });
     } else {
       addCategory({
@@ -69,7 +73,8 @@ export function AddCategoryModal({
         name: name.trim(),
         parentId: parentId || undefined,
         color,
-        icon
+        icon,
+        budgetLimit: parseFloat(budgetLimit) || 0
       });
     }
     
@@ -104,7 +109,7 @@ export function AddCategoryModal({
               <div className="w-14 h-14 bg-accent/20 rounded-[24px] flex items-center justify-center text-accent mb-2 shadow-xl shadow-accent/10">
                 <Layers size={28} strokeWidth={3} />
               </div>
-              <h2 className="text-2xl font-black uppercase tracking-[0.3em] text-white/90">
+              <h2 className="text-2xl font-black uppercase tracking-[0.3em] text-white/90 text-center">
                 {editingCategory ? 'Изменить' : parentId ? 'Подкатегория' : 'Категория'}
               </h2>
           </div>
@@ -113,8 +118,8 @@ export function AddCategoryModal({
              {/* Name & Icon Preview */}
              <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 px-2">
-                  <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Название и Иконка</span>
-                  <div className="h-px bg-white/5 flex-1" />
+                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Название и Иконка</span>
+                   <div className="h-px bg-white/5 flex-1" />
                 </div>
                 <div className="flex gap-4">
                   <div 
@@ -125,7 +130,7 @@ export function AddCategoryModal({
                     <span className="relative z-10">{icon}</span>
                   </div>
                   <input 
-                    className="flex-1 bg-black/20 p-6 rounded-[28px] text-xl font-black text-white outline-none border border-white/5 focus:border-accent/30 transition-all"
+                    className="flex-1 bg-black/20 p-6 rounded-[28px] text-xl font-black text-white outline-none border border-white/5 focus:border-accent/30 transition-all font-black"
                     placeholder="Напр. Аренда, Еда..."
                     value={name} onChange={e => setName(e.target.value)}
                     autoFocus
@@ -133,19 +138,33 @@ export function AddCategoryModal({
                 </div>
              </div>
 
-             {/* Parent Selection */}
-             {!editingCategory && (
              <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 px-2">
-                  <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Расположение</span>
-                  <div className="h-px bg-white/5 flex-1" />
+                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Бюджет (Лимит)</span>
+                   <div className="h-px bg-white/5 flex-1" />
+                </div>
+                <div className="bg-black/20 p-6 rounded-[28px] border border-white/5 flex items-center justify-between">
+                   <span className="text-xl font-black text-white">$</span>
+                   <input 
+                      type="number"
+                      className="bg-transparent text-xl font-black text-white outline-none text-right w-32 font-black"
+                      placeholder="0.0"
+                      value={budgetLimit} onChange={e => setBudgetLimit(e.target.value)}
+                   />
+                </div>
+             </div>
+
+             <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 px-2">
+                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Расположение (Блок)</span>
+                   <div className="h-px bg-white/5 flex-1" />
                 </div>
                 <div className="relative group">
                   <select 
-                      className="w-full bg-black/20 p-5 rounded-[24px] text-white/90 outline-none border border-white/5 appearance-none font-black uppercase tracking-widest text-[11px] pr-12 focus:border-accent/30 transition-all"
+                      className="w-full bg-black/20 p-5 rounded-[24px] text-white/90 outline-none border border-white/5 appearance-none font-black uppercase tracking-widest text-[11px] pr-12 focus:border-accent/30 transition-all font-black"
                       value={parentId || ''} onChange={e => setParentId(e.target.value || undefined)}
                   >
-                    <option value="" className="bg-[#020617]">Главная (Основной блок)</option>
+                    <option value="" className="bg-[#020617]">Сделать новым Блоком</option>
                     {headCategories.map(c => (
                       <option key={c.id} value={c.id} className="bg-[#020617]">{c.name}</option>
                     ))}
@@ -153,7 +172,6 @@ export function AddCategoryModal({
                   <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 group-hover:text-accent transition-colors" size={20} />
                 </div>
              </div>
-             )}
 
              <div className="flex flex-col gap-10">
                 <ColorPicker color={color} onChange={setColor} />
