@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus, Palette, CreditCard } from 'lucide-react';
 import { useStore, Wallet, Portfolio, Folder } from '@/store/useStore';
@@ -13,7 +13,13 @@ export function WalletsView() {
   const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, preferences } = useStore();
   const { baseCurrency } = preferences;
   
-  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>(portfolios[0]?.id || '');
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('');
+
+  useEffect(() => {
+    if (!selectedPortfolioId && portfolios.length > 0) {
+      setSelectedPortfolioId(portfolios[0].id);
+    }
+  }, [portfolios, selectedPortfolioId]);
   
   // Modals visibility
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
@@ -67,11 +73,11 @@ export function WalletsView() {
       {/* Capitals Carousel - Glass Edition */}
       <div className="flex gap-6 overflow-x-auto hide-scrollbar snap-x -mx-6 px-6 pb-4">
         {portfolios.map((p) => (
-          <motion.button 
+          <motion.div 
             key={p.id}
             onClick={() => setSelectedPortfolioId(p.id)}
             className={cn(
-              "flex-shrink-0 w-64 h-48 rounded-[40px] p-8 flex flex-col justify-between snap-center transition-all shadow-2xl relative overflow-hidden group border-4",
+              "flex-shrink-0 w-64 h-48 rounded-[40px] p-8 flex flex-col justify-between snap-center transition-all shadow-2xl relative overflow-hidden group border-4 cursor-pointer",
               selectedPortfolioId === p.id ? "scale-100 border-white/20 shadow-[0_0_30px_rgba(255,255,255,0.1)]" : "opacity-40 scale-[0.95] border-transparent grayscale-[0.5]"
             )}
             style={{ 
@@ -107,7 +113,7 @@ export function WalletsView() {
                  <Trash2 size={14} className="text-white/60" />
                </button>
              </div>
-          </motion.button>
+          </motion.div>
         ))}
         
         <button 

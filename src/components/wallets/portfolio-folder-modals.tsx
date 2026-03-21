@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, FolderPlus, Grid, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ColorPicker } from '@/components/ui/color-picker';
+import { IconPicker } from '@/components/ui/icon-picker';
 
 export function AddPortfolioModal({ 
   isOpen, 
@@ -70,13 +71,15 @@ export function AddPortfolioModal({
 
           <div className="flex flex-col gap-6">
              <div className="flex flex-col gap-3">
-               <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-2">Name</label>
+               <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-2">Название</label>
                <input 
                   className="bg-black/20 p-6 rounded-3xl text-xl font-black text-white outline-none border border-white/5"
-                  placeholder="Portfolio Name"
+                  placeholder="Название капитала"
                   value={name} onChange={e => setName(e.target.value)}
                />
              </div>
+
+             <IconPicker icon={icon} onChange={setIcon} />
 
              <ColorPicker color={color} onChange={setColor} />
           </div>
