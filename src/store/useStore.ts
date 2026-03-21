@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 export interface Category {
   id: string;
@@ -60,8 +62,10 @@ interface UserState {
   folders: Folder[];
   wallets: Wallet[];
   expenses: Expense[];
+  user: User | null;
 
   // Actions
+  setUser: (user: User | null) => void;
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => void;
@@ -83,6 +87,8 @@ interface UserState {
   deleteWallet: (id: string) => void;
 
   addExpense: (expense: Expense) => void;
+  pullData: () => Promise<void>;
+  pushData: () => Promise<void>;
 }
 
 export const useStore = create<UserState>()(
@@ -103,7 +109,9 @@ export const useStore = create<UserState>()(
       folders: [],
       wallets: [],
       expenses: [],
+      user: null,
 
+      setUser: (user) => set({ user }),
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
       addSavedColor: (color) => set((state) => {
         if (state.preferences.savedColors.includes(color)) return state;
@@ -159,6 +167,87 @@ export const useStore = create<UserState>()(
         });
         return { expenses: [...state.expenses, expense], wallets: updatedWallets };
       }),
+
+      pullData: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        try {
+          // Fetch all in parallel
+          const [cats, ports, folds, walls, exps] = await Promise.all([
+            supabase.from('categories').select('*'),
+            supabase.from('portfolios').select('*'),
+            supabase.from('folders').select('*'),
+            supabase.from('wallets').select('*'),
+            supabase.from('transactions').select('*'),
+          ]);
+
+          if (cats.data) set({ categories: cats.data.map((c: any) => ({
+            id: c.id,
+            parentId: c.parent_id,
+            name: c.name,
+            icon: c.icon,
+            color: c.color,
+            budgetLimit: c.budget_limit
+          })) });
+
+          if (ports.data) set({ portfolios: ports.data });
+          if (folds.data) set({ folders: folds.data });
+          if (walls.data) set({ wallets: walls.data });
+          if (exps.data) set({ expenses: exps.data.map((e: any) => ({
+             id: e.id,
+             originalAmount: e.amount,
+             originalCurrency: e.currency,
+             convertedAmount: e.converted_amount,
+             walletAmount: e.wallet_amount,
+             exchangeRate: e.exchange_rate,
+             categoryId: e.category_id,
+             walletId: e.wallet_id,
+             date: e.date
+          })) });
+
+        } catch (error) {
+          console.error('Error pulling data:', error);
+        }
+      },
+
+      pushData: async () => {
+         const { data: { user } } = await supabase.auth.getUser();
+         if (!user) return;
+         
+         const state = useStore.getState();
+         
+         try {
+            // Very simple upsert strategy
+            await Promise.all([
+               supabase.from('categories').upsert(state.categories.map(c => ({
+                  id: c.id,
+                  user_id: user.id,
+                  parent_id: c.parentId,
+                  name: c.name,
+                  icon: c.icon,
+                  color: c.color,
+                  budget_limit: c.budgetLimit
+               }))),
+               supabase.from('portfolios').upsert(state.portfolios.map(p => ({ ...p, user_id: user.id }))),
+               supabase.from('wallets').upsert(state.wallets.map(w => ({ ...w, user_id: user.id }))),
+               supabase.from('transactions').upsert(state.expenses.map(e => ({
+                  id: e.id,
+                  user_id: user.id,
+                  category_id: e.categoryId,
+                  wallet_id: e.walletId,
+                  amount: e.originalAmount,
+                  currency: e.originalCurrency,
+                  converted_amount: e.convertedAmount,
+                  wallet_amount: e.walletAmount,
+                  exchange_rate: e.exchangeRate,
+                  date: e.date
+               })))
+            ]);
+         } catch (error) {
+            console.error('Error pushing data:', error);
+         }
+      }
     }),
     {
       name: 'dmoney-storage',

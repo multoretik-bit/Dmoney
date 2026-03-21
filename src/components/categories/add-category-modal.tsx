@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useStore, Category } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Tag, FolderPlus, Palette, Grid, Plus } from 'lucide-react';
+import { X, Check, Tag, FolderPlus, Palette, Grid, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { IconPicker } from '@/components/ui/icon-picker';
 import { cn } from '@/lib/utils';
@@ -21,12 +21,13 @@ export function AddCategoryModal({
   initialParentId, 
   editingCategory 
 }: AddCategoryModalProps) {
-  const { addCategory, updateCategory, categories, preferences } = useStore();
+  const { addCategory, updateCategory, deleteCategory, categories, preferences } = useStore();
   
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string | undefined>(undefined);
   const [color, setColor] = useState(preferences.savedColors[0]);
   const [icon, setIcon] = useState('🎯');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (editingCategory) {
@@ -40,7 +41,15 @@ export function AddCategoryModal({
       setColor(preferences.savedColors[0]);
       setIcon('🎯');
     }
+    setShowDeleteConfirm(false);
   }, [editingCategory, initialParentId, isOpen, preferences.savedColors]);
+
+  const handleDelete = () => {
+    if (editingCategory) {
+      deleteCategory(editingCategory.id);
+      onClose();
+    }
+  };
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -127,14 +136,31 @@ export function AddCategoryModal({
              </div>
           </div>
 
-          <button 
-            onClick={handleSave}
-            disabled={!name.trim()}
-            className="h-20 bg-white text-black text-xl font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-20"
-          >
-            {editingCategory ? <Check size={28} strokeWidth={4} /> : <Plus size={28} strokeWidth={4} />}
-            {editingCategory ? 'SAVE CHANGES' : parentId ? 'ADD CATEGORY' : 'CREATE BLOCK'}
-          </button>
+           <div className="flex gap-4">
+            {editingCategory && (
+              <button 
+                onClick={() => showDeleteConfirm ? handleDelete() : setShowDeleteConfirm(true)}
+                className={cn(
+                  "flex-1 h-20 rounded-3xl flex items-center justify-center gap-3 transition-all shadow-xl font-black text-xl",
+                  showDeleteConfirm ? "bg-red-500 text-white" : "bg-white/5 text-red-500 border border-red-500/20"
+                )}
+              >
+                {showDeleteConfirm ? <AlertTriangle size={28} /> : <Trash2 size={28} />}
+                {showDeleteConfirm ? 'CONFIRM' : 'DELETE'}
+              </button>
+            )}
+            <button 
+              onClick={handleSave}
+              disabled={!name.trim()}
+              className={cn(
+                "h-20 bg-white text-black text-xl font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-20",
+                editingCategory ? "flex-1" : "w-full"
+              )}
+            >
+              {editingCategory ? <Check size={28} strokeWidth={4} /> : <Plus size={28} strokeWidth={4} />}
+              {editingCategory ? 'SAVE' : parentId ? 'ADD' : 'CREATE'}
+            </button>
+           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>

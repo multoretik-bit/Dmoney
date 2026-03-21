@@ -23,15 +23,23 @@ export function BudgetView() {
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>([]);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
 
   const openAddBlock = () => {
+    setEditingCategory(null);
     setInitialParentId(undefined);
     setIsAddCategoryOpen(true);
   };
 
   const openAddCategory = (parentId: string) => {
+    setEditingCategory(null);
     setInitialParentId(parentId);
+    setIsAddCategoryOpen(true);
+  };
+
+  const openEditCategory = (category: Category) => {
+    setEditingCategory(category);
     setIsAddCategoryOpen(true);
   };
 
@@ -207,6 +215,12 @@ export function BudgetView() {
                        </div>
                     </div>
                     <div className="flex items-center gap-4">
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); openEditCategory(head); }}
+                         className="p-3 w-10 h-10 bg-black/20 rounded-xl flex items-center justify-center text-white/40 hover:text-white transition-all shadow-inner"
+                       >
+                          <Edit2 size={16} />
+                       </button>
                        <div className="w-10 h-10 rounded-full border-2 border-white/20 flex items-center justify-center relative">
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="8" />
@@ -251,6 +265,12 @@ export function BudgetView() {
                                         {spent > limit && limit > 0 && <AlertCircle size={14} className="text-white animate-pulse" />}
                                      </div>
                                      <div className="flex items-center gap-2">
+                                        <button 
+                                          onClick={() => openEditCategory(sub)}
+                                          className="p-2 w-8 h-8 rounded-lg bg-black/20 text-white/40 hover:text-white transition-all shadow-inner"
+                                        >
+                                           <Edit2 size={12} />
+                                        </button>
                                         {viewMode === 'plan' ? (
                                           <div className="flex items-center gap-2 text-white">
                                             <input 
@@ -344,8 +364,9 @@ export function BudgetView() {
       <AddExpenseModal isOpen={isAddExpenseOpen} onClose={() => setIsAddExpenseOpen(false)} />
       <AddCategoryModal 
         isOpen={isAddCategoryOpen} 
-        onClose={() => setIsAddCategoryOpen(false)} 
+        onClose={() => { setIsAddCategoryOpen(false); setEditingCategory(null); }} 
         initialParentId={initialParentId}
+        editingCategory={editingCategory}
       />
     </div>
   );
