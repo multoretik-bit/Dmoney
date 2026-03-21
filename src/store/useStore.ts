@@ -319,7 +319,7 @@ export const useStore = create<UserState>()(
             supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
           ]);
 
-          if (cats.data) {
+          if (cats.data && cats.data.length > 0) {
             console.log(`📥 Fetched ${cats.data.length} categories from Supabase`);
             set({ categories: cats.data.map((c: any) => ({
               id: c.id,
@@ -330,6 +330,10 @@ export const useStore = create<UserState>()(
               budgetLimit: c.budget_limit,
               sortOrder: c.sort_order || 0
             })) });
+          } else if (cats.data && cats.data.length === 0 && useStore.getState().categories.length > 0) {
+            console.log('⚠️ Supabase returned 0 categories, keeping local state to prevent accidental wipe.');
+            // Only overwrite if we are absolutely sure the user has 0 categories in cloud (e.g. fresh account)
+            // For now, let's keep local state if cloud is empty but local is not.
           }
 
           if (ports.data) set({ portfolios: ports.data.map((p: any) => ({

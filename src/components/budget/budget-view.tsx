@@ -84,8 +84,11 @@ export function BudgetView() {
         const hasChildrenWithLimit = categories.some(child => 
           child.parentId === c.id && (child.budgetLimit || 0) > 0
         );
+
+        // EMERGENCY: Show block if it has ANY children (regardless of limit) for visibility
+        const hasAnyChildren = categories.some(child => child.parentId === c.id);
         
-        return hasLimit || hasChildrenWithLimit;
+        return hasLimit || hasChildrenWithLimit || hasAnyChildren;
       })
       .sort((a, b) => {
         if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
@@ -106,13 +109,20 @@ export function BudgetView() {
     return map;
   }, [categories, headCategories]);
   
-  const orphanCategories = useMemo(() => 
-    categories.filter(c => !c.parentId), 
+  // Categories that are NOT blocks themselves
+  const availableCategories = useMemo(() => 
+    categories.filter(c => {
+      // It's a "Category" if it can have a parent or it was intended as one
+      // Let's say all items are categories EXCEPT those that already have sub-items (they are blocks)
+      const hasSubItems = categories.some(child => child.parentId === c.id);
+      return !hasSubItems;
+    }), 
   [categories]);
 
   const addExistingToBlock = (categoryId: string, blockId: string) => {
     const cat = categories.find(c => c.id === categoryId);
     if (cat) {
+      console.log(`🔗 Linking category "${cat.name}" to block ID: ${blockId}`);
       updateCategory(cat.id, { ...cat, parentId: blockId });
     }
     setIsSelectingExisting(null);
@@ -322,10 +332,10 @@ export function BudgetView() {
                           initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                           className="bg-black/20 rounded-[32px] p-4 flex flex-col gap-2 border border-white/5"
                         >
-                          {orphanCategories.filter(c => c.id !== head.id).length === 0 ? (
+                          {availableCategories.filter(c => c.id !== head.id && c.parentId !== head.id).length === 0 ? (
                             <span className="text-[10px] font-black uppercase text-white/10 text-center py-4">Нет доступных категорий</span>
                           ) : (
-                            orphanCategories.filter(c => c.id !== head.id).map(c => (
+                            availableCategories.filter(c => c.id !== head.id && c.parentId !== head.id).map(c => (
                               <button 
                                 key={c.id} 
                                 onClick={() => addExistingToBlock(c.id, head.id)}

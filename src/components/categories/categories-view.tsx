@@ -46,6 +46,11 @@ export function CategoriesView() {
       }),
   [allCategories]);
 
+  const orphanedCategories = useMemo(() => {
+    const headIds = new Set(headCategories.map(h => h.id));
+    return allCategories.filter(c => c.parentId && !headIds.has(c.parentId));
+  }, [allCategories, headCategories]);
+
   return (
     <div className="p-6 flex flex-col gap-10 bg-[#0d1117] min-h-screen text-white pb-40">
       <header className="pt-12 px-2">
@@ -293,6 +298,36 @@ export function CategoriesView() {
               </div>
             );
           })
+        )}
+
+        {orphanedCategories.length > 0 && (
+          <div className="mt-10 flex flex-col gap-4">
+             <div className="flex items-center gap-3 px-2">
+                <span className="text-[11px] font-black uppercase tracking-[0.4em] text-red-500/50">Потерянные категории</span>
+                <div className="h-px bg-red-500/10 flex-1" />
+             </div>
+             <div className="flex flex-col gap-3">
+                {orphanedCategories.map(sub => (
+                   <div 
+                    key={sub.id} 
+                    className="p-5 rounded-3xl flex items-center justify-between border border-red-500/10 bg-red-500/5 group"
+                   >
+                     <div className="flex items-center gap-4">
+                       <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-black/20">
+                          {sub.icon}
+                       </div>
+                       <span className="font-bold text-white/80">{sub.name}</span>
+                     </div>
+                     <button 
+                       onClick={() => openEdit(sub)}
+                       className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white"
+                     >
+                        <Edit2 size={14} />
+                     </button>
+                   </div>
+                ))}
+             </div>
+          </div>
         )}
       </div>
 
