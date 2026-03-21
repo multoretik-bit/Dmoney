@@ -28,7 +28,10 @@ export function BudgetView() {
   const [isSelectingExisting, setIsSelectingExisting] = useState<string | null>(null); // blockId
 
   const currentMonthStr = useMemo(() => new Date().toISOString().substring(0, 7), []);
-  const currentMonthName = useMemo(() => new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }), []);
+  const currentMonthName = useMemo(() => {
+    const name = new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }, []);
 
   const currentMonthExpenses = useMemo(() => 
     expenses.filter(e => e.date.startsWith(currentMonthStr)),
@@ -57,13 +60,22 @@ export function BudgetView() {
     );
   };
 
+  // Spending calculations
+  const spendingByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    currentMonthExpenses.forEach(e => {
+      map[e.categoryId] = (map[e.categoryId] || 0) + e.convertedAmount;
+    });
+    return map;
+  }, [currentMonthExpenses]);
+
   // Group categories into "Blocks"
   const headCategories = useMemo(() => {
     return categories.filter(c => {
       if (c.parentId) return false;
       const hasLimit = (c.budgetLimit || 0) > 0;
       const hasChildren = categories.some(child => child.parentId === c.id);
-      const hasSpending = spendingByCategory[c.id] > 0;
+      const hasSpending = (spendingByCategory[c.id] || 0) > 0;
       return hasLimit || hasChildren || hasSpending;
     });
   }, [categories, spendingByCategory]);
@@ -87,15 +99,6 @@ export function BudgetView() {
     }
     setIsSelectingExisting(null);
   };
-
-  // Spending calculations
-  const spendingByCategory = useMemo(() => {
-    const map: Record<string, number> = {};
-    currentMonthExpenses.forEach(e => {
-      map[e.categoryId] = (map[e.categoryId] || 0) + e.convertedAmount;
-    });
-    return map;
-  }, [currentMonthExpenses]);
 
   const totalPlanned = useMemo(() => 
     categories.reduce((sum, c) => sum + (c.budgetLimit || 0), 0), 
@@ -226,7 +229,7 @@ export function BudgetView() {
                                         {Math.round(percent)}%
                                      </span>
                                   </div>
-                               </div>
+                                </div>
                             </div>
 
                             <div className="flex flex-col items-end gap-1">
@@ -321,7 +324,7 @@ export function BudgetView() {
                     <div key={sub.id} className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
                        <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center text-base border border-red-500/20">{sub.icon}</div>
-                          <span className="text-sm font-bold text-white/80">{sub.name}</span>
+                           <span className="text-sm font-bold text-white/80">{sub.name}</span>
                        </div>
                        <span className="text-sm font-black text-white/60">${(spendingByCategory[sub.id] || 0).toFixed(1)}</span>
                     </div>
