@@ -181,16 +181,20 @@ export function CategoriesView() {
               <div key={head.id} className="flex flex-col gap-3">
                 <button 
                   onClick={() => toggleHead(head.id)}
-                  className="flex items-center justify-between p-7 bg-[#1c2128] rounded-[40px] border border-white/5 shadow-lg active:scale-[0.98] transition-all group relative overflow-hidden"
+                  style={{ 
+                    background: `linear-gradient(145deg, ${head.color}15, ${head.color}05)`,
+                    borderColor: `${head.color}20`
+                  }}
+                  className="flex items-center justify-between p-7 rounded-[40px] border shadow-2xl active:scale-[0.98] transition-all group relative overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-white/[0.01] pointer-events-none" />
+                  <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
                   <div className="flex items-center gap-5 relative z-10">
-                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-xl" style={{ backgroundColor: `${head.color}15`, color: head.color }}>
+                     <div className="w-14 h-14 rounded-[22px] flex items-center justify-center text-3xl shadow-2xl" style={{ backgroundColor: head.color, color: 'white' }}>
                         {head.icon}
                      </div>
                      <div className="flex flex-col items-start">
-                        <span className="text-lg font-black tracking-tight">{head.name}</span>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-white/20">
+                        <span className="text-xl font-black tracking-tight text-white">{head.name}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30">
                           {subs.length === 0 ? 'Пустой блок' : `${subs.length} категории`}
                         </span>
                      </div>
@@ -209,10 +213,19 @@ export function CategoriesView() {
                 {isExpanded && (
                   <div className="flex flex-col gap-3 px-6">
                     {subs.map(sub => (
-                      <div key={sub.id} className="p-5 bg-white/2 rounded-2xl flex items-center justify-between border border-white/5 group relative">
+                      <div 
+                        key={sub.id} 
+                        style={{ 
+                          background: `linear-gradient(145deg, ${sub.color}10, transparent)`,
+                          borderColor: `${sub.color}15`
+                        }}
+                        className="p-5 rounded-3xl flex items-center justify-between border group relative"
+                      >
                          <div className="flex items-center gap-4">
-                           <span className="text-xl">{sub.icon}</span>
-                           <span className="font-bold text-white/70">{sub.name}</span>
+                           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-black/20" style={{ color: sub.color }}>
+                              {sub.icon}
+                           </div>
+                           <span className="font-bold text-white/80">{sub.name}</span>
                          </div>
                          <div className="flex items-center gap-3">
                             <button 

@@ -168,10 +168,15 @@ export function BudgetView() {
             
             return (
               <div key={head.id} className="flex flex-col gap-6">
-                <div className="px-2 flex justify-between items-center group cursor-pointer" onClick={() => toggleBlock(head.id)}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">{head.name}</span>
-                    <div className="h-px flex-1 bg-white/5 w-24 sm:w-48 group-hover:bg-accent/20 transition-colors" />
+                <div 
+                   className="px-4 py-3 flex justify-between items-center group cursor-pointer rounded-2xl transition-all" 
+                   style={{ background: `${head.color}05` }}
+                   onClick={() => toggleBlock(head.id)}
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: head.color }} />
+                    <span className="text-[12px] font-black uppercase tracking-[0.4em]" style={{ color: head.color }}>{head.name}</span>
+                    <div className="h-px flex-1 bg-white/5 group-hover:bg-white/10 transition-colors" />
                   </div>
                   <div className="flex items-center gap-4">
                     <button 
