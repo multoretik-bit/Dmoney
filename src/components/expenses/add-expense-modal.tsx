@@ -133,6 +133,26 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                     autoFocus
                   />
                 </div>
+
+                {/* Conversion Preview */}
+                {(() => {
+                  const wallet = wallets.find(w => w.id === walletId);
+                  const numericAmount = parseFloat(amountInput) || 0;
+                  if (wallet && currency !== wallet.currency && numericAmount > 0) {
+                    const converted = convertAmount(numericAmount, currency, wallet.currency);
+                    return (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                        className="mt-4 px-4 py-2 bg-accent/10 rounded-full border border-accent/20"
+                      >
+                        <span className="text-[10px] font-black uppercase text-accent tracking-widest whitespace-nowrap">
+                          ≈ {converted.toLocaleString()} {wallet.currency} from {wallet.name}
+                        </span>
+                      </motion.div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Category Grid (Grouped) */}

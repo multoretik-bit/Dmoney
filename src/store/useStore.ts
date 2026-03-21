@@ -16,6 +16,7 @@ export interface Wallet {
   id: string;
   name: string;
   currency: string;
+  displayCurrency?: string; // The currency to show balance in
   balance: number;
   type: WalletType;
   icon?: string;

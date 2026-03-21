@@ -6,6 +6,7 @@ import { Plus, Settings, CreditCard, ArrowLeftRight } from 'lucide-react';
 import { useStore, WalletType } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
+import { convertAmount } from '@/lib/exchange';
 
 export function WalletsView() {
   const { wallets } = useStore();
@@ -80,10 +81,15 @@ export function WalletsView() {
               className="bg-[#1c2128] rounded-[40px] p-8 flex items-center justify-between group border border-white/5 shadow-xl hover:bg-[#252a33] transition-all"
             >
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.25em]">{w.name}</span>
+                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.25em]">{w.name} {w.currency}</span>
                 <span className="text-4xl font-black text-white leading-tight">
-                   ${w.balance.toLocaleString()}
+                   {w.balance.toLocaleString()} {w.currency}
                 </span>
+                {w.displayCurrency && w.displayCurrency !== w.currency && (
+                  <span className="text-sm font-black text-accent mt-1 uppercase tracking-widest opacity-80">
+                    ≈ {convertAmount(w.balance, w.currency, w.displayCurrency).toLocaleString()} {w.displayCurrency}
+                  </span>
+                )}
               </div>
               <div 
                 className="w-18 h-18 rounded-[28px] flex items-center justify-center text-white shadow-2xl transition-all"
