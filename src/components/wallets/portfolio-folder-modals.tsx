@@ -1,21 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore, Portfolio, Folder } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, FolderPlus, Grid, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ColorPicker } from '@/components/ui/color-picker';
 
-export function AddPortfolioModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { addPortfolio, preferences } = useStore();
+export function AddPortfolioModal({ 
+  isOpen, 
+  onClose, 
+  editingPortfolio 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  editingPortfolio?: Portfolio | null;
+}) {
+  const { addPortfolio, updatePortfolio, preferences } = useStore();
   const [name, setName] = useState('');
   const [color, setColor] = useState(preferences.savedColors[0]);
   const [icon, setIcon] = useState('💼');
 
+  useEffect(() => {
+    if (editingPortfolio) {
+      setName(editingPortfolio.name);
+      setColor(editingPortfolio.color);
+      setIcon(editingPortfolio.icon || '💼');
+    } else {
+      setName('');
+      setColor(preferences.savedColors[0]);
+      setIcon('💼');
+    }
+  }, [editingPortfolio, isOpen, preferences.savedColors]);
+
   const handleSave = () => {
     if (!name.trim()) return;
-    addPortfolio({ id: Date.now().toString(), name: name.trim(), color, icon });
-    setName('');
+    
+    if (editingPortfolio) {
+      updatePortfolio(editingPortfolio.id, { name: name.trim(), color, icon });
+    } else {
+      addPortfolio({ id: Date.now().toString(), name: name.trim(), color, icon });
+    }
+    
     onClose();
   };
 
@@ -31,9 +57,12 @@ export function AddPortfolioModal({ isOpen, onClose }: { isOpen: boolean; onClos
         <motion.div 
           className="bg-[#1c2128] w-full max-w-md rounded-[48px] p-10 flex flex-col gap-8 shadow-2xl border border-white/10"
           initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-black uppercase tracking-widest text-white/40">New Capital</h2>
+            <h2 className="text-xl font-black uppercase tracking-widest text-white/40">
+              {editingPortfolio ? 'Edit Capital' : 'New Capital'}
+            </h2>
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full"><X size={24} /></button>
           </div>
 
@@ -47,19 +76,7 @@ export function AddPortfolioModal({ isOpen, onClose }: { isOpen: boolean; onClos
                />
              </div>
 
-             <div className="flex flex-col gap-3">
-               <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-2">Primary Color</label>
-               <div className="flex gap-3 px-2">
-                 {preferences.savedColors.map(c => (
-                   <button 
-                     key={c}
-                     onClick={() => setColor(c)}
-                     className={cn("w-10 h-10 rounded-full transition-all border-4", color === c ? "border-white scale-110" : "border-transparent opacity-40")}
-                     style={{ backgroundColor: c }}
-                   />
-                 ))}
-               </div>
-             </div>
+             <ColorPicker color={color} onChange={setColor} />
           </div>
 
           <button 
@@ -67,8 +84,8 @@ export function AddPortfolioModal({ isOpen, onClose }: { isOpen: boolean; onClos
             disabled={!name.trim()}
             className="h-20 bg-white text-black text-xl font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-20"
           >
-            <Check size={28} strokeWidth={4} />
-            CREATE
+            {editingPortfolio ? <Check size={28} strokeWidth={4} /> : <Check size={28} strokeWidth={4} />}
+            {editingPortfolio ? 'SAVE CHANGES' : 'CREATE'}
           </button>
         </motion.div>
       </motion.div>
@@ -76,18 +93,41 @@ export function AddPortfolioModal({ isOpen, onClose }: { isOpen: boolean; onClos
   );
 }
 
-export function AddFolderModal({ isOpen, onClose, portfolioId }: { isOpen: boolean; onClose: () => void; portfolioId: string }) {
-  const { addFolder } = useStore();
+export function AddFolderModal({ 
+  isOpen, 
+  onClose, 
+  portfolioId, 
+  editingFolder 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  portfolioId: string; 
+  editingFolder?: Folder | null;
+}) {
+  const { addFolder, updateFolder } = useStore();
   const [name, setName] = useState('');
+
+  useEffect(() => {
+    if (editingFolder) {
+      setName(editingFolder.name);
+    } else {
+      setName('');
+    }
+  }, [editingFolder, isOpen]);
 
   const handleSave = () => {
     if (!name.trim()) return;
-    addFolder({ id: Date.now().toString(), portfolioId, name: name.trim() });
-    setName('');
+    
+    if (editingFolder) {
+      updateFolder(editingFolder.id, { name: name.trim() });
+    } else {
+      addFolder({ id: Date.now().toString(), portfolioId, name: name.trim() });
+    }
+    
     onClose();
   };
 
-  if (!isOpen || !portfolioId) return null;
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
@@ -99,9 +139,12 @@ export function AddFolderModal({ isOpen, onClose, portfolioId }: { isOpen: boole
         <motion.div 
           className="bg-[#1c2128] w-full max-w-md rounded-[48px] p-10 flex flex-col gap-8 shadow-2xl border border-white/10"
           initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-black uppercase tracking-widest text-white/40">New Folder</h2>
+            <h2 className="text-xl font-black uppercase tracking-widest text-white/40">
+              {editingFolder ? 'Edit Folder' : 'New Folder'}
+            </h2>
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full"><X size={24} /></button>
           </div>
 
@@ -120,7 +163,7 @@ export function AddFolderModal({ isOpen, onClose, portfolioId }: { isOpen: boole
             className="h-20 bg-accent text-white text-xl font-black rounded-3xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-20"
           >
             <FolderPlus size={28} strokeWidth={4} />
-            ADD FOLDER
+            {editingFolder ? 'SAVE CHANGES' : 'ADD FOLDER'}
           </button>
         </motion.div>
       </motion.div>

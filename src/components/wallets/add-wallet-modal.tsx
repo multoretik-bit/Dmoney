@@ -1,16 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore, Wallet } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Globe, Check, LayoutGrid, FolderIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
+import { ColorPicker } from '@/components/ui/color-picker';
 
 const WALLET_ICONS = ['💳', '💰', '🏦', '💎', '📈', '🏠', '🚗', '🛒', '🎮', '✈️', '🍎', '🍺', '💼', '🎁', '📱'];
 
-export function AddWalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { addWallet, portfolios, folders, preferences } = useStore();
+export function AddWalletModal({ 
+  isOpen, 
+  onClose, 
+  editingWallet 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  editingWallet?: Wallet | null;
+}) {
+  const { addWallet, updateWallet, portfolios, folders, preferences } = useStore();
   
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('0');
@@ -22,16 +31,31 @@ export function AddWalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
   const [color, setColor] = useState(preferences.savedColors[0]);
 
   useEffect(() => {
-    if (portfolios.length > 0 && !portfolioId) {
-      setPortfolioId(portfolios[0].id);
+    if (editingWallet) {
+      setName(editingWallet.name);
+      setBalance(editingWallet.balance.toString());
+      setPortfolioId(editingWallet.portfolioId);
+      setFolderId(editingWallet.folderId || '');
+      setCurrency(editingWallet.currency);
+      setDisplayCurrency(editingWallet.displayCurrency || editingWallet.currency);
+      setIcon(editingWallet.icon || '💳');
+      setColor(editingWallet.color || preferences.savedColors[0]);
+    } else {
+      setName('');
+      setBalance('0');
+      setPortfolioId(portfolios[0]?.id || '');
+      setFolderId('');
+      setCurrency('USD');
+      setDisplayCurrency('USD');
+      setIcon('💳');
+      setColor(preferences.savedColors[0]);
     }
-  }, [portfolios, portfolioId]);
+  }, [editingWallet, isOpen, portfolios, preferences.savedColors]);
 
   const handleSave = () => {
     if (!name.trim() || !portfolioId) return;
     
-    addWallet({
-      id: Date.now().toString(),
+    const walletData = {
       portfolioId,
       folderId: folderId || undefined,
       name: name.trim(),
@@ -40,10 +64,17 @@ export function AddWalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
       balance: parseFloat(balance) || 0,
       icon,
       color,
-    });
+    };
+
+    if (editingWallet) {
+      updateWallet(editingWallet.id, walletData);
+    } else {
+      addWallet({
+        id: Date.now().toString(),
+        ...walletData
+      });
+    }
     
-    setName('');
-    setBalance('0');
     onClose();
   };
 
@@ -64,7 +95,9 @@ export function AddWalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-2">
-               <h2 className="text-sm font-black uppercase tracking-widest text-white/40">New Account</h2>
+               <h2 className="text-sm font-black uppercase tracking-widest text-white/40">
+                 {editingWallet ? 'Edit Account' : 'New Account'}
+               </h2>
                <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/40"><X size={20} /></button>
             </div>
 
@@ -96,20 +129,12 @@ export function AddWalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
                  </div>
               </div>
 
-              {/* Style Picker */}
-              <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center px-1">
-                  <label className="text-[10px] font-black uppercase text-white/20 tracking-widest">Icon & Color</label>
-                  <div className="flex gap-1.5 overflow-x-auto hide-scrollbar max-w-[150px]">
-                    {preferences.savedColors.map(c => (
-                      <button 
-                        key={c} onClick={() => setColor(c)}
-                        className={cn("w-6 h-6 rounded-full flex-shrink-0 transition-all border-2", color === c ? "border-white scale-110" : "border-transparent opacity-40")}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                </div>
+              {/* ColorPicker Integration */}
+              <ColorPicker color={color} onChange={setColor} />
+
+              {/* Icon Picker */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-1">Icon</label>
                 <div className="grid grid-cols-5 gap-2 bg-white/5 p-4 rounded-3xl border border-white/5">
                    {WALLET_ICONS.map(i => (
                      <button 
@@ -146,7 +171,7 @@ export function AddWalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
                      </select>
                    </div>
                    <div className="flex flex-col gap-2 border-l border-white/5 pl-4">
-                     <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Balance (Initial)</label>
+                     <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Balance</label>
                      <input 
                         type="number"
                         className="bg-transparent text-lg font-black text-white outline-none w-full"
@@ -163,7 +188,7 @@ export function AddWalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: 
               className="mt-2 min-h-[72px] bg-white text-black text-lg font-black rounded-3xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
             >
               <Check size={28} strokeWidth={4} />
-              SAVE ACCOUNT
+              {editingWallet ? 'SAVE CHANGES' : 'SAVE ACCOUNT'}
             </button>
           </motion.div>
         </motion.div>

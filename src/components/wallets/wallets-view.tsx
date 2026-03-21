@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus } from 'lucide-react';
-import { useStore, Wallet } from '@/store/useStore';
+import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus, Palette } from 'lucide-react';
+import { useStore, Wallet, Portfolio, Folder } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
 import { AddPortfolioModal, AddFolderModal } from './portfolio-folder-modals';
@@ -14,9 +14,17 @@ export function WalletsView() {
   const { baseCurrency } = preferences;
   
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>(portfolios[0]?.id || '');
+  
+  // Modals visibility
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  
+  // Editing state
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
+  const [editingPortfolio, setEditingPortfolio] = useState<Portfolio | null>(null);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
 
   const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId) || portfolios[0];
@@ -34,6 +42,21 @@ export function WalletsView() {
       .reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
   };
 
+  const handleEditWallet = (w: Wallet) => {
+    setEditingWallet(w);
+    setIsWalletModalOpen(true);
+  };
+
+  const handleEditPortfolio = (p: Portfolio) => {
+    setEditingPortfolio(p);
+    setIsPortfolioModalOpen(true);
+  };
+
+  const handleEditFolder = (f: Folder) => {
+    setEditingFolder(f);
+    setIsFolderModalOpen(true);
+  };
+
   return (
     <div className="p-6 flex flex-col gap-8 pb-32 bg-[#0d1117] min-h-screen text-white">
       <header className="pt-8 flex justify-between items-center px-4">
@@ -42,7 +65,7 @@ export function WalletsView() {
           <span className="text-[10px] font-black uppercase text-accent tracking-[0.3em]">Managed Portfolios</span>
         </div>
         <button 
-          onClick={() => setIsPortfolioModalOpen(true)} 
+          onClick={() => { setEditingPortfolio(null); setIsPortfolioModalOpen(true); }} 
           className="w-12 h-12 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center text-white/40 active:scale-90 transition-all border border-white/5"
         >
           <Plus size={24} />
@@ -56,7 +79,7 @@ export function WalletsView() {
             key={p.id}
             onClick={() => setSelectedPortfolioId(p.id)}
             className={cn(
-              "flex-shrink-0 w-[280px] h-48 rounded-[40px] p-8 flex flex-col justify-between snap-center transition-all border-4 shadow-2xl relative overflow-hidden",
+              "flex-shrink-0 w-[240px] h-48 rounded-[40px] p-8 flex flex-col justify-between snap-center transition-all border-4 shadow-2xl relative overflow-hidden group",
               selectedPortfolioId === p.id ? "border-white scale-100" : "border-transparent opacity-60 scale-[0.95]"
             )}
             style={{ backgroundColor: p.color }}
@@ -74,18 +97,27 @@ export function WalletsView() {
                 </div>
              </div>
              
-             <button 
-               onClick={(e) => { e.stopPropagation(); deletePortfolio(p.id); }}
-               className="absolute top-6 right-6 p-2 bg-black/20 rounded-full opacity-0 hover:opacity-100 transition-opacity"
-             >
-               <Trash2 size={14} className="text-white/40" />
-             </button>
+             {/* CRUD Actions for Portfolios */}
+             <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+               <button 
+                 onClick={(e) => { e.stopPropagation(); handleEditPortfolio(p); }}
+                 className="p-2 bg-black/20 hover:bg-black/40 rounded-xl transition-all"
+               >
+                 <Edit2 size={14} className="text-white/60" />
+               </button>
+               <button 
+                 onClick={(e) => { e.stopPropagation(); deletePortfolio(p.id); }}
+                 className="p-2 bg-black/20 hover:bg-red-500/40 rounded-xl transition-all"
+               >
+                 <Trash2 size={14} className="text-white/60" />
+               </button>
+             </div>
           </motion.button>
         ))}
         
         <button 
-          onClick={() => setIsPortfolioModalOpen(true)}
-          className="flex-shrink-0 w-[280px] h-48 rounded-[40px] border-4 border-dashed border-white/5 flex flex-col items-center justify-center gap-4 bg-white/2 hover:bg-white/5 transition-all snap-center opacity-40 hover:opacity-100"
+          onClick={() => { setEditingPortfolio(null); setIsPortfolioModalOpen(true); }}
+          className="flex-shrink-0 w-[240px] h-48 rounded-[40px] border-4 border-dashed border-white/5 flex flex-col items-center justify-center gap-4 bg-white/2 hover:bg-white/5 transition-all snap-center opacity-40 hover:opacity-100"
         >
           <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center"><Plus size={24} /></div>
           <span className="text-[10px] font-black uppercase tracking-widest">New Capital</span>
@@ -99,14 +131,14 @@ export function WalletsView() {
             <div className="flex items-center gap-6">
                <h3 className="text-[10px] font-black uppercase text-white/20 tracking-[0.4em]">Structure</h3>
                <button 
-                onClick={() => setIsFolderModalOpen(true)}
+                onClick={() => { setEditingFolder(null); setIsFolderModalOpen(true); }}
                 className="flex items-center gap-2 text-white/40 text-[9px] font-black uppercase tracking-widest p-2 hover:bg-white/5 rounded-xl transition-all"
                >
                  <FolderPlus size={14} /> Folder
                </button>
             </div>
              <button 
-              onClick={() => setIsWalletModalOpen(true)}
+              onClick={() => { setEditingWallet(null); setIsWalletModalOpen(true); }}
               className="flex items-center gap-2 text-accent text-[10px] font-black uppercase tracking-widest p-2 hover:bg-accent/10 rounded-xl transition-all"
              >
                <Plus size={14} strokeWidth={4} /> Account
@@ -136,12 +168,20 @@ export function WalletsView() {
                          {isExpanded ? <ChevronDown size={16} className="text-white/20" /> : <ChevronRight size={16} className="text-white/20" />}
                       </div>
                     </button>
-                    <button 
-                      onClick={() => deleteFolder(folder.id)}
-                      className="w-12 h-12 flex items-center justify-center text-red-500/0 group-hover:text-red-500/40 hover:text-red-500 transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2">
+                      <button 
+                        onClick={() => handleEditFolder(folder)}
+                        className="w-10 h-10 flex items-center justify-center text-white/20 hover:text-white transition-all"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => deleteFolder(folder.id)}
+                        className="w-10 h-10 flex items-center justify-center text-red-500/40 hover:text-red-500 transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                   
                   <AnimatePresence>
@@ -151,7 +191,7 @@ export function WalletsView() {
                         className="flex flex-col gap-3 pl-4 overflow-hidden border-l-2 border-white/5 ml-4"
                       >
                         {folderWallets.map(w => (
-                          <WalletCard key={w.id} wallet={w} baseCurrency={baseCurrency} onDelete={() => deleteWallet(w.id)} />
+                          <WalletCard key={w.id} wallet={w} baseCurrency={baseCurrency} onDelete={() => deleteWallet(w.id)} onEdit={() => handleEditWallet(w)} />
                         ))}
                       </motion.div>
                     )}
@@ -162,7 +202,7 @@ export function WalletsView() {
 
             {/* Uncategorized Wallets */}
             {portfolioWallets.filter(w => !w.folderId).map(w => (
-              <WalletCard key={w.id} wallet={w} baseCurrency={baseCurrency} onDelete={() => deleteWallet(w.id)} />
+              <WalletCard key={w.id} wallet={w} baseCurrency={baseCurrency} onDelete={() => deleteWallet(w.id)} onEdit={() => handleEditWallet(w)} />
             ))}
             
             {portfolioFolders.length === 0 && portfolioWallets.length === 0 && (
@@ -174,14 +214,24 @@ export function WalletsView() {
         </div>
       )}
       
-      <AddPortfolioModal isOpen={isPortfolioModalOpen} onClose={() => setIsPortfolioModalOpen(false)} />
-      <AddFolderModal isOpen={isFolderModalOpen} onClose={() => setIsFolderModalOpen(false)} portfolioId={selectedPortfolioId} />
-      <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} />
+      <AddPortfolioModal isOpen={isPortfolioModalOpen} onClose={() => setIsPortfolioModalOpen(false)} editingPortfolio={editingPortfolio} />
+      <AddFolderModal isOpen={isFolderModalOpen} onClose={() => setIsFolderModalOpen(false)} portfolioId={selectedPortfolioId} editingFolder={editingFolder} />
+      <AddWalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} editingWallet={editingWallet} />
     </div>
   );
 }
 
-function WalletCard({ wallet, baseCurrency, onDelete }: { wallet: Wallet; baseCurrency: string; onDelete: () => void }) {
+function WalletCard({ 
+  wallet, 
+  baseCurrency, 
+  onDelete, 
+  onEdit 
+}: { 
+  wallet: Wallet; 
+  baseCurrency: string; 
+  onDelete: () => void; 
+  onEdit: () => void;
+}) {
   const balanceInUSD = convertAmount(wallet.balance, wallet.currency, baseCurrency);
   
   return (
@@ -189,7 +239,6 @@ function WalletCard({ wallet, baseCurrency, onDelete }: { wallet: Wallet; baseCu
       layout
       className="bg-[#1c2128] rounded-[32px] p-6 flex items-center gap-5 border border-white/5 shadow-xl group relative overflow-hidden active:scale-[0.98] transition-all"
     >
-      {/* ICON ON LEFT AS REQUESTED */}
       <div 
         className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-white shadow-lg relative overflow-hidden"
         style={{ backgroundColor: wallet.color || '#3b82f6' }}
@@ -214,9 +263,13 @@ function WalletCard({ wallet, baseCurrency, onDelete }: { wallet: Wallet; baseCu
         </div>
       </div>
 
-      {/* ACTIONS ON RIGHT, NOT OVERLAPPING */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-         <button className="p-3 hover:bg-white/5 rounded-xl transition-colors"><Edit2 size={16} className="text-white/20" /></button>
+         <button 
+           onClick={(e) => { e.stopPropagation(); onEdit(); }}
+           className="p-3 hover:bg-white/5 rounded-xl transition-colors"
+         >
+           <Edit2 size={16} className="text-white/20" />
+         </button>
          <button 
            onClick={(e) => { e.stopPropagation(); onDelete(); }}
            className="p-3 hover:bg-red-500/10 rounded-xl transition-colors group/del"
