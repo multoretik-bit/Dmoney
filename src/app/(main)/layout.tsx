@@ -10,7 +10,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, setUser, pullData, wallets } = useStore();
+  const { 
+    user, setUser, pullData, pushData, wallets, 
+    categories, portfolios, folders, expenses, preferences 
+  } = useStore();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -33,6 +36,37 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     return () => subscription.unsubscribe();
   }, [setUser, pullData]);
+
+  // Auto-push changes to Supabase
+  useEffect(() => {
+    if (!user) return;
+    
+    const timeoutId = setTimeout(() => {
+      pushData();
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [user, categories, portfolios, folders, wallets, expenses, preferences, pushData]);
+
+  // Real-time pull from Supabase
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        () => {
+          pullData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, pullData]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

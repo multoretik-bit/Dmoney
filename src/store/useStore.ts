@@ -174,12 +174,13 @@ export const useStore = create<UserState>()(
 
         try {
           // Fetch all in parallel
-          const [cats, ports, folds, walls, exps] = await Promise.all([
+          const [cats, ports, folds, walls, exps, prefs] = await Promise.all([
             supabase.from('categories').select('*'),
             supabase.from('portfolios').select('*'),
             supabase.from('folders').select('*'),
             supabase.from('wallets').select('*'),
             supabase.from('transactions').select('*'),
+            supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
           ]);
 
           if (cats.data) set({ categories: cats.data.map((c: any) => ({
@@ -191,9 +192,31 @@ export const useStore = create<UserState>()(
             budgetLimit: c.budget_limit
           })) });
 
-          if (ports.data) set({ portfolios: ports.data });
-          if (folds.data) set({ folders: folds.data });
-          if (walls.data) set({ wallets: walls.data });
+          if (ports.data) set({ portfolios: ports.data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            color: p.color,
+            icon: p.icon
+          })) });
+
+          if (folds.data) set({ folders: folds.data.map((f: any) => ({
+            id: f.id,
+            portfolioId: f.portfolio_id,
+            name: f.name,
+            color: f.color
+          })) });
+
+          if (walls.data) set({ wallets: walls.data.map((w: any) => ({
+            id: w.id,
+            portfolioId: w.portfolio_id,
+            folderId: w.folder_id,
+            name: w.name,
+            currency: w.currency,
+            balance: w.balance,
+            icon: w.icon,
+            color: w.color
+          })) });
+
           if (exps.data) set({ expenses: exps.data.map((e: any) => ({
              id: e.id,
              originalAmount: e.amount,
@@ -205,6 +228,11 @@ export const useStore = create<UserState>()(
              walletId: e.wallet_id,
              date: e.date
           })) });
+
+          if (prefs.data) set({ preferences: {
+            baseCurrency: prefs.data.base_currency,
+            savedColors: prefs.data.saved_colors || []
+          }});
 
         } catch (error) {
           console.error('Error pulling data:', error);
@@ -218,7 +246,6 @@ export const useStore = create<UserState>()(
          const state = useStore.getState();
          
          try {
-            // Very simple upsert strategy
             await Promise.all([
                supabase.from('categories').upsert(state.categories.map(c => ({
                   id: c.id,
@@ -229,8 +256,31 @@ export const useStore = create<UserState>()(
                   color: c.color,
                   budget_limit: c.budgetLimit
                }))),
-               supabase.from('portfolios').upsert(state.portfolios.map(p => ({ ...p, user_id: user.id }))),
-               supabase.from('wallets').upsert(state.wallets.map(w => ({ ...w, user_id: user.id }))),
+               supabase.from('portfolios').upsert(state.portfolios.map(p => ({
+                  id: p.id,
+                  user_id: user.id,
+                  name: p.name,
+                  color: p.color,
+                  icon: p.icon
+               }))),
+               supabase.from('folders').upsert(state.folders.map(f => ({
+                  id: f.id,
+                  user_id: user.id,
+                  portfolio_id: f.portfolioId,
+                  name: f.name,
+                  color: f.color
+               }))),
+               supabase.from('wallets').upsert(state.wallets.map(w => ({
+                  id: w.id,
+                  user_id: user.id,
+                  portfolio_id: w.portfolioId,
+                  folder_id: w.folderId,
+                  name: w.name,
+                  currency: w.currency,
+                  balance: w.balance,
+                  icon: w.icon,
+                  color: w.color
+               }))),
                supabase.from('transactions').upsert(state.expenses.map(e => ({
                   id: e.id,
                   user_id: user.id,
@@ -242,7 +292,13 @@ export const useStore = create<UserState>()(
                   wallet_amount: e.walletAmount,
                   exchange_rate: e.exchangeRate,
                   date: e.date
-               })))
+               }))),
+               supabase.from('user_preferences').upsert({
+                  user_id: user.id,
+                  base_currency: state.preferences.baseCurrency,
+                  saved_colors: state.preferences.savedColors,
+                  updated_at: new Date().toISOString()
+               })
             ]);
          } catch (error) {
             console.error('Error pushing data:', error);
