@@ -87,7 +87,7 @@ export function WalletsView() {
              <div className="flex flex-col items-start gap-1">
                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{p.name}</span>
                <span className="text-4xl font-black text-white leading-tight">
-                 ${Math.floor(getPortfolioBalance(p.id)).toLocaleString()}
+                 ${getPortfolioBalance(p.id).toFixed(1)}
                </span>
              </div>
              <div className="flex items-center gap-2">
@@ -259,10 +259,10 @@ function WalletCard({
         </div>
         <div className="flex flex-col">
           <span className="text-2xl font-black text-white leading-tight">
-             ${Math.floor(balanceInUSD).toLocaleString()}
+             ${balanceInUSD.toFixed(1)}
           </span>
           <span className="text-[9px] font-black text-accent/50 uppercase tracking-widest">
-             {wallet.balance.toLocaleString()} {wallet.currency}
+             {wallet.balance.toFixed(1)} {wallet.currency}
           </span>
         </div>
       </div>

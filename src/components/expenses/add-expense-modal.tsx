@@ -157,16 +157,16 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                              <div className="flex items-center gap-2 text-accent">
                                 <ArrowRight size={14} className="opacity-40" />
                                 <span className="text-3xl font-black tracking-tight">
-                                  ≈ {convertedUSD.toFixed(2)} USD
+                                  ≈ {convertedUSD.toFixed(1)} USD
                                 </span>
                              </div>
                              <div className="flex flex-col items-center gap-0.5 opacity-40">
                                 <span className="text-[12px] font-black uppercase tracking-[0.2em]">
-                                  ≈ {Math.floor(convertedRUB).toLocaleString()} RUB
+                                  ≈ {convertedRUB.toFixed(1)} RUB
                                 </span>
                                 {wallet && wallet.currency !== 'USD' && wallet.currency !== 'RUB' && (
                                   <span className="text-[9px] font-black uppercase tracking-widest">
-                                    {convertedWallet?.toLocaleString()} {wallet.currency} from {wallet.name}
+                                    {convertedWallet?.toFixed(1)} {wallet.currency} from {wallet.name}
                                   </span>
                                 )}
                              </div>
@@ -256,7 +256,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                         </div>
                         <div className="flex flex-col items-start overflow-hidden">
                           <span className="text-xs font-black uppercase tracking-tight truncate w-full">{w.name}</span>
-                          <span className="text-[9px] font-black opacity-30 tracking-widest">{w.balance.toFixed(0)} {w.currency}</span>
+                          <span className="text-[9px] font-black opacity-30 tracking-widest">{w.balance.toFixed(1)} {w.currency}</span>
                         </div>
                       </button>
                     ))}

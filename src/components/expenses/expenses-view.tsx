@@ -109,7 +109,7 @@ export function ExpensesView() {
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-black text-white leading-none">
-                  ${totalSpentToday.toLocaleString()}
+                  ${totalSpentToday.toFixed(1)}
                 </span>
               </div>
 
@@ -154,7 +154,7 @@ export function ExpensesView() {
                     {Object.values(groupedExpenses).map(({ category, total }) => (
                       <div key={category.id} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full">
                         <span className="text-xs">{category.icon}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">${total.toLocaleString()}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">${total.toFixed(1)}</span>
                       </div>
                     ))}
                   </motion.div>

@@ -132,12 +132,12 @@ export function BudgetView() {
              <div className="absolute inset-0 flex flex-col items-center justify-center">
                 {viewMode === 'execute' ? (
                   <>
-                    <span className="text-3xl font-black">${totalSpent.toLocaleString()}</span>
+                    <span className="text-3xl font-black">${totalSpent.toFixed(1)}</span>
                     <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Потрачено</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-3xl font-black">${totalPlanned.toLocaleString()}</span>
+                    <span className="text-3xl font-black">${totalPlanned.toFixed(1)}</span>
                     <span className="text-[10px] font-black uppercase tracking-widest text-white/20">В плане</span>
                   </>
                 )}
@@ -148,7 +148,7 @@ export function BudgetView() {
             <div className="flex flex-col items-center">
               <span className="text-white/20 text-[9px] font-black uppercase tracking-widest">{viewMode === 'execute' ? 'Осталось' : 'Бюджет'}</span>
               <span className={cn("text-lg font-black", viewMode === 'execute' && totalPlanned - totalSpent < 0 ? "text-red-500" : "text-white")}>
-                ${Math.abs(totalPlanned - totalSpent).toLocaleString()}
+                ${Math.abs(totalPlanned - totalSpent).toFixed(1)}
               </span>
             </div>
             <div className="flex flex-col items-center border-l border-white/5">
@@ -189,16 +189,16 @@ export function BudgetView() {
                     className="p-6 flex items-center justify-between cursor-pointer active:bg-white/5 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner relative" style={{ backgroundColor: `${head.color}15`, color: head.color }}>
+                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg relative border-2" style={{ backgroundColor: `${head.color}30`, borderColor: `${head.color}60`, color: head.color }}>
                           {head.icon}
-                          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl pointer-events-none" />
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl pointer-events-none" />
                        </div>
                        <div className="flex flex-col">
                           <span className="text-lg font-black tracking-tight">{head.name}</span>
                           <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
                             {viewMode === 'execute' 
-                              ? `$${blockSpent.toLocaleString()} / $${blockPlanned.toLocaleString()}` 
-                              : `$${blockPlanned.toLocaleString()} в плане`
+                              ? `$${blockSpent.toFixed(1)} / $${blockPlanned.toFixed(1)}` 
+                              : `$${blockPlanned.toFixed(1)} в плане`
                             }
                           </span>
                        </div>
@@ -237,7 +237,7 @@ export function BudgetView() {
                                <div key={sub.id} className="flex flex-col gap-3">
                                   <div className="flex justify-between items-center">
                                      <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-base">{sub.icon}</div>
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base border" style={{ backgroundColor: `${sub.color}20`, borderColor: `${sub.color}40`, color: sub.color }}>{sub.icon}</div>
                                         <span className="text-sm font-bold text-white/80">{sub.name}</span>
                                         {spent > limit && limit > 0 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
                                      </div>
@@ -258,10 +258,10 @@ export function BudgetView() {
                                               "text-sm font-black transition-colors",
                                               spent > limit && limit > 0 ? "text-red-500" : "text-white"
                                             )}>
-                                              ${spent.toLocaleString()}
+                                              ${spent.toFixed(1)}
                                             </span>
                                             <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
-                                              из ${limit.toLocaleString()}
+                                              из ${limit.toFixed(1)}
                                             </span>
                                           </div>
                                         )}
@@ -308,16 +308,16 @@ export function BudgetView() {
                     <span className="text-lg font-black text-red-500/80 tracking-tight">Всего вне плана</span>
                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Not budgeted spending</span>
                   </div>
-                  <span className="text-2xl font-black text-red-500">${totalUnplannedSpent.toLocaleString()}</span>
+                  <span className="text-2xl font-black text-red-500">${totalUnplannedSpent.toFixed(1)}</span>
                </div>
                <div className="flex flex-col gap-4">
                   {unplannedExpenses.map(sub => (
                     <div key={sub.id} className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center text-base">{sub.icon}</div>
+                          <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center text-base border border-red-500/20">{sub.icon}</div>
                           <span className="text-sm font-bold text-white/80">{sub.name}</span>
                        </div>
-                       <span className="text-sm font-black text-white/60">${(spendingByCategory[sub.id] || 0).toLocaleString()}</span>
+                       <span className="text-sm font-black text-white/60">${(spendingByCategory[sub.id] || 0).toFixed(1)}</span>
                     </div>
                   ))}
                </div>
