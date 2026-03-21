@@ -15,13 +15,15 @@ interface AddCategoryModalProps {
   onClose: () => void;
   initialParentId?: string;
   editingCategory?: Category | null;
+  hideBudgetLimit?: boolean;
 }
 
 export function AddCategoryModal({ 
   isOpen, 
   onClose, 
   initialParentId, 
-  editingCategory 
+  editingCategory,
+  hideBudgetLimit = false
 }: AddCategoryModalProps) {
   const { addCategory, updateCategory, deleteCategory, categories, preferences } = useStore();
   
@@ -65,7 +67,7 @@ export function AddCategoryModal({
         parentId: parentId || undefined, 
         color, 
         icon,
-        budgetLimit: parseFloat(budgetLimit) || 0
+        budgetLimit: hideBudgetLimit ? (editingCategory.budgetLimit || 0) : (parseFloat(budgetLimit) || 0)
       });
     } else {
       addCategory({
@@ -74,7 +76,7 @@ export function AddCategoryModal({
         parentId: parentId || undefined,
         color,
         icon,
-        budgetLimit: parseFloat(budgetLimit) || 0
+        budgetLimit: hideBudgetLimit ? 0 : (parseFloat(budgetLimit) || 0)
       });
     }
     
@@ -140,6 +142,7 @@ export function AddCategoryModal({
                 </div>
              </div>
 
+             {!hideBudgetLimit && (
              <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 px-2">
                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Бюджет (Лимит)</span>
@@ -155,6 +158,7 @@ export function AddCategoryModal({
                    />
                 </div>
              </div>
+             )}
 
              <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 px-2">

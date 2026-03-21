@@ -194,9 +194,6 @@ export function CategoriesView() {
                      </div>
                      <div className="flex flex-col items-start">
                         <span className="text-xl font-black tracking-tight text-white">{head.name}</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30">
-                          {subs.length === 0 ? 'Пустой блок' : `${subs.length} категории`}
-                        </span>
                      </div>
                   </div>
                   <div className="flex items-center gap-4 relative z-10">
@@ -257,6 +254,7 @@ export function CategoriesView() {
         onClose={() => { setIsModalOpen(false); setEditingCategory(null); }} 
         initialParentId={initialParentId}
         editingCategory={editingCategory}
+        hideBudgetLimit={true}
       />
     </div>
   );
