@@ -90,242 +90,159 @@ export function BudgetView() {
   [unplannedExpenses, spendingByCategory]);
 
   return (
-    <div className="flex flex-col min-h-screen pb-40 bg-[#0d1117] text-white">
-      {/* Header Summary */}
-      <header className="p-8 pt-16 bg-[#161b22] rounded-b-[64px] border-b border-white/5 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 blur-[120px] rounded-full -mr-32 -mt-32" />
-        
-        <div className="flex justify-between items-center mb-10 relative z-10">
-          <button className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/5 shadow-lg"><Settings size={22} className="text-white/40" /></button>
-          <div className="flex bg-black/20 p-1 rounded-2xl border border-white/5">
-            <button 
-              onClick={() => setViewMode('plan')}
-              className={cn(
-                "px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                viewMode === 'plan' ? "bg-white text-black shadow-xl" : "text-white/40"
-              )}
-            >
-              План
-            </button>
-            <button 
-              onClick={() => setViewMode('execute')}
-              className={cn(
-                "px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
-                viewMode === 'execute' ? "bg-white text-black shadow-xl" : "text-white/40"
-              )}
-            >
-              Выполнение
-            </button>
-          </div>
-          <button className="w-12 h-12 bg-accent/20 rounded-2xl flex items-center justify-center border border-accent/10 shadow-lg text-accent"><Target size={22} /></button>
-        </div>
+    <div className="flex flex-col min-h-screen pb-40">
+      {/* Header Summary - dHabits Minimalist Style */}
+      <header className="py-12 flex flex-col items-center justify-center text-center gap-2">
+        <h1 className="text-3xl font-black text-white px-6">
+          {viewMode === 'execute' ? 'Траты и Бюджет' : 'Планирование'}
+        </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+          {viewMode === 'execute' 
+            ? `Использовано ${Math.round(overallProgress)}% от лимита` 
+            : `Общий план: $${totalPlanned.toFixed(1)}`
+          }
+        </p>
 
-        <div className="flex flex-col items-center gap-2 relative z-10">
-          <div className="relative w-56 h-56 flex items-center justify-center">
-             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="10" />
-                <motion.circle 
-                  cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="10" 
-                  strokeDasharray="276" 
-                  initial={{ strokeDashoffset: 276 }} 
-                  animate={{ 
-                    strokeDashoffset: viewMode === 'plan' ? 0 : 276 - (276 * Math.min(overallProgress, 100)) / 100,
-                    opacity: viewMode === 'plan' ? 0.2 : 1
-                  }}
-                  strokeLinecap="round" className={cn(overallProgress > 100 ? "text-red-500" : "text-accent")}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                />
-             </svg>
-             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                {viewMode === 'execute' ? (
-                  <>
-                    <span className="text-3xl font-black">${totalSpent.toFixed(1)}</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Потрачено</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-3xl font-black">${totalPlanned.toFixed(1)}</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/20">В плане</span>
-                  </>
-                )}
-             </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-8 mt-2 w-full max-w-xs">
-            <div className="flex flex-col items-center">
-              <span className="text-white/20 text-[9px] font-black uppercase tracking-widest">{viewMode === 'execute' ? 'Осталось' : 'Бюджет'}</span>
-              <span className={cn("text-lg font-black", viewMode === 'execute' && totalPlanned - totalSpent < 0 ? "text-red-500" : "text-white")}>
-                ${Math.abs(totalPlanned - totalSpent).toFixed(1)}
-              </span>
-            </div>
-            <div className="flex flex-col items-center border-l border-white/5">
-              <span className="text-white/20 text-[9px] font-black uppercase tracking-widest">Прогресс</span>
-              <span className="text-lg font-black">{Math.round(overallProgress)}%</span>
-            </div>
-          </div>
+        <div className="mt-8 bg-black/40 p-1 rounded-2xl border border-white/5 backdrop-blur-md">
+          <button 
+            onClick={() => setViewMode('plan')}
+            className={cn(
+              "px-8 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+              viewMode === 'plan' ? "bg-white text-black shadow-xl" : "text-white/40"
+            )}
+          >
+            План
+          </button>
+          <button 
+            onClick={() => setViewMode('execute')}
+            className={cn(
+              "px-8 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+              viewMode === 'execute' ? "bg-white text-black shadow-xl" : "text-white/40"
+            )}
+          >
+            Выполнение
+          </button>
         </div>
       </header>
 
       <div className="p-6 flex flex-col gap-10 mt-4">
         {/* Budget Blocks */}
-        <div className="flex flex-col gap-6">
-          <div className="px-2 flex justify-between items-center">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Budget Blocks</span>
-            <button 
-              onClick={openAddBlock}
-              className="text-accent text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-all"
-            >
-              <Plus size={12} strokeWidth={4} /> ADD BLOCK
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {headCategories.map(head => {
-              const subCats = categoriesByBlock[head.id] || [];
-              const isExpanded = expandedBlocks.includes(head.id);
-              
-              const blockPlanned = subCats.reduce((sum, c) => sum + (c.budgetLimit || 0), 0);
-              const blockSpent = subCats.reduce((sum, c) => sum + (spendingByCategory[c.id] || 0), 0);
-              const blockPercent = blockPlanned > 0 ? (blockSpent / blockPlanned) * 100 : 0;
-
-              return (
-                <div 
-                  key={head.id} 
-                  className="rounded-[40px] border-2 shadow-2xl overflow-hidden active:scale-[0.99] transition-all relative"
-                  style={{ backgroundColor: head.color, borderColor: head.color }}
-                >
-                  <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-                  {/* Block Header */}
-                  <div 
-                    onClick={() => toggleBlock(head.id)}
-                    className="p-6 flex items-center justify-between cursor-pointer relative z-10"
-                  >
-                    <div className="flex items-center gap-4">
-                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg relative border-2 bg-black/20" style={{ borderColor: 'transparent' }}>
-                          <span className="filter brightness-50 contrast-150">{head.icon}</span>
-                       </div>
-                       <div className="flex flex-col">
-                          <span className="text-lg font-black tracking-tight text-white">{head.name}</span>
-                          <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">
-                            {viewMode === 'execute' 
-                              ? `$${blockSpent.toFixed(1)} / $${blockPlanned.toFixed(1)}` 
-                              : `$${blockPlanned.toFixed(1)} в плане`
-                            }
-                          </span>
-                       </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); openEditCategory(head); }}
-                         className="p-3 w-10 h-10 bg-black/20 rounded-xl flex items-center justify-center text-white/40 hover:text-white transition-all shadow-inner"
-                       >
-                          <Edit2 size={16} />
-                       </button>
-                       <div className="w-10 h-10 rounded-full border-2 border-white/20 flex items-center justify-center relative">
-                          <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                             <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="8" />
-                             <circle 
-                                cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="8" 
-                                strokeDasharray="251" strokeDashoffset={251 - (251 * Math.min(blockPercent, 100)) / 100}
-                                strokeLinecap="round"
-                             />
-                          </svg>
-                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{Math.round(blockPercent)}%</span>
-                       </div>
-                       <ChevronDown size={20} className={cn("text-white/40 transition-transform", !isExpanded && "-rotate-90")} />
-                    </div>
+        <div className="flex flex-col gap-12">
+          {headCategories.map(head => {
+            const subCats = categoriesByBlock[head.id] || [];
+            const isExpanded = expandedBlocks.includes(head.id);
+            
+            return (
+              <div key={head.id} className="flex flex-col gap-6">
+                <div className="px-2 flex justify-between items-center group cursor-pointer" onClick={() => toggleBlock(head.id)}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">{head.name}</span>
+                    <div className="h-px flex-1 bg-white/5 w-24 sm:w-48 group-hover:bg-accent/20 transition-colors" />
                   </div>
-
-                  {/* Block Content */}
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                        className="border-t border-black/10 bg-black/20"
-                      >
-                        <div className="p-6 flex flex-col gap-6">
-                           {subCats.map(sub => {
-                             const spent = spendingByCategory[sub.id] || 0;
-                             const limit = sub.budgetLimit || 0;
-                             const percent = limit > 0 ? (spent / limit) * 100 : 0;
-
-                             return (
-                               <div 
-                                 key={sub.id} 
-                                 className="flex flex-col gap-3 p-5 rounded-3xl border-2 shadow-lg relative overflow-hidden active:scale-[0.98] transition-all"
-                                 style={{ backgroundColor: sub.color, borderColor: sub.color }}
-                               >
-                                  <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-                                  <div className="flex justify-between items-center relative z-10">
-                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-black/20 border-2" style={{ borderColor: 'transparent' }}>
-                                          <span className="filter brightness-50 contrast-150">{sub.icon}</span>
-                                        </div>
-                                        <span className="text-base font-bold text-white">{sub.name}</span>
-                                        {spent > limit && limit > 0 && <AlertCircle size={14} className="text-white animate-pulse" />}
-                                     </div>
-                                     <div className="flex items-center gap-2">
-                                        <button 
-                                          onClick={() => openEditCategory(sub)}
-                                          className="p-2 w-8 h-8 rounded-lg bg-black/20 text-white/40 hover:text-white transition-all shadow-inner"
-                                        >
-                                           <Edit2 size={12} />
-                                        </button>
-                                        {viewMode === 'plan' ? (
-                                          <div className="flex items-center gap-2 text-white">
-                                            <input 
-                                              type="number"
-                                              value={limit || ''}
-                                              onChange={(e) => setCategoryLimit(sub.id, parseFloat(e.target.value) || 0)}
-                                              className="bg-black/20 border border-white/20 rounded-lg w-20 px-2 py-1 text-xs font-black text-right outline-none focus:border-white/40"
-                                            />
-                                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">USD</span>
-                                          </div>
-                                        ) : (
-                                          <div className="flex flex-col items-end">
-                                            <span className="text-sm font-black text-white">
-                                              ${spent.toFixed(1)}
-                                            </span>
-                                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
-                                              из ${limit.toFixed(1)}
-                                            </span>
-                                          </div>
-                                        )}
-                                     </div>
-                                  </div>
-                                  {viewMode === 'execute' && (
-                                    <div className="h-2 w-full bg-black/20 rounded-full overflow-hidden relative z-10">
-                                       <motion.div 
-                                         className="h-full bg-white shadow-[0_0_10px_white]" 
-                                         initial={{ width: 0 }} animate={{ width: `${Math.min(percent, 100)}%` }}
-                                         transition={{ duration: 1, ease: "easeOut" }}
-                                       />
-                                    </div>
-                                  )}
-                               </div>
-                             );
-                           })}
-                           <button 
-                             onClick={() => openAddCategory(head.id)}
-                             className="py-4 border border-dashed border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-white/20 hover:bg-white/5 active:scale-[0.98] transition-all"
-                           >
-                             + Add Category to {head.name}
-                           </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); openEditCategory(head); }}
+                      className="text-white/20 hover:text-white transition-colors"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <ChevronDown size={16} className={cn("text-white/20 transition-transform", !isExpanded && "-rotate-90")} />
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }} 
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex flex-col gap-3"
+                    >
+                      {subCats.map((sub, catIndex) => {
+                        const spent = spendingByCategory[sub.id] || 0;
+                        const limit = sub.budgetLimit || 0;
+                        const percent = limit > 0 ? (spent / limit) * 100 : 0;
+
+                        return (
+                          <div 
+                            key={sub.id} 
+                            className={cn(
+                              "glass-card p-4 flex items-center justify-between group active:scale-[0.99] transition-all relative overflow-hidden",
+                              spent > limit && limit > 0 
+                                ? "border-l-4 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]" 
+                                : (catIndex % 3 === 0 ? "neon-border-blue" : catIndex % 3 === 1 ? "neon-border-purple" : "neon-border-green")
+                            )}
+                          >
+                            <div className="flex items-center gap-4 flex-1">
+                               <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center text-2xl border border-white/5 shadow-inner">
+                                  {sub.icon}
+                               </div>
+                               <div className="flex flex-col gap-1 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-base font-black text-white leading-tight">{sub.name}</span>
+                                    {spent > limit && limit > 0 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                     <div className="h-1.5 flex-1 bg-white/5 rounded-full overflow-hidden max-w-[120px]">
+                                        <motion.div 
+                                          className="h-full bg-white opacity-40" 
+                                          initial={{ width: 0 }} animate={{ width: `${Math.min(percent, 100)}%` }}
+                                        />
+                                     </div>
+                                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                                        {Math.round(percent)}%
+                                     </span>
+                                  </div>
+                               </div>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1">
+                               <div className="flex items-center gap-2">
+                                  <span className="text-lg font-black text-white">${spent.toFixed(1)}</span>
+                                  <button 
+                                    onClick={() => openEditCategory(sub)}
+                                    className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                               </div>
+                               <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                                 из ${limit.toFixed(1)}
+                               </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      
+                      <button 
+                         onClick={() => openAddCategory(head.id)}
+                         className="h-16 border-2 border-dashed border-white/5 rounded-[32px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/10 hover:text-white/40 hover:bg-white/5 transition-all"
+                      >
+                        <Plus size={14} strokeWidth={4} /> Добавить в {head.name}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+          
+          <button 
+            onClick={openAddBlock}
+            className="h-24 glass-card rounded-[40px] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 group hover:border-accent/40 transition-all"
+          >
+            <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <Plus size={24} strokeWidth={4} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 group-hover:text-accent transition-colors">Создать новый блок</span>
+          </button>
         </div>
 
         {/* Unplanned Section */}
         {totalUnplannedSpent > 0 && (
           <div className="flex flex-col gap-6">
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Внеплановые траты</span>
-            <div className="bg-[#1c2128] rounded-[40px] border border-red-500/20 p-8 shadow-xl relative overflow-hidden">
+            <div className="glass-card rounded-[40px] border-l-4 border-red-500/50 p-8 shadow-xl relative overflow-hidden">
                <div className="absolute top-0 right-0 p-4 opacity-5">
                   <Activity size={80} className="text-red-500" />
                </div>

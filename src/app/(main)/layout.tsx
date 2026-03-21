@@ -5,20 +5,27 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { AuthModal } from '@/components/auth/auth-modal';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
-import { Settings, User as UserIcon } from 'lucide-react';
+import { Settings, User as UserIcon, LogOut, Wallet, CircleDollarSign } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, setUser, pullData } = useStore();
+  const { user, setUser, pullData, wallets } = useStore();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    // Check current session
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) pullData();
     });
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (event === 'SIGNED_IN' && session?.user) pullData();
@@ -27,31 +34,70 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return () => subscription.unsubscribe();
   }, [setUser, pullData]);
 
-  return (
-    <div className="min-h-screen bg-background text-textMain flex flex-col pt-safe relative">
-      {/* Top Auth Bar */}
-      <div className="fixed top-0 left-0 right-0 h-16 z-[100] px-6 flex justify-end items-center pointer-events-none">
-        <button 
-          onClick={() => setIsAuthOpen(true)}
-          className="pointer-events-auto p-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 text-white/40 hover:text-accent transition-all flex items-center gap-2 group"
-        >
-          {user ? (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/20 group-hover:text-white">Synced</span>
-            </div>
-          ) : (
-            <>
-              <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white">Sign In</span>
-              <UserIcon size={16} />
-            </>
-          )}
-        </button>
-      </div>
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
-      <main className="flex-1 w-full max-w-md mx-auto relative pb-24 overflow-x-hidden pt-16">
+  const totalBalance = wallets.reduce((acc, w) => acc + w.balance, 0);
+
+  return (
+    <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col pt-safe relative">
+      {/* Premium Header - dHabits Style */}
+      <header className={cn(
+        "fixed top-0 left-0 right-0 z-[100] transition-all duration-300 px-6 py-4 flex items-center justify-between",
+        scrolled ? "bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 py-3" : "bg-transparent"
+      )}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)]">
+            <CircleDollarSign className="text-white" size={24} />
+          </div>
+          <span className="text-xl font-black tracking-tighter text-white">DMoney</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {user && (
+            <div className="hidden sm:flex items-center gap-2 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Synced</span>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1 bg-black/40 p-1 rounded-2xl border border-white/5 shadow-inner">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-xl">
+               <div className="w-4 h-4 bg-accent rounded-full flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+               </div>
+               <span className="text-sm font-black text-accent">{totalBalance.toFixed(1)}</span>
+            </div>
+            
+            <button className="p-2 text-white/40 hover:text-white transition-colors">
+              <Settings size={20} />
+            </button>
+            
+            {user ? (
+              <button 
+                onClick={handleLogout}
+                className="p-2 text-white/40 hover:text-red-500 transition-colors"
+              >
+                <LogOut size={20} />
+              </button>
+            ) : (
+              <button 
+                onClick={() => setIsAuthOpen(true)}
+                className="p-2 text-white/40 hover:text-accent transition-colors"
+              >
+                <UserIcon size={20} />
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 w-full max-w-5xl mx-auto relative pb-32 overflow-x-hidden pt-24 px-6">
         {children}
       </main>
+      
       <BottomNav />
       
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />

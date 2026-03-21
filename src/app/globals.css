@@ -2,14 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 11, 28, 44;
-  --background-end-rgb: 11, 28, 44;
+@layer base {
+  :root {
+    --background: 222 47% 4%;
+    --foreground: 213 31% 91%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 210 40% 98%;
+    --card: 222 47% 6%;
+    --card-foreground: 213 31% 91%;
+  }
+
+  body {
+    @apply bg-[#020617] text-slate-100 antialiased;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+  
+  .glass-card {
+    @apply bg-[#0b101b] border border-white/5 shadow-2xl;
+  }
+
+  .neon-border-blue {
+    box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.3);
+    border-left: 4px solid #3b82f6;
+  }
+
+  .neon-border-purple {
+    box-shadow: 0 0 15px -3px rgba(139, 92, 246, 0.3);
+    border-left: 4px solid #8b5cf6;
+  }
+
+  .neon-border-green {
+    box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.3);
+    border-left: 4px solid #10b981;
+  }
+}
+
+* {
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 0px;
 }

@@ -84,7 +84,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
           <motion.div 
-            className="bg-[#0d1117] w-full max-w-xl max-h-[90vh] rounded-[48px] flex flex-col p-8 shadow-2xl relative border border-white/10"
+            className="glass-card w-full max-w-2xl max-h-[90vh] rounded-[48px] flex flex-col p-8 shadow-2xl relative border-t-4 border-t-accent"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -92,7 +92,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
             onClick={(e) => e.stopPropagation()}
           >
             {/* CENTERED HEADER */}
-            <div className="flex flex-col items-center mb-8 relative">
+            <div className="flex flex-col items-center mb-10 relative">
               <button 
                 onClick={onClose} 
                 className="absolute right-0 top-0 p-3 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all"
@@ -100,32 +100,31 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                 <X size={20} />
               </button>
               
-              <div className="w-16 h-16 bg-accent/20 rounded-[22px] flex items-center justify-center text-accent mb-3 shadow-xl shadow-accent/10">
-                <Calculator size={32} />
+              <div className="w-16 h-16 bg-accent/20 rounded-[28px] flex items-center justify-center text-accent mb-4 shadow-xl shadow-accent/10">
+                <Calculator size={32} strokeWidth={3} />
               </div>
-              <h2 className="text-2xl font-black uppercase tracking-widest text-white/90">Расход</h2>
+              <h2 className="text-3xl font-black uppercase tracking-[0.3em] text-white">Расход</h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-8 hide-scrollbar pb-24">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-10 hide-scrollbar pb-24">
               {/* Amount Input with Enhanced Preview */}
-              <div className="flex flex-col items-center justify-center p-10 bg-white/2 border border-white/5 rounded-[40px] relative overflow-hidden min-h-[280px]">
-                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50" />
-                <div className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em] mb-8">Сумма трат</div>
+              <div className="flex flex-col items-center justify-center p-12 bg-black/20 rounded-[48px] border border-white/5 relative overflow-hidden min-h-[320px]">
+                <div className="text-[11px] text-white/20 font-black uppercase tracking-[0.4em] mb-10">Введите сумму</div>
                 
-                <div className="flex flex-col items-center gap-6 w-full">
+                <div className="flex flex-col items-center gap-8 w-full">
                   <div className="flex items-center justify-center gap-4 w-full">
                     <button 
                       type="button"
                       onClick={() => setIsCurrencyPickerOpen(true)}
-                      className="bg-white/5 px-4 h-14 rounded-2xl text-lg font-black outline-none text-accent border border-white/5 flex items-center gap-2 group hover:bg-white/10 transition-all"
+                      className="bg-white/5 px-5 h-16 rounded-[24px] text-xl font-black outline-none text-accent border border-accent/10 flex items-center gap-3 hover:bg-accent/10 transition-all"
                     >
                       {currency}
-                      <ChevronDown size={14} className="text-accent/40 group-hover:text-accent transition-colors" />
+                      <ChevronDown size={14} className="text-accent/60" />
                     </button>
                     <input 
                       type="text" 
                       inputMode="decimal"
-                      className="bg-transparent text-6xl font-black text-left outline-none min-w-[120px] max-w-[200px] text-white placeholder-white/5"
+                      className="bg-transparent text-7xl font-black text-left outline-none min-w-[140px] max-w-[240px] text-white placeholder-white/5"
                       placeholder="0"
                       value={amountInput}
                       onChange={(e) => setAmountInput(e.target.value)}
@@ -151,22 +150,21 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                         
                         return (
                           <motion.div 
-                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                            className="flex flex-col items-center gap-1.5 bg-accent/5 p-5 rounded-3xl border border-accent/10 w-full"
+                            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center gap-2 bg-accent/5 p-6 rounded-[32px] border border-accent/10 w-full"
                           >
-                             <div className="flex items-center gap-2 text-accent">
-                                <ArrowRight size={14} className="opacity-40" />
-                                <span className="text-3xl font-black tracking-tight">
+                             <div className="flex items-center gap-3 text-accent">
+                                <span className="text-4xl font-black tracking-tight">
                                   ≈ {convertedUSD.toFixed(1)} USD
                                 </span>
                              </div>
-                             <div className="flex flex-col items-center gap-0.5 opacity-40">
-                                <span className="text-[12px] font-black uppercase tracking-[0.2em]">
+                             <div className="flex flex-col items-center gap-1 opacity-30">
+                                <span className="text-[13px] font-black uppercase tracking-widest text-white">
                                   ≈ {convertedRUB.toFixed(1)} RUB
                                 </span>
                                 {wallet && wallet.currency !== 'USD' && wallet.currency !== 'RUB' && (
-                                  <span className="text-[9px] font-black uppercase tracking-widest">
-                                    {convertedWallet?.toFixed(1)} {wallet.currency} from {wallet.name}
+                                  <span className="text-[10px] font-black uppercase tracking-widest">
+                                    {convertedWallet?.toFixed(1)} {wallet.currency} • {wallet.name}
                                   </span>
                                 )}
                              </div>
@@ -174,8 +172,8 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
                         );
                       }
                       return (
-                        <div className="text-[10px] font-black uppercase text-white/5 tracking-[0.4em]">
-                          Enter amount
+                        <div className="text-[10px] font-black uppercase text-white/5 tracking-[0.5em] animate-pulse">
+                          Ожидание ввода
                         </div>
                       );
                     })()}
@@ -185,45 +183,43 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
 
               {/* Category Selection */}
               <div className="flex flex-col gap-6">
-                <div className="flex items-center gap-2 px-1">
-                  <Tag size={14} className="text-white/20" />
-                  <div className="text-[10px] text-white/20 font-black uppercase tracking-widest">Категория</div>
+                <div className="flex items-center gap-3 px-2">
+                  <span className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30">Категория</span>
+                  <div className="h-px bg-white/5 flex-1" />
                 </div>
                 {categories.length === 0 ? (
-                  <div className="text-center text-white/10 p-10 bg-white/2 rounded-[32px] border border-dashed border-white/5">
+                  <div className="text-center py-20 bg-white/[0.02] rounded-[40px] border-2 border-dashed border-white/5 text-[10px] font-black uppercase tracking-[0.4em] text-white/10">
                     Сначала создайте категории
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-10">
                     {categories.filter(c => !c.parentId).map(head => {
                       const subs = categories.filter(c => c.parentId === head.id);
                       return (
-                        <div key={head.id} className="flex flex-col gap-3">
-                          <span className="text-[10px] font-black uppercase text-white/20 tracking-[0.2em] px-1">{head.name}</span>
-                          <div className="grid grid-cols-4 gap-3">
+                        <div key={head.id} className="flex flex-col gap-4">
+                          <span className="text-[11px] font-black uppercase text-white/40 tracking-[0.2em] px-2">{head.name}</span>
+                          <div className="grid grid-cols-4 gap-4">
                             <button 
                               onClick={() => setCategoryId(head.id)}
                               className={cn(
-                                "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all border-2",
-                                categoryId === head.id ? "border-white shadow-xl scale-105" : "bg-white/2 border-transparent opacity-40 hover:opacity-100"
+                                "flex flex-col items-center justify-center gap-3 h-24 rounded-[28px] transition-all border-l-4",
+                                categoryId === head.id ? "bg-accent/20 border-accent shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-105" : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
                               )}
-                              style={categoryId === head.id ? { backgroundColor: head.color, color: '#fff' } : {}}
                             >
-                              <div className="text-2xl">{head.icon}</div>
-                              <span className="text-[8px] font-black uppercase truncate w-full text-center">Все</span>
+                              <div className="text-3xl" style={categoryId === head.id ? { color: head.color } : {}}>{head.icon}</div>
+                              <span className="text-[9px] font-black uppercase tracking-widest text-white/60">Все</span>
                             </button>
                             {subs.map(sub => (
                               <button 
                                 key={sub.id} 
                                 onClick={() => setCategoryId(sub.id)}
                                 className={cn(
-                                  "flex flex-col items-center gap-2 p-4 rounded-2xl transition-all border-2",
-                                  categoryId === sub.id ? "border-white shadow-xl scale-105" : "bg-white/2 border-transparent opacity-40 hover:opacity-100"
+                                  "flex flex-col items-center justify-center gap-3 h-24 rounded-[28px] transition-all border-l-4",
+                                  categoryId === sub.id ? "bg-accent/20 border-accent shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-105" : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
                                 )}
-                                style={categoryId === sub.id ? { backgroundColor: sub.color, color: '#fff' } : {}}
                               >
-                                <div className="text-2xl">{sub.icon}</div>
-                                <span className="text-[8px] font-black uppercase truncate w-full text-center">{sub.name}</span>
+                                <div className="text-3xl" style={categoryId === sub.id ? { color: sub.color } : {}}>{sub.icon}</div>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/60 truncate w-full px-2 text-center">{sub.name}</span>
                               </button>
                             ))}
                           </div>
@@ -236,27 +232,27 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
               
                {/* Wallet Selection */}
               {wallets.length > 0 && (
-                <div className="flex flex-col gap-4">
-                   <div className="flex items-center gap-2 px-1">
-                    <WalletIcon size={14} className="text-white/20" />
-                    <div className="text-[10px] text-white/20 font-black uppercase tracking-widest">Списать с</div>
+                <div className="flex flex-col gap-6">
+                   <div className="flex items-center gap-3 px-2">
+                    <span className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30">Списать с</span>
+                    <div className="h-px bg-white/5 flex-1" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {wallets.map(w => (
                       <button
                         key={w.id}
                         onClick={() => setWalletId(w.id)}
                         className={cn(
-                          "p-4 rounded-[24px] flex items-center gap-3 border-2 transition-all active:scale-95",
-                          walletId === w.id ? "bg-accent/10 border-accent text-accent" : "bg-white/2 border-transparent text-white/40"
+                          "p-5 rounded-[32px] flex items-center gap-4 transition-all active:scale-95 border-l-4",
+                          walletId === w.id ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(59,130,246,0.1)]" : "bg-white/5 border-transparent text-white/20"
                         )}
                       >
-                        <div className="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center text-xl shadow-inner" style={walletId === w.id ? { backgroundColor: w.color } : {}}>
-                          <span className={cn(walletId === w.id ? "text-white" : "")}>{w.icon}</span>
+                        <div className="w-12 h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl" style={walletId === w.id ? { color: w.color } : {}}>
+                          {w.icon}
                         </div>
-                        <div className="flex flex-col items-start overflow-hidden">
-                          <span className="text-xs font-black uppercase tracking-tight truncate w-full">{w.name}</span>
-                          <span className="text-[9px] font-black opacity-30 tracking-widest">{w.balance.toFixed(1)} {w.currency}</span>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className={cn("text-sm font-black uppercase tracking-tighter truncate w-full", walletId === w.id ? "text-white" : "text-white/40")}>{w.name}</span>
+                          <span className="text-[10px] font-black opacity-20 tracking-widest leading-none mt-1">{w.balance.toFixed(1)} {w.currency}</span>
                         </div>
                       </button>
                     ))}
@@ -268,9 +264,9 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
             <button 
               onClick={handleSave}
               disabled={!amountInput || !categoryId || !walletId}
-              className="mt-4 min-h-[72px] bg-white text-black text-xl font-black rounded-[28px] flex items-center justify-center gap-3 shadow-2xl shadow-white/10 transition-all active:scale-95 disabled:opacity-20 disabled:grayscale"
+              className="mt-6 min-h-[80px] bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-2xl shadow-accent/20 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group"
             >
-              <Check size={28} strokeWidth={4} />
+              <Check size={32} strokeWidth={4} className="group-hover:scale-125 transition-transform" />
               СОХРАНИТЬ
             </button>
           </motion.div>
