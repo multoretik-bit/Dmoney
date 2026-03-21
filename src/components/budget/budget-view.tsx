@@ -76,22 +76,28 @@ export function BudgetView() {
     return categories
       .filter(c => {
         if (c.parentId) return false;
+        
+        // Show block if it has a limit itself
         const hasLimit = (c.budgetLimit || 0) > 0;
-        const hasChildren = categories.some(child => child.parentId === c.id);
-        const hasSpending = (spendingByCategory[c.id] || 0) > 0;
-        return hasLimit || hasChildren || hasSpending;
+        
+        // OR if it has any children with a limit
+        const hasChildrenWithLimit = categories.some(child => 
+          child.parentId === c.id && (child.budgetLimit || 0) > 0
+        );
+        
+        return hasLimit || hasChildrenWithLimit;
       })
       .sort((a, b) => {
         if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
         return a.id.localeCompare(b.id);
       });
-  }, [categories, spendingByCategory]);
+  }, [categories]);
   
   const categoriesByBlock = useMemo(() => {
     const map: Record<string, Category[]> = {};
     headCategories.forEach(head => {
       map[head.id] = categories
-        .filter(c => c.parentId === head.id)
+        .filter(c => c.parentId === head.id && (c.budgetLimit || 0) > 0)
         .sort((a, b) => {
           if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
           return a.id.localeCompare(b.id);

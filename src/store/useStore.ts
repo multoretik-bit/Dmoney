@@ -388,7 +388,7 @@ export const useStore = create<UserState>()(
          
          try {
             console.log('☁️ Pushing data to Supabase...');
-            await Promise.all([
+            const results = await Promise.all([
                supabase.from('categories').upsert(state.categories.map(c => ({
                   id: c.id,
                   user_id: user.id,
@@ -398,21 +398,21 @@ export const useStore = create<UserState>()(
                   color: c.color,
                   budget_limit: c.budgetLimit,
                   sort_order: c.sortOrder || 0
-               }))),
+               })), { onConflict: 'id' }),
                supabase.from('portfolios').upsert(state.portfolios.map(p => ({
                   id: p.id,
                   user_id: user.id,
                   name: p.name,
                   color: p.color,
                   icon: p.icon
-               }))),
+               })), { onConflict: 'id' }),
                supabase.from('folders').upsert(state.folders.map(f => ({
                   id: f.id,
                   user_id: user.id,
                   portfolio_id: f.portfolioId,
                   name: f.name,
                   color: f.color
-               }))),
+               })), { onConflict: 'id' }),
                supabase.from('wallets').upsert(state.wallets.map(w => ({
                   id: w.id,
                   user_id: user.id,
@@ -423,7 +423,7 @@ export const useStore = create<UserState>()(
                   balance: w.balance,
                   icon: w.icon,
                   color: w.color
-               }))),
+               })), { onConflict: 'id' }),
                supabase.from('transactions').upsert(state.expenses.map(e => ({
                   id: e.id,
                   user_id: user.id,
@@ -435,17 +435,25 @@ export const useStore = create<UserState>()(
                   wallet_amount: e.walletAmount,
                   exchange_rate: e.exchangeRate,
                   date: e.date
-               }))),
+               })), { onConflict: 'id' }),
                supabase.from('user_preferences').upsert({
                   user_id: user.id,
                   base_currency: state.preferences.baseCurrency,
                   saved_colors: state.preferences.savedColors,
                   updated_at: new Date().toISOString()
-               })
+               }, { onConflict: 'user_id' })
             ]);
+
+            const firstError = results.find(r => r.error)?.error;
+            if (firstError) {
+               console.error('❌ Push error:', firstError);
+               throw firstError;
+            }
+
             console.log('✅ Data pushed successfully');
          } catch (error) {
             console.error('❌ Error pushing data:', error);
+            throw error;
          }
       }
     }),
