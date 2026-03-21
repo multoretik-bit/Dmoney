@@ -24,7 +24,6 @@ export function BudgetView() {
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
-  const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
 
   const openAddBlock = () => {
     setInitialParentId(undefined);
@@ -168,7 +167,11 @@ export function BudgetView() {
               onClick={openAddBlock}
               className="text-accent text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-all"
             >
-              <Plus size={12} strokeWidth={4} />          <div className="flex flex-col gap-4">
+              <Plus size={12} strokeWidth={4} /> ADD BLOCK
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-4">
             {headCategories.map(head => {
               const subCats = categoriesByBlock[head.id] || [];
               const isExpanded = expandedBlocks.includes(head.id);
@@ -215,10 +218,7 @@ export function BudgetView() {
                           </svg>
                           <span className="absolute inset-0 flex items-center justify-center text-[8px] font-black">{Math.round(blockPercent)}%</span>
                        </div>
-                       {isExpanded ? <ChevronDown size={20} className="text-white/40" /> : <ChevronRight size={20} className="text-white/40" />}
-                    </div>
-                  </div>
- />}
+                       <ChevronDown size={20} className={cn("text-white/40 transition-transform", !isExpanded && "-rotate-90")} />
                     </div>
                   </div>
 
@@ -227,14 +227,13 @@ export function BudgetView() {
                     {isExpanded && (
                       <motion.div 
                         initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                        className="border-t border-white/5 bg-black/20"
+                        className="border-t border-black/10 bg-black/20"
                       >
                         <div className="p-6 flex flex-col gap-6">
                            {subCats.map(sub => {
                              const spent = spendingByCategory[sub.id] || 0;
                              const limit = sub.budgetLimit || 0;
                              const percent = limit > 0 ? (spent / limit) * 100 : 0;
-                             const isEditing = editingLimitId === sub.id;
 
                              return (
                                <div 
@@ -253,12 +252,12 @@ export function BudgetView() {
                                      </div>
                                      <div className="flex items-center gap-2">
                                         {viewMode === 'plan' ? (
-                                          <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-2 text-white">
                                             <input 
                                               type="number"
-                                              value={limit}
+                                              value={limit || ''}
                                               onChange={(e) => setCategoryLimit(sub.id, parseFloat(e.target.value) || 0)}
-                                              className="bg-black/20 border border-white/20 rounded-lg w-20 px-2 py-1 text-xs font-black text-right outline-none text-white focus:border-white/40"
+                                              className="bg-black/20 border border-white/20 rounded-lg w-20 px-2 py-1 text-xs font-black text-right outline-none focus:border-white/40"
                                             />
                                             <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">USD</span>
                                           </div>
@@ -341,7 +340,6 @@ export function BudgetView() {
       >
         <Plus size={32} strokeWidth={4} />
       </motion.button>
-
 
       <AddExpenseModal isOpen={isAddExpenseOpen} onClose={() => setIsAddExpenseOpen(false)} />
       <AddCategoryModal 
