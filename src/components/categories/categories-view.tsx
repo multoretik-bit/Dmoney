@@ -38,14 +38,6 @@ export function CategoriesView() {
 
   const allCategories = categories || [];
   const headCategories = allCategories.filter(c => !c.parentId);
-  
-  // Categorize for better view
-  const categoriesWithChildren = headCategories.filter(h => 
-    allCategories.some(c => c.parentId === h.id)
-  );
-  const standaloneCategories = headCategories.filter(h => 
-    !allCategories.some(c => c.parentId === h.id)
-  );
 
   return (
     <div className="p-6 flex flex-col gap-10 bg-[#0d1117] min-h-screen text-white pb-40">
@@ -162,110 +154,88 @@ export function CategoriesView() {
 
       <div className="flex justify-between items-center mt-6 px-2">
         <div className="flex flex-col">
-           <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 mb-1">Система</span>
-           <h2 className="text-2xl font-black uppercase tracking-widest text-white/60">Все Категории</h2>
+           <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 mb-1">Настройка</span>
+           <h2 className="text-2xl font-black uppercase tracking-widest text-white/60">Бюджетные Блоки</h2>
         </div>
         <button 
           onClick={() => { setInitialParentId(undefined); setEditingCategory(null); setIsModalOpen(true); }} 
-          className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-black shadow-2xl active:scale-90 transition-all"
+          className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-black shadow-2xl active:scale-90 transition-all font-black"
+          title="Создать новый блок"
         >
           <Plus size={28} strokeWidth={4} />
         </button>
       </div>
 
-      <div className="flex flex-col gap-10">
-        {/* STANDALONE CATEGORIES */}
-        {standaloneCategories.length > 0 && (
-          <div className="flex flex-col gap-4">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-4">Одиночные категории</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {standaloneCategories.map(cat => (
-                <div key={cat.id} className="p-6 bg-[#1c2128] rounded-[32px] border border-white/5 flex items-center justify-between group shadow-lg">
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
-                         {cat.icon}
-                      </div>
-                      <span className="text-base font-black text-white/90">{cat.name}</span>
-                   </div>
-                   <button 
-                      onClick={() => openEdit(cat)}
-                      className="p-2.5 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                   >
-                      <Edit2 size={16} />
-                   </button>
-                </div>
-              ))}
-            </div>
+      <div className="flex flex-col gap-6">
+        {headCategories.length === 0 ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-4 text-white/10">
+             <Plus size={48} strokeWidth={1} />
+             <span className="text-[10px] font-black uppercase tracking-[0.4em]">Нет созданных блоков</span>
           </div>
-        )}
-
-        {/* BLOCKS / GROUPS */}
-        {categoriesWithChildren.length > 0 && (
-          <div className="flex flex-col gap-4">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-4">Группы и Блоки</span>
-            <div className="flex flex-col gap-4">
-              {categoriesWithChildren.map(head => {
-                const subs = allCategories.filter(c => c.parentId === head.id);
-                const isExpanded = expandedHeads[head.id];
-                
-                return (
-                  <div key={head.id} className="flex flex-col gap-3">
-                    <button 
-                      onClick={() => toggleHead(head.id)}
-                      className="flex items-center justify-between p-7 bg-[#1c2128] rounded-[40px] border border-white/5 shadow-lg active:scale-[0.98] transition-all group"
-                    >
-                      <div className="flex items-center gap-5">
-                         <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${head.color}15`, color: head.color }}>
-                            {head.icon}
-                         </div>
-                         <div className="flex flex-col items-start">
-                            <span className="text-lg font-black tracking-tight">{head.name}</span>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-white/20">{subs.length} подкатегории</span>
-                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                         <button 
-                            onClick={(e) => { e.stopPropagation(); openEdit(head); }}
-                            className="p-2.5 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                         >
-                            <Edit2 size={16} />
-                         </button>
-                         {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
-                      </div>
-                    </button>
-
-                    {isExpanded && (
-                      <div className="flex flex-col gap-3 px-6">
-                        {subs.map(sub => (
-                          <div key={sub.id} className="p-5 bg-white/2 rounded-2xl flex items-center justify-between border border-white/5 group">
-                             <div className="flex items-center gap-4">
-                               <span className="text-xl">{sub.icon}</span>
-                               <span className="font-bold text-white/70">{sub.name}</span>
-                             </div>
-                             <div className="flex items-center gap-3">
-                                <button 
-                                  onClick={() => openEdit(sub)}
-                                  className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
-                             </div>
-                          </div>
-                        ))}
-                        <button 
-                          onClick={() => openAddSub(head.id)}
-                          className="p-5 bg-white/5 rounded-[24px] border border-dashed border-white/10 text-[10px] font-black uppercase tracking-widest text-white/20 hover:bg-white/10 transition-all font-black"
-                        >
-                          + Добавить подкатегорию
-                        </button>
-                      </div>
-                    )}
+        ) : (
+          headCategories.map(head => {
+            const subs = allCategories.filter(c => c.parentId === head.id);
+            const isExpanded = expandedHeads[head.id];
+            
+            return (
+              <div key={head.id} className="flex flex-col gap-3">
+                <button 
+                  onClick={() => toggleHead(head.id)}
+                  className="flex items-center justify-between p-7 bg-[#1c2128] rounded-[40px] border border-white/5 shadow-lg active:scale-[0.98] transition-all group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/[0.01] pointer-events-none" />
+                  <div className="flex items-center gap-5 relative z-10">
+                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-xl" style={{ backgroundColor: `${head.color}15`, color: head.color }}>
+                        {head.icon}
+                     </div>
+                     <div className="flex flex-col items-start">
+                        <span className="text-lg font-black tracking-tight">{head.name}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white/20">
+                          {subs.length === 0 ? 'Пустой блок' : `${subs.length} категории`}
+                        </span>
+                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                  <div className="flex items-center gap-4 relative z-10">
+                     <button 
+                        onClick={(e) => { e.stopPropagation(); openEdit(head); }}
+                        className="p-2.5 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                     >
+                        <Edit2 size={16} />
+                     </button>
+                     {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="flex flex-col gap-3 px-6">
+                    {subs.map(sub => (
+                      <div key={sub.id} className="p-5 bg-white/2 rounded-2xl flex items-center justify-between border border-white/5 group relative">
+                         <div className="flex items-center gap-4">
+                           <span className="text-xl">{sub.icon}</span>
+                           <span className="font-bold text-white/70">{sub.name}</span>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => openEdit(sub)}
+                              className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
+                         </div>
+                      </div>
+                    ))}
+                    <button 
+                      onClick={() => openAddSub(head.id)}
+                      className="p-5 bg-white/5 rounded-[24px] border border-dashed border-white/10 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white/40 hover:bg-white/10 transition-all font-black"
+                    >
+                      + Добавить категорию в блок
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 

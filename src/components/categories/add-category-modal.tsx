@@ -110,7 +110,9 @@ export function AddCategoryModal({
                 <Layers size={28} strokeWidth={3} />
               </div>
               <h2 className="text-2xl font-black uppercase tracking-[0.3em] text-white/90 text-center">
-                {editingCategory ? 'Изменить' : parentId ? 'Подкатегория' : 'Категория'}
+                {editingCategory 
+                  ? (editingCategory.parentId ? 'Изменить категорию' : 'Изменить блок') 
+                  : (parentId ? 'Новая Категория' : 'Новый Блок')}
               </h2>
           </div>
 
@@ -156,7 +158,7 @@ export function AddCategoryModal({
 
              <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3 px-2">
-                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Расположение (Блок)</span>
+                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Внутри Блока (Расположение)</span>
                    <div className="h-px bg-white/5 flex-1" />
                 </div>
                 <div className="relative group">
@@ -164,7 +166,7 @@ export function AddCategoryModal({
                       className="w-full bg-black/20 p-5 rounded-[24px] text-white/90 outline-none border border-white/5 appearance-none font-black uppercase tracking-widest text-[11px] pr-12 focus:border-accent/30 transition-all font-black"
                       value={parentId || ''} onChange={e => setParentId(e.target.value || undefined)}
                   >
-                    <option value="" className="bg-[#020617]">Сделать новым Блоком</option>
+                    <option value="" className="bg-[#020617]">Сделать основным Блоком</option>
                     {headCategories.map(c => (
                       <option key={c.id} value={c.id} className="bg-[#020617]">{c.name}</option>
                     ))}
