@@ -71,9 +71,9 @@ interface UserState {
   setAuthModalOpen: (open: boolean) => void;
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   addSavedColor: (color: string) => void;
-  addCategory: (category: Category) => void;
-  updateCategory: (id: string, updates: Partial<Category>) => void;
-  setCategoryLimit: (id: string, limit: number) => void;
+  addCategory: (category: Category) => Promise<void>;
+  updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
+  setCategoryLimit: (id: string, limit: number) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   
   addPortfolio: (p: Portfolio) => void;
@@ -123,22 +123,51 @@ export const useStore = create<UserState>()(
         if (state.preferences.savedColors.includes(color)) return state;
         return { preferences: { ...state.preferences, savedColors: [...state.preferences.savedColors, color] } };
       }),
-      addCategory: (category) => {
+
+      addCategory: async (category) => {
         set((state) => ({ categories: [...state.categories, category] }));
-        useStore.getState().pushData();
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('categories').upsert({
+             id: category.id,
+             user_id: user.id,
+             parent_id: category.parentId,
+             name: category.name,
+             icon: category.icon,
+             color: category.color,
+             budget_limit: category.budgetLimit,
+             sort_order: category.sortOrder
+          });
+        }
       },
-      updateCategory: (id, updates) => {
+
+      updateCategory: async (id, updates) => {
         set((state) => ({
           categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
         }));
-        useStore.getState().pushData();
+        
+        const state = useStore.getState();
+        if (state.user) {
+          const cat = state.categories.find(c => c.id === id);
+          if (cat) {
+            await supabase.from('categories').upsert({
+              id: cat.id,
+              user_id: state.user.id,
+              parent_id: cat.parentId,
+              name: cat.name,
+              icon: cat.icon,
+              color: cat.color,
+              budget_limit: cat.budgetLimit,
+              sort_order: cat.sortOrder
+            });
+          }
+        }
       },
-      setCategoryLimit: (id, limit) => {
-        set((state) => ({
-          categories: state.categories.map(c => c.id === id ? { ...c, budgetLimit: limit } : c)
-        }));
-        useStore.getState().pushData();
+
+      setCategoryLimit: async (id, limit) => {
+        await useStore.getState().updateCategory(id, { budgetLimit: limit });
       },
+
       deleteCategory: async (id) => {
         const { user } = useStore.getState();
         if (user) {
@@ -154,24 +183,54 @@ export const useStore = create<UserState>()(
         const category = state.categories.find(c => c.id === id);
         if (!category) return;
 
+        // Get siblings and sort them by current order (or index as tie-breaker)
         const siblings = state.categories
-          .filter(c => c.parentId === category.parentId)
-          .sort((a, b) => a.sortOrder - b.sortOrder);
+          .filter(c => (c.parentId || undefined) === (category.parentId || undefined))
+          .sort((a, b) => {
+             if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+             return a.id.localeCompare(b.id); // Tie-breaker
+          });
 
         const currentIndex = siblings.findIndex(s => s.id === id);
         const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
 
         if (newIndex < 0 || newIndex >= siblings.length) return;
 
-        const neighbor = siblings[newIndex];
+        // Create a new array of siblings with swapped items
+        const newSiblings = [...siblings];
+        const temp = newSiblings[currentIndex];
+        newSiblings[currentIndex] = newSiblings[newIndex];
+        newSiblings[newIndex] = temp;
+
+        // Assign clean sort orders 0, 1, 2...
+        const updatedWithNewOrders = newSiblings.map((s, idx) => ({
+           ...s,
+           sortOrder: idx
+        }));
+
+        // Merge back into main categories list
         const updatedCategories = state.categories.map(c => {
-          if (c.id === id) return { ...c, sortOrder: neighbor.sortOrder };
-          if (c.id === neighbor.id) return { ...c, sortOrder: category.sortOrder };
-          return c;
+           const updatedSibling = updatedWithNewOrders.find(u => u.id === c.id);
+           return updatedSibling || c;
         });
 
         set({ categories: updatedCategories });
-        await state.pushData();
+        
+        // Push all updated siblings to Supabase
+        if (state.user) {
+           await Promise.all(updatedWithNewOrders.map(s => 
+              supabase.from('categories').upsert({
+                 id: s.id,
+                 user_id: state.user!.id,
+                 parent_id: s.parentId,
+                 name: s.name,
+                 icon: s.icon,
+                 color: s.color,
+                 budget_limit: s.budgetLimit,
+                 sort_order: s.sortOrder
+              })
+           ));
+        }
       },
 
       addPortfolio: (p) => set((state) => ({ portfolios: [...state.portfolios, p] })),
@@ -250,7 +309,7 @@ export const useStore = create<UserState>()(
 
           if (cats.data) set({ categories: cats.data.map((c: any) => ({
             id: c.id,
-            parentId: c.parent_id,
+            parentId: c.parent_id || undefined,
             name: c.name,
             icon: c.icon,
             color: c.color,

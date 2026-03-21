@@ -81,7 +81,10 @@ export function BudgetView() {
         const hasSpending = (spendingByCategory[c.id] || 0) > 0;
         return hasLimit || hasChildren || hasSpending;
       })
-      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      .sort((a, b) => {
+        if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
+        return a.id.localeCompare(b.id);
+      });
   }, [categories, spendingByCategory]);
   
   const categoriesByBlock = useMemo(() => {
@@ -89,7 +92,10 @@ export function BudgetView() {
     headCategories.forEach(head => {
       map[head.id] = categories
         .filter(c => c.parentId === head.id)
-        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+        .sort((a, b) => {
+          if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
+          return a.id.localeCompare(b.id);
+        });
     });
     return map;
   }, [categories, headCategories]);

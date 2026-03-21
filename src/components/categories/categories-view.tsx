@@ -40,7 +40,10 @@ export function CategoriesView() {
   const headCategories = useMemo(() => 
     allCategories
       .filter(c => !c.parentId)
-      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
+      .sort((a, b) => {
+        if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
+        return a.id.localeCompare(b.id);
+      }),
   [allCategories]);
 
   return (
@@ -180,7 +183,10 @@ export function CategoriesView() {
           headCategories.map(head => {
             const subs = allCategories
               .filter(c => c.parentId === head.id)
-              .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+              .sort((a, b) => {
+                if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
+                return a.id.localeCompare(b.id);
+              });
             const isExpanded = expandedHeads[head.id];
             
             return (

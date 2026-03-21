@@ -62,7 +62,7 @@ export function AddCategoryModal({
     if (!name.trim()) return;
     
     // Calculate next sort order if new
-    const siblings = categories.filter(c => c.parentId === (parentId || undefined));
+    const siblings = categories.filter(c => (c.parentId || undefined) === (parentId || undefined));
     const nextSortOrder = siblings.length > 0 
       ? Math.max(...siblings.map(s => s.sortOrder)) + 1 
       : 0;
