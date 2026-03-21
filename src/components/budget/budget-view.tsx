@@ -15,13 +15,26 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddExpenseModal } from '../expenses/add-expense-modal';
+import { AddCategoryModal } from '../categories/add-category-modal';
 
 export function BudgetView() {
   const { categories, expenses, setCategoryLimit, preferences } = useStore();
   const [viewMode, setViewMode] = useState<'plan' | 'execute'>('execute');
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>([]);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
   const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
+
+  const openAddBlock = () => {
+    setInitialParentId(undefined);
+    setIsAddCategoryOpen(true);
+  };
+
+  const openAddCategory = (parentId: string) => {
+    setInitialParentId(parentId);
+    setIsAddCategoryOpen(true);
+  };
 
   const toggleBlock = (id: string) => {
     setExpandedBlocks(prev => 
@@ -137,7 +150,10 @@ export function BudgetView() {
         <div className="flex flex-col gap-6">
           <div className="px-2 flex justify-between items-center">
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Budget Blocks</span>
-            <button className="text-accent text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+            <button 
+              onClick={openAddBlock}
+              className="text-accent text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-all"
+            >
               <Plus size={12} strokeWidth={4} /> ADD BLOCK
             </button>
           </div>
@@ -241,7 +257,10 @@ export function BudgetView() {
                                </div>
                              );
                            })}
-                           <button className="py-4 border border-dashed border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-white/20 hover:bg-white/5 active:scale-[0.98] transition-all">
+                           <button 
+                             onClick={() => openAddCategory(head.id)}
+                             className="py-4 border border-dashed border-white/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-white/20 hover:bg-white/5 active:scale-[0.98] transition-all"
+                           >
                              + Add Category to {head.name}
                            </button>
                         </div>
@@ -294,7 +313,13 @@ export function BudgetView() {
         <Plus size={32} strokeWidth={4} />
       </motion.button>
 
+
       <AddExpenseModal isOpen={isAddExpenseOpen} onClose={() => setIsAddExpenseOpen(false)} />
+      <AddCategoryModal 
+        isOpen={isAddCategoryOpen} 
+        onClose={() => setIsAddCategoryOpen(false)} 
+        initialParentId={initialParentId}
+      />
     </div>
   );
 }
