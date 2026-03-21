@@ -1,0 +1,9 @@
+{
+  "name": "dmoney App",
+  "short_name": "dmoney",
+  "theme_color": "#0B1C2C",
+  "background_color": "#0B1C2C",
+  "display": "standalone",
+  "start_url": "/",
+  "orientation": "portrait"
+}
