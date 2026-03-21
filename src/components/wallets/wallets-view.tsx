@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
 import { AddPortfolioModal, AddFolderModal } from './portfolio-folder-modals';
 import { convertAmount } from '@/lib/exchange';
+import { useDragScroll } from '@/hooks/useDragScroll';
 
 export function WalletsView() {
   const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, preferences } = useStore();
@@ -32,15 +33,8 @@ export function WalletsView() {
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
 
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { ref: scrollRef, props: dragScrollProps } = useDragScroll();
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (scrollRef.current) {
-      if (e.deltaY !== 0) {
-        scrollRef.current.scrollLeft += e.deltaY;
-      }
-    }
-  };
 
   const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId) || portfolios[0];
   
@@ -82,7 +76,7 @@ export function WalletsView() {
       {/* Capitals Carousel - Glass Edition */}
       <div 
         ref={scrollRef}
-        onWheel={handleWheel}
+        {...dragScrollProps}
         className="flex gap-6 overflow-x-auto hide-scrollbar snap-x -mx-6 px-6 pb-4"
       >
         {portfolios.map((p) => (

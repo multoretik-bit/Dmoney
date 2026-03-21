@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useStore, Category, Expense } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDragScroll } from '@/hooks/useDragScroll';
 import { 
   Settings, 
   ChevronDown, 
@@ -28,6 +29,7 @@ export function BudgetView() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
   const [isSelectingExisting, setIsSelectingExisting] = useState<string | null>(null); // blockId
+  const { ref: dragScrollRef, props: dragScrollProps } = useDragScroll();
 
   const currentMonthStr = useMemo(() => new Date().toISOString().substring(0, 7), []);
   const currentMonthName = useMemo(() => {
@@ -383,7 +385,11 @@ export function BudgetView() {
                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Неиспользуемые категории</span>
                <span className="text-[10px] font-black text-white/10">{unusedCategories.length}</span>
             </div>
-            <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar">
+            <div 
+              ref={dragScrollRef}
+              {...dragScrollProps}
+              className="flex overflow-x-auto gap-4 pb-4 no-scrollbar active:cursor-grabbing"
+            >
                {unusedCategories.map(cat => (
                  <button 
                   key={cat.id} 
