@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore, Category } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw, Edit2 } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { IconPicker } from '@/components/ui/icon-picker';
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { AddCategoryModal } from './add-category-modal';
 
 export function CategoriesView() {
-  const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences } = useStore();
+  const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences, updateCategoryOrder } = useStore();
   const { baseCurrency = 'USD' } = preferences || {};
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -37,7 +37,11 @@ export function CategoriesView() {
   };
 
   const allCategories = categories || [];
-  const headCategories = allCategories.filter(c => !c.parentId);
+  const headCategories = useMemo(() => 
+    allCategories
+      .filter(c => !c.parentId)
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
+  [allCategories]);
 
   return (
     <div className="p-6 flex flex-col gap-10 bg-[#0d1117] min-h-screen text-white pb-40">
@@ -174,38 +178,60 @@ export function CategoriesView() {
           </div>
         ) : (
           headCategories.map(head => {
-            const subs = allCategories.filter(c => c.parentId === head.id);
+            const subs = allCategories
+              .filter(c => c.parentId === head.id)
+              .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
             const isExpanded = expandedHeads[head.id];
             
             return (
               <div key={head.id} className="flex flex-col gap-3">
-                <button 
-                  onClick={() => toggleHead(head.id)}
-                  style={{ 
-                    background: `linear-gradient(145deg, ${head.color}15, ${head.color}05)`,
-                    borderColor: `${head.color}20`
-                  }}
-                  className="flex items-center justify-between p-7 rounded-[40px] border shadow-2xl active:scale-[0.98] transition-all group relative overflow-hidden"
+                <div 
+                  className="flex items-center gap-3"
                 >
-                  <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
-                  <div className="flex items-center gap-5 relative z-10">
-                     <div className="w-14 h-14 rounded-[22px] flex items-center justify-center text-3xl shadow-2xl" style={{ backgroundColor: head.color, color: 'white' }}>
-                        {head.icon}
-                     </div>
-                     <div className="flex flex-col items-start">
-                        <span className="text-xl font-black tracking-tight text-white">{head.name}</span>
-                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 relative z-10">
+                  <button 
+                    onClick={() => toggleHead(head.id)}
+                    style={{ 
+                      background: `linear-gradient(145deg, ${head.color}15, ${head.color}05)`,
+                      borderColor: `${head.color}20`
+                    }}
+                    className="flex-1 flex items-center justify-between p-7 rounded-[40px] border shadow-2xl active:scale-[0.98] transition-all group relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
+                    <div className="flex items-center gap-5 relative z-10">
+                       <div className="w-14 h-14 rounded-[22px] flex items-center justify-center text-3xl shadow-2xl" style={{ backgroundColor: head.color, color: 'white' }}>
+                          {head.icon}
+                       </div>
+                       <div className="flex flex-col items-start">
+                          <span className="text-xl font-black tracking-tight text-white">{head.name}</span>
+                       </div>
+                    </div>
+                    <div className="flex items-center gap-4 relative z-10">
+                       <button 
+                          onClick={(e) => { e.stopPropagation(); openEdit(head); }}
+                          className="p-2.5 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                       >
+                          <Edit2 size={16} />
+                       </button>
+                       {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
+                    </div>
+                  </button>
+                  
+                  {/* Reordering controls for block */}
+                  <div className="flex flex-col gap-1">
                      <button 
-                        onClick={(e) => { e.stopPropagation(); openEdit(head); }}
-                        className="p-2.5 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                       onClick={() => updateCategoryOrder(head.id, 'up')}
+                       className="p-3 bg-white/5 rounded-2xl text-white/20 hover:text-white hover:bg-white/10 transition-all"
                      >
-                        <Edit2 size={16} />
+                       <ArrowUp size={20} />
                      </button>
-                     {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
+                     <button 
+                       onClick={() => updateCategoryOrder(head.id, 'down')}
+                       className="p-3 bg-white/5 rounded-2xl text-white/20 hover:text-white hover:bg-white/10 transition-all"
+                     >
+                       <ArrowDown size={20} />
+                     </button>
                   </div>
-                </button>
+                </div>
 
                 {isExpanded && (
                   <div className="flex flex-col gap-3 px-6">
@@ -225,6 +251,21 @@ export function CategoriesView() {
                            <span className="font-bold text-white/80">{sub.name}</span>
                          </div>
                          <div className="flex items-center gap-3">
+                            {/* Reordering controls for category */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all mr-2">
+                               <button 
+                                 onClick={() => updateCategoryOrder(sub.id, 'up')}
+                                 className="p-2 text-white/20 hover:text-white"
+                               >
+                                 <ArrowUp size={16} />
+                               </button>
+                               <button 
+                                 onClick={() => updateCategoryOrder(sub.id, 'down')}
+                                 className="p-2 text-white/20 hover:text-white"
+                               >
+                                 <ArrowDown size={16} />
+                               </button>
+                            </div>
                             <button 
                               onClick={() => openEdit(sub)}
                               className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"

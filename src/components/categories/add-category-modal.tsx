@@ -61,6 +61,12 @@ export function AddCategoryModal({
   const handleSave = () => {
     if (!name.trim()) return;
     
+    // Calculate next sort order if new
+    const siblings = categories.filter(c => c.parentId === (parentId || undefined));
+    const nextSortOrder = siblings.length > 0 
+      ? Math.max(...siblings.map(s => s.sortOrder)) + 1 
+      : 0;
+
     if (editingCategory) {
       updateCategory(editingCategory.id, { 
         name: name.trim(), 
@@ -76,7 +82,8 @@ export function AddCategoryModal({
         parentId: parentId || undefined,
         color,
         icon,
-        budgetLimit: hideBudgetLimit ? 0 : (parseFloat(budgetLimit) || 0)
+        budgetLimit: hideBudgetLimit ? 0 : (parseFloat(budgetLimit) || 0),
+        sortOrder: nextSortOrder
       });
     }
     

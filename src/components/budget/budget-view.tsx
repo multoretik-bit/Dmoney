@@ -11,14 +11,16 @@ import {
   AlertCircle, 
   Target, 
   Activity,
-  Edit2
+  Edit2,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddExpenseModal } from '../expenses/add-expense-modal';
 import { AddCategoryModal } from '../categories/add-category-modal';
 
 export function BudgetView() {
-  const { categories, expenses, setCategoryLimit, updateCategory, preferences } = useStore();
+  const { categories, expenses, setCategoryLimit, updateCategory, preferences, updateCategoryOrder } = useStore();
   const [viewMode, setViewMode] = useState<'plan' | 'execute'>('execute');
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>([]);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -71,19 +73,23 @@ export function BudgetView() {
 
   // Group categories into "Blocks"
   const headCategories = useMemo(() => {
-    return categories.filter(c => {
-      if (c.parentId) return false;
-      const hasLimit = (c.budgetLimit || 0) > 0;
-      const hasChildren = categories.some(child => child.parentId === c.id);
-      const hasSpending = (spendingByCategory[c.id] || 0) > 0;
-      return hasLimit || hasChildren || hasSpending;
-    });
+    return categories
+      .filter(c => {
+        if (c.parentId) return false;
+        const hasLimit = (c.budgetLimit || 0) > 0;
+        const hasChildren = categories.some(child => child.parentId === c.id);
+        const hasSpending = (spendingByCategory[c.id] || 0) > 0;
+        return hasLimit || hasChildren || hasSpending;
+      })
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   }, [categories, spendingByCategory]);
   
   const categoriesByBlock = useMemo(() => {
     const map: Record<string, Category[]> = {};
     headCategories.forEach(head => {
-      map[head.id] = categories.filter(c => c.parentId === head.id);
+      map[head.id] = categories
+        .filter(c => c.parentId === head.id)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     });
     return map;
   }, [categories, headCategories]);
@@ -179,6 +185,21 @@ export function BudgetView() {
                     <div className="h-px flex-1 bg-white/5 group-hover:bg-white/10 transition-colors" />
                   </div>
                   <div className="flex items-center gap-4">
+                    {/* Reordering controls for block */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); updateCategoryOrder(head.id, 'up'); }}
+                         className="p-1.5 text-white/20 hover:text-white"
+                       >
+                         <ArrowUp size={14} />
+                       </button>
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); updateCategoryOrder(head.id, 'down'); }}
+                         className="p-1.5 text-white/20 hover:text-white"
+                       >
+                         <ArrowDown size={14} />
+                       </button>
+                    </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); openEditCategory(head); }}
                       className="text-white/20 hover:text-white transition-colors"
@@ -239,6 +260,20 @@ export function BudgetView() {
 
                             <div className="flex flex-col items-end gap-1">
                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all mr-2">
+                                     <button 
+                                       onClick={() => updateCategoryOrder(sub.id, 'up')}
+                                       className="p-1 px-2 text-white/20 hover:text-white"
+                                     >
+                                       <ArrowUp size={12} />
+                                     </button>
+                                     <button 
+                                       onClick={() => updateCategoryOrder(sub.id, 'down')}
+                                       className="p-1 px-2 text-white/20 hover:text-white"
+                                     >
+                                       <ArrowDown size={12} />
+                                     </button>
+                                  </div>
                                   <span className="text-lg font-black text-white">${spent.toFixed(1)}</span>
                                   <button 
                                     onClick={() => openEditCategory(sub)}

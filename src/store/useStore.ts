@@ -10,6 +10,7 @@ export interface Category {
   icon: string;
   color: string;
   budgetLimit?: number;
+  sortOrder: number;
 }
 
 export interface Portfolio {
@@ -73,24 +74,25 @@ interface UserState {
   addCategory: (category: Category) => void;
   updateCategory: (id: string, updates: Partial<Category>) => void;
   setCategoryLimit: (id: string, limit: number) => void;
-  deleteCategory: (id: string) => void;
+  deleteCategory: (id: string) => Promise<void>;
   
   addPortfolio: (p: Portfolio) => void;
   updatePortfolio: (id: string, updates: Partial<Portfolio>) => void;
-  deletePortfolio: (id: string) => void;
+  deletePortfolio: (id: string) => Promise<void>;
 
   addFolder: (f: Folder) => void;
   updateFolder: (id: string, updates: Partial<Folder>) => void;
-  deleteFolder: (id: string) => void;
+  deleteFolder: (id: string) => Promise<void>;
 
   addWallet: (wallet: Wallet) => void;
   updateWallet: (id: string, updates: Partial<Wallet>) => void;
   updateWalletBalance: (walletId: string, amountChange: number) => void;
-  deleteWallet: (id: string) => void;
+  deleteWallet: (id: string) => Promise<void>;
 
   addExpense: (expense: Expense) => void;
   pullData: () => Promise<void>;
   pushData: () => Promise<void>;
+  updateCategoryOrder: (id: string, direction: 'up' | 'down') => Promise<void>;
 }
 
 export const useStore = create<UserState>()(
@@ -101,9 +103,9 @@ export const useStore = create<UserState>()(
         savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
       },
       categories: [
-        { id: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Дом', icon: '🏠', color: '#8b5cf6' },
-        { id: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', parentId: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Оплата квартиры', icon: '🔑', color: '#8b5cf6' },
-        { id: 'f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f', name: 'Еда и напитки', icon: '🍔', color: '#f59e0b' },
+        { id: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Дом', icon: '🏠', color: '#8b5cf6', sortOrder: 0 },
+        { id: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', parentId: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Оплата квартиры', icon: '🔑', color: '#8b5cf6', sortOrder: 0 },
+        { id: 'f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f', name: 'Еда и напитки', icon: '🍔', color: '#f59e0b', sortOrder: 1 },
       ],
       portfolios: [
         { id: '7d8e9f0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a', name: 'Main Capital', color: '#3b82f6', icon: '🏦' },
@@ -121,35 +123,87 @@ export const useStore = create<UserState>()(
         if (state.preferences.savedColors.includes(color)) return state;
         return { preferences: { ...state.preferences, savedColors: [...state.preferences.savedColors, color] } };
       }),
-      addCategory: (category) => set((state) => ({ categories: [...state.categories, category] })),
-      updateCategory: (id, updates) => set((state) => ({
-        categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
-      })),
-      setCategoryLimit: (id, limit) => set((state) => ({
-        categories: state.categories.map(c => c.id === id ? { ...c, budgetLimit: limit } : c)
-      })),
-      deleteCategory: (id) => set((state) => ({
-        categories: state.categories.filter(c => c.id !== id && c.parentId !== id)
-      })),
+      addCategory: (category) => {
+        set((state) => ({ categories: [...state.categories, category] }));
+        useStore.getState().pushData();
+      },
+      updateCategory: (id, updates) => {
+        set((state) => ({
+          categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
+        }));
+        useStore.getState().pushData();
+      },
+      setCategoryLimit: (id, limit) => {
+        set((state) => ({
+          categories: state.categories.map(c => c.id === id ? { ...c, budgetLimit: limit } : c)
+        }));
+        useStore.getState().pushData();
+      },
+      deleteCategory: async (id) => {
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('categories').delete().eq('id', id);
+        }
+        set((state) => ({
+          categories: state.categories.filter(c => c.id !== id && c.parentId !== id)
+        }));
+      },
+
+      updateCategoryOrder: async (id, direction) => {
+        const state = useStore.getState();
+        const category = state.categories.find(c => c.id === id);
+        if (!category) return;
+
+        const siblings = state.categories
+          .filter(c => c.parentId === category.parentId)
+          .sort((a, b) => a.sortOrder - b.sortOrder);
+
+        const currentIndex = siblings.findIndex(s => s.id === id);
+        const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        if (newIndex < 0 || newIndex >= siblings.length) return;
+
+        const neighbor = siblings[newIndex];
+        const updatedCategories = state.categories.map(c => {
+          if (c.id === id) return { ...c, sortOrder: neighbor.sortOrder };
+          if (c.id === neighbor.id) return { ...c, sortOrder: category.sortOrder };
+          return c;
+        });
+
+        set({ categories: updatedCategories });
+        await state.pushData();
+      },
 
       addPortfolio: (p) => set((state) => ({ portfolios: [...state.portfolios, p] })),
       updatePortfolio: (id, updates) => set((state) => ({
         portfolios: state.portfolios.map(p => p.id === id ? { ...p, ...updates } : p)
       })),
-      deletePortfolio: (id) => set((state) => ({
-        portfolios: state.portfolios.filter(p => p.id !== id),
-        folders: state.folders.filter(f => f.portfolioId !== id),
-        wallets: state.wallets.filter(w => w.portfolioId !== id)
-      })),
+      deletePortfolio: async (id) => {
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('portfolios').delete().eq('id', id);
+        }
+        set((state) => ({
+          portfolios: state.portfolios.filter(p => p.id !== id),
+          folders: state.folders.filter(f => f.portfolioId !== id),
+          wallets: state.wallets.filter(w => w.portfolioId !== id)
+        }));
+      },
 
       addFolder: (f) => set((state) => ({ folders: [...state.folders, f] })),
       updateFolder: (id, updates) => set((state) => ({
         folders: state.folders.map(f => f.id === id ? { ...f, ...updates } : f)
       })),
-      deleteFolder: (id) => set((state) => ({
-        folders: state.folders.filter(f => f.id !== id),
-        wallets: state.wallets.map(w => w.folderId === id ? { ...w, folderId: undefined } : w)
-      })),
+      deleteFolder: async (id) => {
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('folders').delete().eq('id', id);
+        }
+        set((state) => ({
+          folders: state.folders.filter(f => f.id !== id),
+          wallets: state.wallets.map(w => w.folderId === id ? { ...w, folderId: undefined } : w)
+        }));
+      },
 
       addWallet: (wallet) => set((state) => ({ wallets: [...state.wallets, wallet] })),
       updateWallet: (id, updates) => set((state) => ({
@@ -158,10 +212,16 @@ export const useStore = create<UserState>()(
       updateWalletBalance: (walletId, amountChange) => set((state) => ({
         wallets: state.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance + amountChange } : w)
       })),
-      deleteWallet: (id) => set((state) => ({
-        wallets: state.wallets.filter(w => w.id !== id),
-        expenses: state.expenses.filter(e => e.walletId !== id)
-      })),
+      deleteWallet: async (id) => {
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('wallets').delete().eq('id', id);
+        }
+        set((state) => ({
+          wallets: state.wallets.filter(w => w.id !== id),
+          expenses: state.expenses.filter(e => e.walletId !== id)
+        }));
+      },
       addExpense: (expense) => set((state) => {
         const updatedWallets = state.wallets.map(w => {
           if (w.id === expense.walletId) {
@@ -194,7 +254,8 @@ export const useStore = create<UserState>()(
             name: c.name,
             icon: c.icon,
             color: c.color,
-            budgetLimit: c.budget_limit
+            budgetLimit: c.budget_limit,
+            sortOrder: c.sort_order || 0
           })) });
 
           if (ports.data) set({ portfolios: ports.data.map((p: any) => ({
@@ -261,7 +322,8 @@ export const useStore = create<UserState>()(
                   name: c.name,
                   icon: c.icon,
                   color: c.color,
-                  budget_limit: c.budgetLimit
+                  budget_limit: c.budgetLimit,
+                  sort_order: c.sortOrder || 0
                }))),
                supabase.from('portfolios').upsert(state.portfolios.map(p => ({
                   id: p.id,

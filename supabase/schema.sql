@@ -14,8 +14,9 @@ CREATE TABLE categories (
   icon TEXT,
   color TEXT,
   budget_limit NUMERIC DEFAULT 0,
+  sort_order NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
-);
+ );
 
 -- Portfolios (Capitals)
 CREATE TABLE portfolios (
