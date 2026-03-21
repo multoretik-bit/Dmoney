@@ -155,10 +155,14 @@ export function WalletsView() {
                   <div className="flex items-center group">
                     <button 
                        onClick={() => toggleFolder(folder.id)}
-                       className="flex-1 flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 rounded-2xl transition-all"
+                       className="flex-1 flex items-center justify-between p-4 bg-white/2 hover:bg-white/5 rounded-2xl transition-all border border-transparent"
+                       style={folder.color ? { borderColor: `${folder.color}20`, backgroundColor: `${folder.color}05` } : {}}
                     >
                       <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent">
+                         <div 
+                           className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg"
+                           style={{ backgroundColor: folder.color ? `${folder.color}20` : 'rgba(0, 191, 165, 0.2)', color: folder.color || '#00bfa5' }}
+                         >
                             <FolderIcon size={18} />
                          </div>
                          <span className="text-xs font-black uppercase tracking-widest text-white/60">{folder.name}</span>

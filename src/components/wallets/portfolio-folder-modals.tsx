@@ -104,24 +104,27 @@ export function AddFolderModal({
   portfolioId: string; 
   editingFolder?: Folder | null;
 }) {
-  const { addFolder, updateFolder } = useStore();
+  const { addFolder, updateFolder, preferences } = useStore();
   const [name, setName] = useState('');
+  const [color, setColor] = useState(preferences.savedColors[0]);
 
   useEffect(() => {
     if (editingFolder) {
       setName(editingFolder.name);
+      setColor(editingFolder.color || preferences.savedColors[0]);
     } else {
       setName('');
+      setColor(preferences.savedColors[0]);
     }
-  }, [editingFolder, isOpen]);
+  }, [editingFolder, isOpen, preferences.savedColors]);
 
   const handleSave = () => {
     if (!name.trim()) return;
     
     if (editingFolder) {
-      updateFolder(editingFolder.id, { name: name.trim() });
+      updateFolder(editingFolder.id, { name: name.trim(), color });
     } else {
-      addFolder({ id: Date.now().toString(), portfolioId, name: name.trim() });
+      addFolder({ id: Date.now().toString(), portfolioId, name: name.trim(), color });
     }
     
     onClose();
@@ -148,13 +151,17 @@ export function AddFolderModal({
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full"><X size={24} /></button>
           </div>
 
-          <div className="flex flex-col gap-3">
-             <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-2">Folder Name</label>
-             <input 
-                className="bg-black/20 p-6 rounded-3xl text-xl font-black text-white outline-none border border-white/5"
-                placeholder="E.g. Savings, Daily, Crypto..."
-                value={name} onChange={e => setName(e.target.value)}
-             />
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+               <label className="text-[10px] font-black uppercase text-white/20 tracking-widest px-2">Folder Name</label>
+               <input 
+                  className="bg-black/20 p-6 rounded-3xl text-xl font-black text-white outline-none border border-white/5"
+                  placeholder="E.g. Savings, Daily, Crypto..."
+                  value={name} onChange={e => setName(e.target.value)}
+               />
+            </div>
+
+            <ColorPicker color={color} onChange={setColor} />
           </div>
 
           <button 
