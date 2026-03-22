@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus, Palette, CreditCard } from 'lucide-react';
+import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus, Palette, CreditCard, Target } from 'lucide-react';
 import { useStore, Wallet, Portfolio, Folder } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
@@ -186,6 +186,12 @@ export function WalletsView() {
                      >
                        <Edit2 size={14} />
                      </button>
+                     <button 
+                       onClick={(e) => { e.stopPropagation(); if (confirm('Удалить папку? Счета сохранятся.')) deleteFolder(folder.id); }}
+                       className="p-2 opacity-0 group-hover:opacity-100 transition-opacity text-white/20 hover:text-red-500"
+                     >
+                       <Trash2 size={14} />
+                     </button>
                      {isExpanded ? <ChevronDown size={18} className="text-white/20" /> : <ChevronRight size={18} className="text-white/20" />}
                   </div>
                 </div>
@@ -266,41 +272,62 @@ function WalletCard({
   return (
     <motion.div 
       layout
-      className={cn("glass-card p-4 flex items-center justify-between group active:scale-[0.99] transition-all border-l-4", className)}
+      className={cn("glass-card p-4 flex flex-col gap-4 group active:scale-[0.99] transition-all border-l-4", className)}
       style={{ borderLeftColor: wallet.color || '#3b82f6' }}
     >
-      <div className="flex items-center gap-4 flex-1">
-         <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center text-2xl border border-white/5 shadow-inner">
-            {wallet.icon || <CreditCard size={20} className="text-white/20" />}
-         </div>
-         <div className="flex flex-col gap-1 min-w-0">
-            <span className="text-base font-black text-white leading-tight truncate">{wallet.name}</span>
-            <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
-               {wallet.balance.toFixed(1)} {wallet.currency}
-            </span>
-         </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4 flex-1">
+           <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center text-2xl border border-white/5 shadow-inner">
+              {wallet.icon || <CreditCard size={20} className="text-white/20" />}
+           </div>
+           <div className="flex flex-col gap-1 min-w-0">
+              <span className="text-base font-black text-white leading-tight truncate">{wallet.name}</span>
+              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                 {wallet.balance.toFixed(1)} {wallet.currency}
+              </span>
+           </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+           <div className="flex flex-col items-end">
+              <span className="text-lg font-black text-white">${balanceInUSD.toFixed(1)}</span>
+              <span className="text-[9px] font-black text-accent uppercase tracking-widest">{wallet.currency}</span>
+           </div>
+           <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+             <button 
+               onClick={(e) => { e.stopPropagation(); onEdit(); }}
+               className="p-1 px-2 hover:text-white text-white/20 transition-colors"
+             >
+               <Edit2 size={12} />
+             </button>
+             <button 
+               onClick={(e) => { e.stopPropagation(); onDelete(); }}
+               className="p-1 px-2 hover:text-red-500 text-white/20 transition-colors"
+             >
+               <Trash2 size={12} />
+             </button>
+           </div>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-         <div className="flex flex-col items-end">
-            <span className="text-lg font-black text-white">${balanceInUSD.toFixed(1)}</span>
-            <span className="text-[9px] font-black text-accent uppercase tracking-widest">{wallet.currency}</span>
-         </div>
-         <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-           <button 
-             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-             className="p-1 px-2 hover:text-white text-white/20 transition-colors"
-           >
-             <Edit2 size={12} />
-           </button>
-           <button 
-             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-             className="p-1 px-2 hover:text-red-500 text-white/20 transition-colors"
-           >
-             <Trash2 size={12} />
-           </button>
-         </div>
-      </div>
+      {wallet.targetAmount && wallet.targetAmount > 0 && (
+        <div className="flex flex-col gap-2 bg-black/20 p-3 rounded-2xl border border-white/5">
+          <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-white/40">
+              <Target size={10} />
+              <span>Цель: ${convertAmount(wallet.targetAmount, wallet.currency, baseCurrency).toFixed(0)}</span>
+            </div>
+            <span className="text-accent">{Math.round((balanceInUSD / convertAmount(wallet.targetAmount, wallet.currency, baseCurrency)) * 100)}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, (balanceInUSD / convertAmount(wallet.targetAmount, wallet.currency, baseCurrency)) * 100)}%` }}
+              className="h-full bg-accent rounded-full"
+            />
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

@@ -10,7 +10,7 @@ let cachedRates: Record<string, number> = {
 };
 
 let lastFetch = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
 
 export async function fetchLatestRates() {
   const now = Date.now();

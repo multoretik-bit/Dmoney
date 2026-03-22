@@ -37,6 +37,7 @@ export interface Wallet {
   balance: number;
   icon?: string;
   color?: string;
+  targetAmount?: number;
 }
 
 export interface Expense {
@@ -358,7 +359,8 @@ export const useStore = create<UserState>()(
             currency: w.currency,
             balance: w.balance,
             icon: w.icon,
-            color: w.color
+            color: w.color,
+            targetAmount: w.target_amount
           })) });
 
           if (exps.data) set({ expenses: exps.data.map((e: any) => ({
@@ -426,7 +428,8 @@ export const useStore = create<UserState>()(
                   currency: w.currency,
                   balance: w.balance,
                   icon: w.icon,
-                  color: w.color
+                  color: w.color,
+                  target_amount: w.targetAmount
                })), { onConflict: 'id' }),
                supabase.from('transactions').upsert(state.expenses.map(e => ({
                   id: e.id,

@@ -5,7 +5,7 @@ import { generateUUID } from '@/lib/uuid';
 import { useState, useEffect } from 'react';
 import { useStore, Wallet } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Globe, Check, LayoutGrid, FolderIcon, ChevronDown } from 'lucide-react';
+import { X, Globe, Check, LayoutGrid, FolderIcon, ChevronDown, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { ColorPicker } from '@/components/ui/color-picker';
@@ -31,6 +31,7 @@ export function AddWalletModal({
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const [icon, setIcon] = useState('💳');
   const [color, setColor] = useState(preferences.savedColors[0]);
+  const [targetAmount, setTargetAmount] = useState('0');
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function AddWalletModal({
       setDisplayCurrency(editingWallet.displayCurrency || editingWallet.currency);
       setIcon(editingWallet.icon || '💳');
       setColor(editingWallet.color || preferences.savedColors[0]);
+      setTargetAmount(editingWallet.targetAmount?.toString() || '0');
     } else {
       setName('');
       setBalance('0');
@@ -52,6 +54,7 @@ export function AddWalletModal({
       setDisplayCurrency('USD');
       setIcon('💳');
       setColor(preferences.savedColors[0]);
+      setTargetAmount('0');
     }
   }, [editingWallet, isOpen, portfolios, preferences.savedColors]);
 
@@ -67,6 +70,7 @@ export function AddWalletModal({
       balance: parseFloat(balance) || 0,
       icon,
       color,
+      targetAmount: parseFloat(targetAmount) || 0,
     };
 
     if (editingWallet) {
@@ -175,6 +179,20 @@ export function AddWalletModal({
                         value={balance} onChange={e => setBalance(e.target.value)}
                      />
                    </div>
+                </div>
+
+                <div className="h-px bg-white/5 mx-[-24px]" />
+
+                <div className="flex flex-col gap-2">
+                   <label className="text-[9px] font-black uppercase text-white/20 tracking-widest flex items-center gap-2">
+                     <Target size={10} /> Цель накопления (необязательно)
+                   </label>
+                   <input 
+                      type="number"
+                      className="bg-transparent text-lg font-black text-white outline-none w-full"
+                      placeholder="0"
+                      value={targetAmount} onChange={e => setTargetAmount(e.target.value)}
+                   />
                 </div>
               </div>
             </div>
