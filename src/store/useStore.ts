@@ -11,6 +11,7 @@ export interface Category {
   color: string;
   budgetLimit?: number;
   sortOrder: number;
+  excludeFromBudget?: boolean;
 }
 
 export interface Portfolio {
@@ -372,7 +373,8 @@ export const useStore = create<UserState>()(
               icon: c.icon,
               color: c.color,
               budgetLimit: c.budget_limit,
-              sortOrder: c.sort_order || 0
+              sortOrder: c.sort_order || 0,
+              excludeFromBudget: c.exclude_from_budget
             })) });
           } else if (cats.data && cats.data.length === 0 && useStore.getState().categories.length > 0) {
             console.log('⚠️ Supabase returned 0 categories, keeping local state to prevent accidental wipe.');
@@ -446,7 +448,8 @@ export const useStore = create<UserState>()(
                   icon: c.icon,
                   color: c.color,
                   budget_limit: c.budgetLimit,
-                  sort_order: c.sortOrder || 0
+                  sort_order: c.sortOrder || 0,
+                  exclude_from_budget: c.excludeFromBudget || false
                })), { onConflict: 'id' }),
                supabase.from('portfolios').upsert(state.portfolios.map(p => ({
                   id: p.id,

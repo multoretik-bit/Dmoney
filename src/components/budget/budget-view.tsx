@@ -131,18 +131,24 @@ export function BudgetView() {
   };
 
   const totalPlanned = useMemo(() => 
-    categories.reduce((sum, c) => sum + (c.budgetLimit || 0), 0), 
+    categories.reduce((sum, c) => sum + (!c.excludeFromBudget && c.budgetLimit ? c.budgetLimit : 0), 0), 
   [categories]);
 
-  const totalSpent = useMemo(() => 
-    Object.values(spendingByCategory).reduce((sum, val) => sum + val, 0),
-  [spendingByCategory]);
+  const totalSpent = useMemo(() => {
+    let sum = 0;
+    for (const [catId, amount] of Object.entries(spendingByCategory)) {
+      const cat = categories.find(c => c.id === catId);
+      if (cat && !cat.excludeFromBudget) {
+        sum += amount;
+      }
+    }
+    return sum;
+  }, [spendingByCategory, categories]);
 
   const overallProgress = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
 
-  // Unplanned categories (not in a block or limit = 0 but has spending)
   const unplannedExpenses = useMemo(() => {
-    const plannedIds = new Set(categories.filter(c => c.budgetLimit && c.budgetLimit > 0).map(c => c.id));
+    const plannedIds = new Set(categories.filter(c => !c.excludeFromBudget && c.budgetLimit && c.budgetLimit > 0).map(c => c.id));
     return categories.filter(c => !plannedIds.has(c.id) && (spendingByCategory[c.id] || 0) > 0);
   }, [categories, spendingByCategory]);
 
@@ -161,8 +167,8 @@ export function BudgetView() {
   [unplannedExpenses, spendingByCategory]);
 
   const blockSummaries = useMemo(() => {
-    return headCategories.map(head => {
-      const children = categories.filter(c => c.parentId === head.id);
+    return headCategories.filter(h => !h.excludeFromBudget).map(head => {
+      const children = categories.filter(c => c.parentId === head.id && !c.excludeFromBudget);
       const totalLimit = (head.budgetLimit || 0) + children.reduce((sum, c) => sum + (c.budgetLimit || 0), 0);
       const totalSpent = (spendingByCategory[head.id] || 0) + children.reduce((sum, c) => sum + (spendingByCategory[c.id] || 0), 0);
       return { id: head.id, name: head.name, color: head.color, limit: totalLimit, spent: totalSpent };
@@ -461,7 +467,7 @@ export function BudgetView() {
         {/* Unplanned Section - Only in Execution/Execute mode */}
         {viewMode === 'execute' && totalUnplannedSpent > 0 && (
           <div className="flex flex-col gap-6">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Внеплановые траты</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Внеплановые / Вне бюджета</span>
             <div className="glass-card rounded-[40px] border-l-4 border-red-500/50 p-8 shadow-xl relative overflow-hidden">
                <div className="absolute top-0 right-0 p-4 opacity-5">
                   <Activity size={80} className="text-red-500" />
@@ -469,7 +475,7 @@ export function BudgetView() {
                <div className="flex justify-between items-center mb-6">
                   <div className="flex flex-col">
                     <span className="text-lg font-black text-red-500/80 tracking-tight">Всего вне плана</span>
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Not budgeted spending</span>
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Not budgeted / Excluded</span>
                   </div>
                   <span className="text-2xl font-black text-red-500">${totalUnplannedSpent.toFixed(1)}</span>
                </div>

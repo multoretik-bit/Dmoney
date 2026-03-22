@@ -32,6 +32,7 @@ export function AddCategoryModal({
   const [color, setColor] = useState(preferences.savedColors[0]);
   const [icon, setIcon] = useState('🎯');
   const [budgetLimit, setBudgetLimit] = useState('0');
+  const [excludeFromBudget, setExcludeFromBudget] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -41,12 +42,14 @@ export function AddCategoryModal({
       setColor(editingCategory.color);
       setIcon(editingCategory.icon);
       setBudgetLimit(editingCategory.budgetLimit?.toString() || '0');
+      setExcludeFromBudget(editingCategory.excludeFromBudget || false);
     } else {
       setName('');
       setParentId(initialParentId);
       setColor(preferences.savedColors[0]);
       setIcon('🎯');
       setBudgetLimit('0');
+      setExcludeFromBudget(false);
     }
     setShowDeleteConfirm(false);
   }, [editingCategory, initialParentId, isOpen, preferences.savedColors]);
@@ -73,7 +76,8 @@ export function AddCategoryModal({
         parentId: parentId || undefined, 
         color, 
         icon,
-        budgetLimit: hideBudgetLimit ? (editingCategory.budgetLimit || 0) : (parseFloat(budgetLimit) || 0)
+        budgetLimit: hideBudgetLimit ? (editingCategory.budgetLimit || 0) : (parseFloat(budgetLimit) || 0),
+        excludeFromBudget
       });
     } else {
       await addCategory({
@@ -83,7 +87,8 @@ export function AddCategoryModal({
         color,
         icon,
         budgetLimit: hideBudgetLimit ? 0 : (parseFloat(budgetLimit) || 0),
-        sortOrder: nextSortOrder
+        sortOrder: nextSortOrder,
+        excludeFromBudget
       });
     }
     
@@ -184,6 +189,27 @@ export function AddCategoryModal({
                   </select>
                   <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 group-hover:text-accent transition-colors" size={20} />
                 </div>
+             </div>
+
+             <div className="flex flex-col gap-4">
+               <button 
+                 onClick={() => setExcludeFromBudget(!excludeFromBudget)}
+                 className={cn(
+                   "flex items-center gap-4 p-5 rounded-[24px] border transition-all text-left",
+                   excludeFromBudget ? "bg-accent/10 border-accent/30 text-accent" : "bg-black/20 border-white/5 hover:border-white/10 text-white/60"
+                 )}
+               >
+                 <div className={cn(
+                   "w-6 h-6 rounded-lg flex items-center justify-center border transition-all",
+                   excludeFromBudget ? "bg-accent border-accent text-white" : "border-white/20 bg-black/40"
+                 )}>
+                   {excludeFromBudget && <Check size={14} strokeWidth={4} />}
+                 </div>
+                 <div className="flex flex-col flex-1">
+                   <span className="font-black text-sm text-white">Не учитывать в бюджете</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest leading-tight mt-1 opacity-50">Такие траты будут отображаться снизу как "Вне плана"</span>
+                 </div>
+               </button>
              </div>
 
              <div className="flex flex-col gap-10">

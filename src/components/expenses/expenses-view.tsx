@@ -30,7 +30,10 @@ export function ExpensesView() {
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
 
   const dayExpenses = expenses.filter(e => isSameDay(new Date(e.date), selectedDate));
-  const totalSpentToday = dayExpenses.reduce((sum, e) => sum + e.convertedAmount, 0);
+  const excludeIds = new Set(categories.filter(c => c.excludeFromBudget).map(c => c.id));
+  const totalSpentToday = dayExpenses
+    .filter(e => !excludeIds.has(e.categoryId))
+    .reduce((sum, e) => sum + e.convertedAmount, 0);
 
   // Group daily expenses by category
   const groupedExpenses = dayExpenses.reduce((acc, exp) => {
@@ -52,7 +55,7 @@ export function ExpensesView() {
 
   const getDaySpendingStatus = (date: Date) => {
     const dayTotal = expenses
-      .filter(e => isSameDay(new Date(e.date), date))
+      .filter(e => isSameDay(new Date(e.date), date) && !excludeIds.has(e.categoryId))
       .reduce((sum, e) => sum + e.convertedAmount, 0);
     
     if (dayTotal === 0) return null;
