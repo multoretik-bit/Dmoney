@@ -30,7 +30,10 @@ export function ExpensesView() {
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
 
   const dayExpenses = expenses.filter(e => isSameDay(new Date(e.date), selectedDate));
-  const excludeIds = new Set(categories.filter(c => c.excludeFromBudget).map(c => c.id));
+  const excludeIds = new Set(categories.filter(c => {
+    const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
+    return c.excludeFromBudget || (parent && parent.excludeFromBudget);
+  }).map(c => c.id));
   const totalSpentToday = dayExpenses
     .filter(e => !excludeIds.has(e.categoryId))
     .reduce((sum, e) => sum + e.convertedAmount, 0);

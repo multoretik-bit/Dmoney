@@ -131,15 +131,23 @@ export function BudgetView() {
   };
 
   const totalPlanned = useMemo(() => 
-    categories.reduce((sum, c) => sum + (!c.excludeFromBudget && c.budgetLimit ? c.budgetLimit : 0), 0), 
+    categories.reduce((sum, c) => {
+      const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
+      const isExcluded = c.excludeFromBudget || (parent && parent.excludeFromBudget);
+      return sum + (!isExcluded && c.budgetLimit ? c.budgetLimit : 0);
+    }, 0), 
   [categories]);
 
   const totalSpent = useMemo(() => {
     let sum = 0;
     for (const [catId, amount] of Object.entries(spendingByCategory)) {
       const cat = categories.find(c => c.id === catId);
-      if (cat && !cat.excludeFromBudget) {
-        sum += amount;
+      if (cat) {
+        const parent = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
+        const isExcluded = cat.excludeFromBudget || (parent && parent.excludeFromBudget);
+        if (!isExcluded) {
+          sum += amount;
+        }
       }
     }
     return sum;
@@ -148,7 +156,11 @@ export function BudgetView() {
   const overallProgress = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
 
   const unplannedExpenses = useMemo(() => {
-    const plannedIds = new Set(categories.filter(c => !c.excludeFromBudget && c.budgetLimit && c.budgetLimit > 0).map(c => c.id));
+    const plannedIds = new Set(categories.filter(c => {
+      const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
+      const isExcluded = c.excludeFromBudget || (parent && parent.excludeFromBudget);
+      return !isExcluded && c.budgetLimit && c.budgetLimit > 0;
+    }).map(c => c.id));
     return categories.filter(c => !plannedIds.has(c.id) && (spendingByCategory[c.id] || 0) > 0);
   }, [categories, spendingByCategory]);
 
