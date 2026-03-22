@@ -36,7 +36,8 @@ export function CategoriesView() {
     setIsModalOpen(true);
   };
 
-  const allCategories = categories || [];
+  const allCategories = useMemo(() => categories || [], [categories]);
+  
   const headCategories = useMemo(() => 
     allCategories
       .filter(c => !c.parentId)

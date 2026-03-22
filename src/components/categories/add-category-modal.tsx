@@ -207,7 +207,7 @@ export function AddCategoryModal({
                  </div>
                  <div className="flex flex-col flex-1">
                    <span className="font-black text-sm text-white">Не учитывать в бюджете</span>
-                   <span className="text-[10px] font-black uppercase tracking-widest leading-tight mt-1 opacity-50">Такие траты будут отображаться снизу как "Вне плана"</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest leading-tight mt-1 opacity-50">Такие траты будут отображаться снизу как &quot;Вне плана&quot;</span>
                  </div>
                </button>
              </div>
