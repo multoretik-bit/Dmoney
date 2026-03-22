@@ -26,6 +26,7 @@ export function ExpensesView() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
 
   const dayExpenses = expenses.filter(e => isSameDay(new Date(e.date), selectedDate));
@@ -187,8 +188,9 @@ export function ExpensesView() {
                       initial={{ opacity: 0, x: -20 }} 
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
+                      onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
                       className={cn(
-                        "glass-card p-5 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden",
+                        "glass-card p-5 flex items-center justify-between group active:scale-[0.98] transition-all relative overflow-hidden cursor-pointer",
                         idx % 3 === 0 ? "neon-border-blue" : idx % 3 === 1 ? "neon-border-purple" : "neon-border-green"
                       )}
                     >
@@ -202,11 +204,11 @@ export function ExpensesView() {
                              {format(new Date(exp.date), 'HH:mm')}
                            </span>
                          </div>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-lg font-black text-white">-${exp.originalAmount.toFixed(1)}</span>
-                        <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{exp.originalCurrency}</span>
-                      </div>
+                       </div>
+                       <div className="flex flex-col items-end">
+                         <span className="text-lg font-black text-white">-${exp.convertedAmount.toFixed(1)}</span>
+                         <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{exp.originalAmount.toFixed(1)} {exp.originalCurrency}</span>
+                       </div>
                     </motion.div>
                   );
                 })
@@ -222,7 +224,11 @@ export function ExpensesView() {
         <Plus size={36} strokeWidth={4} className="group-hover:rotate-90 transition-transform duration-300" />
       </button>
 
-      <AddExpenseModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+       <AddExpenseModal 
+        isOpen={isModalOpen} 
+        onClose={() => { setIsModalOpen(false); setEditingExpense(null); }} 
+        editingExpense={editingExpense}
+      />
     </div>
   );
 }

@@ -92,6 +92,8 @@ interface UserState {
   deleteWallet: (id: string) => Promise<void>;
 
   addExpense: (expense: Expense) => void;
+  updateExpense: (id: string, expense: Expense) => void;
+  deleteExpense: (id: string) => void;
   pullData: () => Promise<void>;
   pushData: () => Promise<void>;
   updateCategoryOrder: (id: string, direction: 'up' | 'down') => Promise<void>;
@@ -302,6 +304,47 @@ export const useStore = create<UserState>()(
           return w;
         });
         return { expenses: [...state.expenses, expense], wallets: updatedWallets };
+      }),
+      deleteExpense: (id) => set((state) => {
+        const expense = state.expenses.find(e => e.id === id);
+        if (!expense) return state;
+        
+        const updatedWallets = state.wallets.map(w => {
+          if (w.id === expense.walletId) {
+            return { ...w, balance: w.balance + expense.walletAmount };
+          }
+          return w;
+        });
+        
+        return { 
+          expenses: state.expenses.filter(e => e.id !== id),
+          wallets: updatedWallets 
+        };
+      }),
+      updateExpense: (id, newExpense) => set((state) => {
+        const oldExpense = state.expenses.find(e => e.id === id);
+        if (!oldExpense) return state;
+
+        // "Undo" old expense balance
+        let intermediateWallets = state.wallets.map(w => {
+          if (w.id === oldExpense.walletId) {
+            return { ...w, balance: w.balance + oldExpense.walletAmount };
+          }
+          return w;
+        });
+
+        // "Apply" new expense balance
+        const updatedWallets = intermediateWallets.map(w => {
+          if (w.id === newExpense.walletId) {
+            return { ...w, balance: w.balance - newExpense.walletAmount };
+          }
+          return w;
+        });
+
+        return {
+          expenses: state.expenses.map(e => e.id === id ? newExpense : e),
+          wallets: updatedWallets
+        };
       }),
 
       pullData: async () => {

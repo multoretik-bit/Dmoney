@@ -5,14 +5,22 @@ import { generateUUID } from '@/lib/uuid';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Calculator, Wallet as WalletIcon, Tag, ArrowRight, ChevronDown } from 'lucide-react';
-import { useStore } from '@/store/useStore';
+import { useStore, Expense } from '@/store/useStore';
 import { convertAmount, getExchangeRate } from '@/lib/exchange';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { CurrencyPicker } from '@/components/ui/currency-picker';
 
-export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { addExpense, preferences, wallets, categories, expenses } = useStore();
+export function AddExpenseModal({ 
+  isOpen, 
+  onClose, 
+  editingExpense 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  editingExpense?: Expense | null;
+}) {
+  const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories, expenses } = useStore();
   const { baseCurrency } = preferences;
   
   const [amountInput, setAmountInput] = useState('');
@@ -24,16 +32,24 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
   // Auto-select logic
   useEffect(() => {
     if (isOpen) {
-      if (expenses.length > 0) {
+      if (editingExpense) {
+        setAmountInput(editingExpense.originalAmount.toString());
+        setCurrency(editingExpense.originalCurrency);
+        setCategoryId(editingExpense.categoryId);
+        setWalletId(editingExpense.walletId);
+      } else if (expenses.length > 0) {
         const last = expenses[expenses.length - 1];
         setCategoryId(last.categoryId);
         setWalletId(last.walletId);
-      } else if (wallets.length > 0) {
-        setWalletId(wallets[0].id);
+        setCurrency(baseCurrency);
+        setAmountInput('');
+      } else {
+        if (wallets.length > 0) setWalletId(wallets[0].id);
+        setCurrency(baseCurrency);
+        setAmountInput('');
       }
-      setCurrency(baseCurrency);
     }
-  }, [isOpen, expenses, wallets, baseCurrency]);
+  }, [isOpen, editingExpense, expenses, wallets, baseCurrency]);
 
   const evaluateMath = (expr: string) => {
     try {
@@ -58,8 +74,8 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     const convertedAmount = convertAmount(numericAmount, currency, baseCurrency);
     const exchangeRate = getExchangeRate(currency, wallet.currency);
 
-    addExpense({
-      id: generateUUID(),
+    const expenseData = {
+      id: editingExpense ? editingExpense.id : generateUUID(),
       originalAmount: numericAmount,
       originalCurrency: currency,
       convertedAmount,
@@ -67,8 +83,14 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
       exchangeRate,
       categoryId,
       walletId,
-      date: new Date().toISOString()
-    });
+      date: editingExpense ? editingExpense.date : new Date().toISOString()
+    };
+
+    if (editingExpense) {
+      updateExpense(editingExpense.id, expenseData);
+    } else {
+      addExpense(expenseData);
+    }
 
     if (navigator.vibrate) navigator.vibrate(50);
     onClose();
@@ -105,7 +127,9 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean; onClose:
               <div className="w-16 h-16 bg-accent/20 rounded-[28px] flex items-center justify-center text-accent mb-4 shadow-xl shadow-accent/10">
                 <Calculator size={32} strokeWidth={3} />
               </div>
-              <h2 className="text-3xl font-black uppercase tracking-[0.3em] text-white">Расход</h2>
+              <h2 className="text-3xl font-black uppercase tracking-[0.3em] text-white">
+                {editingExpense ? 'Правка' : 'Расход'}
+              </h2>
             </div>
 
             <div className="flex-1 overflow-y-auto flex flex-col gap-10 hide-scrollbar pb-24">
