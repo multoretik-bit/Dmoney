@@ -19,6 +19,7 @@ export interface Portfolio {
   name: string;
   color: string;
   icon: string;
+  sortOrder: number;
 }
 
 export interface Folder {
@@ -82,6 +83,7 @@ interface UserState {
   addPortfolio: (p: Portfolio) => void;
   updatePortfolio: (id: string, updates: Partial<Portfolio>) => void;
   deletePortfolio: (id: string) => Promise<void>;
+  updatePortfolioOrder: (id: string, direction: 'left' | 'right') => Promise<void>;
 
   addFolder: (f: Folder) => void;
   updateFolder: (id: string, updates: Partial<Folder>) => void;
@@ -113,7 +115,7 @@ export const useStore = create<UserState>()(
         { id: 'f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f', name: 'Еда и напитки', icon: '🍔', color: '#f59e0b', sortOrder: 1 },
       ],
       portfolios: [
-        { id: '7d8e9f0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a', name: 'Main Capital', color: '#3b82f6', icon: '🏦' },
+        { id: '7d8e9f0a-1b2c-3d4e-5f6a-7b8c9d0e1f2a', name: 'Main Capital', color: '#3b82f6', icon: '🏦', sortOrder: 0 },
       ],
       folders: [],
       wallets: [],
@@ -253,6 +255,52 @@ export const useStore = create<UserState>()(
       updatePortfolio: (id, updates) => set((state) => ({
         portfolios: state.portfolios.map(p => p.id === id ? { ...p, ...updates } : p)
       })),
+      updatePortfolioOrder: async (id, direction) => {
+        const state = useStore.getState();
+        if (state.isReordering) return;
+        set({ isReordering: true });
+
+        try {
+          const portfolio = state.portfolios.find(p => p.id === id);
+          if (!portfolio) return;
+
+          const sortedPortfolios = [...state.portfolios].sort((a, b) => {
+             if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+             return a.id.localeCompare(b.id);
+          });
+
+          const currentIndex = sortedPortfolios.findIndex(p => p.id === id);
+          const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+
+          if (newIndex < 0 || newIndex >= sortedPortfolios.length) return;
+
+          const newPortfoliosOrdered = [...sortedPortfolios];
+          const temp = newPortfoliosOrdered[currentIndex];
+          newPortfoliosOrdered[currentIndex] = newPortfoliosOrdered[newIndex];
+          newPortfoliosOrdered[newIndex] = temp;
+
+          const updatedWithNewOrders = newPortfoliosOrdered.map((p, idx) => ({
+             ...p,
+             sortOrder: idx
+          }));
+
+          set({ portfolios: updatedWithNewOrders });
+          
+          if (state.user) {
+             const { error } = await supabase.from('portfolios').upsert(updatedWithNewOrders.map(p => ({
+                id: p.id,
+                user_id: state.user!.id,
+                name: p.name,
+                color: p.color,
+                icon: p.icon,
+                sort_order: p.sortOrder
+             })), { onConflict: 'id' });
+             if (error) console.error('❌ Sync error (updatePortfolioOrder):', error);
+          }
+        } finally {
+          set({ isReordering: false });
+        }
+      },
       deletePortfolio: async (id) => {
         const { user } = useStore.getState();
         if (user) {
@@ -386,7 +434,8 @@ export const useStore = create<UserState>()(
             id: p.id,
             name: p.name,
             color: p.color,
-            icon: p.icon
+            icon: p.icon,
+            sortOrder: p.sort_order || 0
           })) });
 
           if (folds.data) set({ folders: folds.data.map((f: any) => ({
@@ -456,7 +505,8 @@ export const useStore = create<UserState>()(
                   user_id: user.id,
                   name: p.name,
                   color: p.color,
-                  icon: p.icon
+                  icon: p.icon,
+                  sort_order: p.sortOrder || 0
                })), { onConflict: 'id' }),
                supabase.from('folders').upsert(state.folders.map(f => ({
                   id: f.id,

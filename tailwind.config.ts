@@ -12,6 +12,7 @@ const config: Config = {
         background: "#0B1C2C",
         card: "#132A3E",
         accent: "#3DA9FC",
+        "accent-light": "#70C1FF",
         textMain: "#FFFFFF",
         textMuted: "#9CA3AF",
         success: "#10B981",
@@ -22,6 +23,14 @@ const config: Config = {
         'xl': '12px',
         '2xl': '16px',
         '3xl': '20px',
+      },
+      keyframes: {
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 2s infinite',
       },
     },
   },

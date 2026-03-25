@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus, Palette, CreditCard, Target } from 'lucide-react';
+import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus, Palette, CreditCard, Target, ChevronLeft } from 'lucide-react';
 import { useStore, Wallet, Portfolio, Folder } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
@@ -11,7 +11,7 @@ import { convertAmount } from '@/lib/exchange';
 import { useDragScroll } from '@/hooks/useDragScroll';
 
 export function WalletsView() {
-  const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, preferences } = useStore();
+  const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, updatePortfolioOrder, preferences } = useStore();
   const { baseCurrency } = preferences;
   
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('');
@@ -36,7 +36,12 @@ export function WalletsView() {
   const { ref: scrollRef, props: dragScrollProps } = useDragScroll();
 
 
-  const selectedPortfolio = portfolios.find(p => p.id === selectedPortfolioId) || portfolios[0];
+  const sortedPortfolios = [...portfolios].sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return a.id.localeCompare(b.id);
+  });
+
+  const selectedPortfolio = sortedPortfolios.find(p => p.id === selectedPortfolioId) || sortedPortfolios[0];
   
   const portfolioWallets = wallets.filter(w => w.portfolioId === (selectedPortfolio?.id || ''));
   const portfolioFolders = folders.filter(f => f.portfolioId === (selectedPortfolio?.id || ''));
@@ -79,7 +84,7 @@ export function WalletsView() {
         {...dragScrollProps}
         className="flex gap-6 overflow-x-auto hide-scrollbar snap-x -mx-6 px-6 pb-4"
       >
-        {portfolios.map((p) => (
+        {sortedPortfolios.map((p, idx) => (
           <motion.div 
             key={p.id}
             onClick={() => setSelectedPortfolioId(p.id)}
@@ -106,23 +111,37 @@ export function WalletsView() {
              </div>
              
              {/* CRUD Actions for Portfolios */}
-             <div className={cn(
-               "absolute top-6 right-6 flex items-center gap-2 transition-opacity z-30",
-               selectedPortfolioId === p.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-             )}>
-               <button 
-                 onClick={(e) => { e.stopPropagation(); console.log('Edit clicked', p.name); handleEditPortfolio(p); }}
-                 className="p-3 bg-black/40 hover:bg-black/60 rounded-xl transition-all border border-white/10 active:scale-95"
-               >
-                 <Edit2 size={16} className="text-white" />
-               </button>
-               <button 
-                 onClick={(e) => { e.stopPropagation(); console.log('Delete clicked', p.id); deletePortfolio(p.id); }}
-                 className="p-3 bg-black/40 hover:bg-red-500/60 rounded-xl transition-all border border-white/10 active:scale-95"
-               >
-                 <Trash2 size={16} className="text-white" />
-               </button>
-             </div>
+              <div className={cn(
+                "absolute top-6 right-6 flex items-center gap-1.5 transition-opacity z-30",
+                selectedPortfolioId === p.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              )}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); updatePortfolioOrder(p.id, 'left'); }}
+                  disabled={idx === 0}
+                  className="p-2.5 bg-black/40 hover:bg-black/60 disabled:opacity-20 rounded-xl transition-all border border-white/10 active:scale-95"
+                >
+                  <ChevronLeft size={16} className="text-white" />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); updatePortfolioOrder(p.id, 'right'); }}
+                  disabled={idx === sortedPortfolios.length - 1}
+                  className="p-2.5 bg-black/40 hover:bg-black/60 disabled:opacity-20 rounded-xl transition-all border border-white/10 active:scale-95"
+                >
+                  <ChevronRight size={16} className="text-white" />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleEditPortfolio(p); }}
+                  className="p-2.5 bg-black/40 hover:bg-black/60 rounded-xl transition-all border border-white/10 active:scale-95"
+                >
+                  <Edit2 size={16} className="text-white" />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); if (confirm('Удалить портфель? Все счета внутри останутся.')) deletePortfolio(p.id); }}
+                  className="p-2.5 bg-black/40 hover:bg-red-500/60 rounded-xl transition-all border border-white/10 active:scale-95"
+                >
+                  <Trash2 size={16} className="text-white" />
+                </button>
+              </div>
           </motion.div>
         ))}
         
@@ -311,20 +330,25 @@ function WalletCard({
       </div>
 
       {wallet.targetAmount && wallet.targetAmount > 0 && (
-        <div className="flex flex-col gap-2 bg-black/20 p-3 rounded-2xl border border-white/5">
-          <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest">
-            <div className="flex items-center gap-2 text-white/40">
-              <Target size={10} />
-              <span>Цель: ${convertAmount(wallet.targetAmount, wallet.currency, baseCurrency).toFixed(0)}</span>
+        <div className="flex flex-col gap-3 bg-white/[0.02] p-4 rounded-[24px] border border-white/5 relative overflow-hidden group/goal">
+          <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover/goal:opacity-100 transition-opacity" />
+          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest relative z-10">
+            <div className="flex items-center gap-2 text-white/50">
+              <Target size={12} className="text-accent" />
+              <span>Цель: {wallet.targetAmount.toFixed(0)} {wallet.currency}</span>
             </div>
-            <span className="text-accent">{Math.round((balanceInUSD / convertAmount(wallet.targetAmount, wallet.currency, baseCurrency)) * 100)}%</span>
+            <div className="flex items-center gap-1">
+               <span className="text-accent font-black">{Math.round((wallet.balance / wallet.targetAmount) * 100)}%</span>
+            </div>
           </div>
-          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+          <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden relative z-10 p-[1px]">
             <motion.div 
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, (balanceInUSD / convertAmount(wallet.targetAmount, wallet.currency, baseCurrency)) * 100)}%` }}
-              className="h-full bg-accent rounded-full"
-            />
+              animate={{ width: `${Math.min(100, (wallet.balance / wallet.targetAmount) * 100)}%` }}
+              className="h-full bg-gradient-to-r from-accent to-accent-light rounded-full relative shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+            >
+               <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)] animate-shimmer" />
+            </motion.div>
           </div>
         </div>
       )}

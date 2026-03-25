@@ -25,6 +25,7 @@ CREATE TABLE portfolios (
   name TEXT NOT NULL,
   color TEXT,
   icon TEXT,
+  sort_order NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -47,6 +48,7 @@ CREATE TABLE wallets (
   name TEXT NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   balance NUMERIC DEFAULT 0,
+  target_amount NUMERIC DEFAULT 0,
   icon TEXT,
   color TEXT,
   created_at TIMESTAMPTZ DEFAULT now()

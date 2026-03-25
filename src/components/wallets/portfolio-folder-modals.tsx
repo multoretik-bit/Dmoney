@@ -42,7 +42,11 @@ export function AddPortfolioModal({
     if (editingPortfolio) {
       updatePortfolio(editingPortfolio.id, { name: name.trim(), color, icon });
     } else {
-      addPortfolio({ id: generateUUID(), name: name.trim(), color, icon });
+      const { portfolios } = useStore.getState();
+      const nextSortOrder = portfolios.length > 0 
+        ? Math.max(...portfolios.map(p => p.sortOrder)) + 1 
+        : 0;
+      addPortfolio({ id: generateUUID(), name: name.trim(), color, icon, sortOrder: nextSortOrder });
     }
     
     onClose();

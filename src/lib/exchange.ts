@@ -12,15 +12,33 @@ let cachedRates: Record<string, number> = {
 let lastFetch = 0;
 const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
 
+import { fetchCBRRates } from './cbr';
+
 export async function fetchLatestRates() {
   const now = Date.now();
   if (now - lastFetch < CACHE_DURATION) return cachedRates;
 
   try {
-    const response = await fetch('https://open.er-api.com/v6/latest/USD');
-    const data = await response.json();
+    // Fetch both, but prioritize CBR for RUB if needed
+    const [erResponse, cbrData] = await Promise.all([
+      fetch('https://open.er-api.com/v6/latest/USD'),
+      fetchCBRRates()
+    ]);
+    
+    const data = await erResponse.json();
     if (data && data.rates) {
-      cachedRates = data.rates;
+      cachedRates = { ...data.rates };
+      
+      // If CBR data is available, we can override/augment rates
+      // CBR gives rates against RUB, so we need to convert to USD-base
+      if (cbrData && cbrData.Valute) {
+          const usdToRub = cbrData.Valute.USD.Value / cbrData.Valute.USD.Nominal;
+          cachedRates['RUB'] = usdToRub;
+          
+          // Optionally adjust other currencies relative to RUB if needed, 
+          // but er-api is usually better for non-RUB pairs.
+      }
+      
       lastFetch = now;
     }
   } catch (error) {

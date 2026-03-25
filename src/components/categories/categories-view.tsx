@@ -3,13 +3,15 @@
 import { useState, useMemo } from 'react';
 import { useStore, Category } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw, Edit2, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw, Edit2, ArrowUp, ArrowDown, CircleDollarSign } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { IconPicker } from '@/components/ui/icon-picker';
 import { cn } from '@/lib/utils';
 
 import { AddCategoryModal } from './add-category-modal';
+import { fetchCBRRates, CBRResponse } from '@/lib/cbr';
+import { useEffect } from 'react';
 
 export function CategoriesView() {
   const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences, updateCategoryOrder } = useStore();
@@ -19,6 +21,13 @@ export function CategoriesView() {
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [expandedHeads, setExpandedHeads] = useState<Record<string, boolean>>({});
+  const [cbrData, setCbrData] = useState<CBRResponse | null>(null);
+
+  useEffect(() => {
+    fetchCBRRates().then(setCbrData);
+    const interval = setInterval(() => fetchCBRRates().then(setCbrData), 1000 * 60 * 30);
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleHead = (id: string) => {
     setExpandedHeads(prev => ({ ...prev, [id]: !prev[id] }));
@@ -134,32 +143,89 @@ export function CategoriesView() {
         )}
       </section>
 
-      {/* Currency Selection */}
+      {/* Currency Selection & Exchange Rates */}
       <section className="flex flex-col gap-4">
         <div className="flex items-center gap-3 px-2">
           <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Настройки</span>
           <div className="h-px bg-white/5 flex-1" />
         </div>
-        <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-4 shadow-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-               <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
-                  <Globe size={24} />
-               </div>
-               <div className="flex flex-col">
-                 <span className="font-black text-white uppercase text-[9px] tracking-[0.2em] mb-1">Основная валюта</span>
-                 <span className="text-xs font-bold text-white/40">Используется для расчетов</span>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
+                    <Globe size={24} />
+                 </div>
+                 <div className="flex flex-col">
+                   <span className="font-black text-white uppercase text-[9px] tracking-[0.2em] mb-1">Основная валюта</span>
+                   <span className="text-xs font-bold text-white/40">Используется для расчетов</span>
+                 </div>
+              </div>
+               <div className="relative group">
+                  <select 
+                    className="bg-white/5 pl-6 pr-10 py-4 rounded-2xl text-accent font-black border border-white/5 outline-none appearance-none cursor-pointer focus:border-accent/30 transition-all"
+                    value={baseCurrency}
+                    onChange={(e) => updatePreferences({ baseCurrency: e.target.value })}
+                  >
+                    {['USD', 'EUR', 'RUB', 'KZT', 'THB', 'KGS'].map(c => <option key={c} value={c} className="bg-[#1c2128]">{c}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none group-hover:text-accent transition-colors" size={16} />
                </div>
             </div>
-             <div className="relative group">
-                <select 
-                  className="bg-white/5 pl-6 pr-10 py-4 rounded-2xl text-accent font-black border border-white/5 outline-none appearance-none cursor-pointer focus:border-accent/30 transition-all"
-                  value={baseCurrency}
-                  onChange={(e) => updatePreferences({ baseCurrency: e.target.value })}
-                >
-                  {['USD', 'EUR', 'RUB', 'KZT', 'THB', 'KGS'].map(c => <option key={c} value={c} className="bg-[#1c2128]">{c}</option>)}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none group-hover:text-accent transition-colors" size={16} />
+          </div>
+
+          <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-4 shadow-xl overflow-hidden relative group">
+             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <RefreshCw size={48} />
+             </div>
+             
+             <div className="flex flex-col gap-4 relative z-10">
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
+                         <CircleDollarSign size={20} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Курсы ЦБ РФ</span>
+                   </div>
+                   {cbrData && (
+                      <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">
+                         Обновлено {new Date(cbrData.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                   )}
+                </div>
+
+                <div className="flex items-center gap-6 overflow-x-auto hide-scrollbar py-1">
+                   {cbrData ? (
+                      ['USD', 'EUR', 'KZT', 'THB', 'KGS'].map(code => {
+                         const val = cbrData.Valute[code];
+                         if (!val) return null;
+                         const rate = (val.Value / val.Nominal).toFixed(2);
+                         const diff = val.Value - val.Previous;
+                         return (
+                            <div key={code} className="flex flex-col gap-1 flex-shrink-0">
+                               <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-black text-white">{code}</span>
+                                  <span className={cn(
+                                     "text-[8px] font-bold",
+                                     diff >= 0 ? "text-emerald-500" : "text-red-500"
+                                  )}>
+                                     {diff >= 0 ? '↑' : '↓'}
+                                  </span>
+                               </div>
+                               <span className="text-lg font-black text-accent tracking-tighter">
+                                  {rate}
+                               </span>
+                            </div>
+                         );
+                      })
+                   ) : (
+                      <div className="flex items-center gap-2 text-white/20 py-2">
+                         <RefreshCw size={12} className="animate-spin" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">Загрузка курсов...</span>
+                      </div>
+                   )}
+                </div>
              </div>
           </div>
         </div>
