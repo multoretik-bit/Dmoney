@@ -27,9 +27,11 @@ export function ExpensesView() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [isWorkMode, setIsWorkMode] = useState(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
 
-  const dayExpenses = expenses.filter(e => isSameDay(new Date(e.date), selectedDate));
+  const filteredExpenses = expenses.filter(e => isWorkMode ? !!e.isWork : !e.isWork);
+  const dayExpenses = filteredExpenses.filter(e => isSameDay(new Date(e.date), selectedDate));
   const excludeIds = new Set(categories.filter(c => {
     const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
     return c.excludeFromBudget || (parent && parent.excludeFromBudget);
@@ -57,7 +59,7 @@ export function ExpensesView() {
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const getDaySpendingStatus = (date: Date) => {
-    const dayTotal = expenses
+    const dayTotal = filteredExpenses
       .filter(e => isSameDay(new Date(e.date), date) && !excludeIds.has(e.categoryId))
       .reduce((sum, e) => sum + e.convertedAmount, 0);
     
@@ -68,8 +70,33 @@ export function ExpensesView() {
   return (
     <div className="flex flex-col gap-8 pb-32">
        <header className="py-12 flex flex-col items-center justify-center text-center gap-2">
-        <h1 className="text-3xl font-black text-white px-6">Обзор Трат</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">История и Календарь</p>
+        <h1 className="text-3xl font-black text-white px-6">
+          {isWorkMode ? 'Рабочие Траты' : 'Обзор Трат'}
+        </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+          {isWorkMode ? 'Служебные расходы' : 'История и Календарь'}
+        </p>
+
+        <div className="mt-6 flex bg-black/40 p-1 rounded-2xl border border-white/5 backdrop-blur-md">
+          <button 
+            onClick={() => setIsWorkMode(false)}
+            className={cn(
+              "px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2",
+              !isWorkMode ? "bg-white text-black shadow-xl" : "text-white/40"
+            )}
+          >
+            Личные
+          </button>
+          <button 
+            onClick={() => setIsWorkMode(true)}
+            className={cn(
+              "px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2",
+              isWorkMode ? "bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.3)]" : "text-white/40"
+            )}
+          >
+            Рабочие
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-col gap-8">
@@ -99,22 +126,66 @@ export function ExpensesView() {
            </div>
 
            <div className="glass-card rounded-[40px] p-8 flex flex-col gap-6 shadow-2xl relative overflow-hidden group">
-              <div className="flex flex-col items-center text-center">
-                 <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">
-                   {isSameDay(selectedDate, new Date()) ? 'Траты за сегодня' : format(selectedDate, 'd MMMM', { locale: ru })}
-                 </span>
-                 <div className="flex items-baseline gap-2 mt-2">
-                   <span className="text-5xl font-black text-white leading-none">
-                     ${totalSpentToday.toFixed(1)}
-                   </span>
-                 </div>
-              </div>
+               <div className="flex flex-col items-center text-center">
+                  <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">
+                    {isSameDay(selectedDate, new Date()) ? 'Траты за сегодня' : format(selectedDate, 'd MMMM', { locale: ru })}
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <span className="text-5xl font-black text-white leading-none">
+                      ${totalSpentToday.toFixed(1)}
+                    </span>
+                  </div>
+                  
+                  {isWorkMode && (preferences.workBudgetLimit || 0) > 0 && (
+                    <div className="mt-6 flex flex-col gap-2 w-full max-w-[200px]">
+                      <div className="flex justify-between items-end">
+                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Месячный лимит</span>
+                        <span className="text-sm font-black text-amber-500">
+                          {Math.round((expenses.filter(e => e.isWork && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.workBudgetLimit || 1)) * 100)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                        <motion.div 
+                          className="h-full bg-amber-500"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, (expenses.filter(e => e.isWork && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.workBudgetLimit || 1)) * 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[9px] font-black text-white/10 uppercase tracking-[0.2em]">
+                          Лимит: {preferences.workBudgetLimit} {baseCurrency}
+                        </span>
+                        <button 
+                          onClick={() => {
+                            const val = prompt('Введите новый лимит для рабочих трат:', preferences.workBudgetLimit?.toString());
+                            if (val !== null) useStore.getState().updatePreferences({ workBudgetLimit: parseFloat(val) || 0 });
+                          }}
+                          className="text-[8px] font-black uppercase tracking-widest text-amber-500/40 hover:text-amber-500 transition-colors"
+                        >
+                          Изменить лимит
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isWorkMode && (!preferences.workBudgetLimit || preferences.workBudgetLimit === 0) && (
+                    <button 
+                      onClick={() => {
+                        const val = prompt('Установите лимит для рабочих трат:', '0');
+                        if (val !== null) useStore.getState().updatePreferences({ workBudgetLimit: parseFloat(val) || 0 });
+                      }}
+                      className="mt-6 px-6 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase text-amber-500 tracking-widest hover:bg-amber-500/20 transition-all"
+                    >
+                      Установить лимит
+                    </button>
+                  )}
+               </div>
 
               <div className="h-16 flex items-end justify-between gap-1.5 px-1">
                 {eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) }).map((date, i) => {
-                  const dayTotal = expenses.filter(e => isSameDay(new Date(e.date), date)).reduce((sum, e) => sum + e.convertedAmount, 0);
+                  const dayTotal = filteredExpenses.filter(e => isSameDay(new Date(e.date), date)).reduce((sum, e) => sum + e.convertedAmount, 0);
                   const monthMax = Math.max(...eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) }).map(d => 
-                    expenses.filter(e => isSameDay(new Date(e.date), d)).reduce((sum, e) => sum + e.convertedAmount, 0)
+                    filteredExpenses.filter(e => isSameDay(new Date(e.date), d)).reduce((sum, e) => sum + e.convertedAmount, 0)
                   ), 10);
                   const height = (dayTotal / monthMax) * 100;
                   const isSelected = isSameDay(date, selectedDate);
@@ -225,7 +296,10 @@ export function ExpensesView() {
 
       <button 
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-32 right-8 w-20 h-20 bg-accent rounded-[32px] flex items-center justify-center text-white shadow-[0_20px_40px_rgba(59,130,246,0.3)] active:scale-95 hover:scale-105 transition-all z-40 group"
+        className={cn(
+          "fixed bottom-32 right-8 w-20 h-20 rounded-[32px] flex items-center justify-center text-white shadow-2xl active:scale-95 hover:scale-105 transition-all z-40 group",
+          isWorkMode ? "bg-amber-500 shadow-amber-500/20" : "bg-accent shadow-accent/20"
+        )}
       >
         <Plus size={36} strokeWidth={4} className="group-hover:rotate-90 transition-transform duration-300" />
       </button>

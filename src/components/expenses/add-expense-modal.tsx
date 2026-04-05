@@ -27,6 +27,7 @@ export function AddExpenseModal({
   const [currency, setCurrency] = useState('USD');
   const [categoryId, setCategoryId] = useState('');
   const [walletId, setWalletId] = useState('');
+  const [isWork, setIsWork] = useState(false);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
 
   // Auto-select logic
@@ -37,16 +38,19 @@ export function AddExpenseModal({
         setCurrency(editingExpense.originalCurrency);
         setCategoryId(editingExpense.categoryId);
         setWalletId(editingExpense.walletId);
+        setIsWork(!!editingExpense.isWork);
       } else if (expenses.length > 0) {
         const last = expenses[expenses.length - 1];
         setCategoryId(last.categoryId);
         setWalletId(last.walletId);
         setCurrency(baseCurrency);
         setAmountInput('');
+        setIsWork(false);
       } else {
         if (wallets.length > 0) setWalletId(wallets[0].id);
         setCurrency(baseCurrency);
         setAmountInput('');
+        setIsWork(false);
       }
     }
   }, [isOpen, editingExpense, expenses, wallets, baseCurrency]);
@@ -83,7 +87,8 @@ export function AddExpenseModal({
       exchangeRate,
       categoryId,
       walletId,
-      date: editingExpense ? editingExpense.date : new Date().toISOString()
+      date: editingExpense ? editingExpense.date : new Date().toISOString(),
+      isWork
     };
 
     if (editingExpense) {
@@ -285,6 +290,39 @@ export function AddExpenseModal({
                   </div>
                 </div>
               )}
+
+              {/* Work Expense Toggle */}
+              <div 
+                onClick={() => setIsWork(!isWork)}
+                className={cn(
+                  "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
+                  isWork 
+                    ? "bg-amber-500/10 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.1)]" 
+                    : "bg-white/5 border-transparent hover:bg-white/10"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
+                    isWork ? "bg-amber-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
+                  )}>
+                    💼
+                  </div>
+                  <div className="flex flex-col">
+                    <span className={cn("text-base font-black transition-colors", isWork ? "text-amber-500" : "text-white/60")}>Рабочая трата</span>
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Отдельный учет и лимит</span>
+                  </div>
+                </div>
+                <div className={cn(
+                  "w-14 h-8 rounded-full p-1 transition-all",
+                  isWork ? "bg-amber-500" : "bg-white/10"
+                )}>
+                  <motion.div 
+                    animate={{ x: isWork ? 24 : 0 }}
+                    className="w-6 h-6 bg-white rounded-full shadow-lg"
+                  />
+                </div>
+              </div>
             </div>
 
             <button 

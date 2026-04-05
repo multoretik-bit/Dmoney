@@ -38,7 +38,7 @@ export function BudgetView() {
   }, []);
 
   const currentMonthExpenses = useMemo(() => 
-    expenses.filter(e => e.date.startsWith(currentMonthStr)),
+    expenses.filter(e => e.date.startsWith(currentMonthStr) && !e.isWork),
   [expenses, currentMonthStr]);
 
   const openAddBlock = () => {
