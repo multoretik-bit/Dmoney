@@ -37,7 +37,11 @@ export function ExpensesView() {
     return c.excludeFromBudget || (parent && parent.excludeFromBudget);
   }).map(c => c.id));
   const totalSpentToday = dayExpenses
-    .filter(e => !excludeIds.has(e.categoryId))
+    .filter(e => isWorkMode || !excludeIds.has(e.categoryId))
+    .reduce((sum, e) => sum + e.convertedAmount, 0);
+
+  const totalSpentMonth = filteredExpenses
+    .filter(e => e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (isWorkMode || !excludeIds.has(e.categoryId)))
     .reduce((sum, e) => sum + e.convertedAmount, 0);
 
   // Group daily expenses by category
@@ -136,12 +140,17 @@ export function ExpensesView() {
                     </span>
                   </div>
                   
+                  <div className="mt-4 flex flex-col items-center">
+                    <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">За {(format(currentMonth, 'MMMM', { locale: ru }))}</span>
+                    <span className="text-xl font-black text-white/60">${totalSpentMonth.toFixed(1)}</span>
+                  </div>
+                  
                   {isWorkMode && (preferences.workBudgetLimit || 0) > 0 && (
                     <div className="mt-6 flex flex-col gap-2 w-full max-w-[200px]">
                       <div className="flex justify-between items-end">
                         <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Месячный лимит</span>
                         <span className="text-sm font-black text-amber-500">
-                          {Math.round((expenses.filter(e => e.isWork && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.workBudgetLimit || 1)) * 100)}%
+                          {Math.round((totalSpentMonth / (preferences.workBudgetLimit || 1)) * 100)}%
                         </span>
                       </div>
                       <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
