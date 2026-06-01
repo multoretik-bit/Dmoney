@@ -14,11 +14,13 @@ import { CurrencyPicker } from '@/components/ui/currency-picker';
 export function AddExpenseModal({ 
   isOpen, 
   onClose, 
-  editingExpense 
+  editingExpense,
+  initialViewMode = 'personal'
 }: { 
   isOpen: boolean; 
   onClose: () => void;
   editingExpense?: Expense | null;
+  initialViewMode?: 'personal' | 'work' | 'large';
 }) {
   const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories, expenses } = useStore();
   const { baseCurrency } = preferences;
@@ -28,6 +30,7 @@ export function AddExpenseModal({
   const [categoryId, setCategoryId] = useState('');
   const [walletId, setWalletId] = useState('');
   const [isWork, setIsWork] = useState(false);
+  const [isLarge, setIsLarge] = useState(false);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
 
   // Auto-select logic
@@ -39,18 +42,21 @@ export function AddExpenseModal({
         setCategoryId(editingExpense.categoryId);
         setWalletId(editingExpense.walletId);
         setIsWork(!!editingExpense.isWork);
+        setIsLarge(!!editingExpense.isLarge);
       } else if (expenses.length > 0) {
         const last = expenses[expenses.length - 1];
         setCategoryId(last.categoryId);
         setWalletId(last.walletId);
         setCurrency(baseCurrency);
         setAmountInput('');
-        setIsWork(false);
+        setIsWork(initialViewMode === 'work');
+        setIsLarge(initialViewMode === 'large');
       } else {
         if (wallets.length > 0) setWalletId(wallets[0].id);
         setCurrency(baseCurrency);
         setAmountInput('');
-        setIsWork(false);
+        setIsWork(initialViewMode === 'work');
+        setIsLarge(initialViewMode === 'large');
       }
     }
   }, [isOpen, editingExpense, expenses, wallets, baseCurrency]);
@@ -88,7 +94,8 @@ export function AddExpenseModal({
       categoryId,
       walletId,
       date: editingExpense ? editingExpense.date : new Date().toISOString(),
-      isWork
+      isWork,
+      isLarge
     };
 
     if (editingExpense) {
@@ -293,7 +300,7 @@ export function AddExpenseModal({
 
               {/* Work Expense Toggle */}
               <div 
-                onClick={() => setIsWork(!isWork)}
+                onClick={() => { setIsWork(!isWork); if (!isWork) setIsLarge(false); }}
                 className={cn(
                   "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
                   isWork 
@@ -319,6 +326,39 @@ export function AddExpenseModal({
                 )}>
                   <motion.div 
                     animate={{ x: isWork ? 24 : 0 }}
+                    className="w-6 h-6 bg-white rounded-full shadow-lg"
+                  />
+                </div>
+              </div>
+
+              {/* Large Purchase Toggle */}
+              <div 
+                onClick={() => { setIsLarge(!isLarge); if (!isLarge) setIsWork(false); }}
+                className={cn(
+                  "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
+                  isLarge 
+                    ? "bg-purple-500/10 border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.1)]" 
+                    : "bg-white/5 border-transparent hover:bg-white/10"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
+                    isLarge ? "bg-purple-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
+                  )}>
+                    🛍️
+                  </div>
+                  <div className="flex flex-col">
+                    <span className={cn("text-base font-black transition-colors", isLarge ? "text-purple-500" : "text-white/60")}>Крупная покупка</span>
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Вне основного бюджета</span>
+                  </div>
+                </div>
+                <div className={cn(
+                  "w-14 h-8 rounded-full p-1 transition-all",
+                  isLarge ? "bg-purple-500" : "bg-white/10"
+                )}>
+                  <motion.div 
+                    animate={{ x: isLarge ? 24 : 0 }}
                     className="w-6 h-6 bg-white rounded-full shadow-lg"
                   />
                 </div>

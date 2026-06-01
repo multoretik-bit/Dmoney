@@ -53,12 +53,14 @@ export interface Expense {
   walletId: string;
   date: string;
   isWork?: boolean;
+  isLarge?: boolean;
 }
 
 export interface UserPreferences {
   baseCurrency: string;
   savedColors: string[];
   workBudgetLimit?: number;
+  largeBudgetLimit?: number;
 }
 
 interface UserState {
@@ -469,13 +471,15 @@ export const useStore = create<UserState>()(
              categoryId: e.category_id,
              walletId: e.wallet_id,
              date: e.date,
-             isWork: e.is_work
+             isWork: e.is_work,
+             isLarge: e.is_large
           })) });
 
           if (prefs.data) set({ preferences: {
             baseCurrency: prefs.data.base_currency,
             savedColors: prefs.data.saved_colors || [],
-            workBudgetLimit: prefs.data.work_budget_limit || 0
+            workBudgetLimit: prefs.data.work_budget_limit || 0,
+            largeBudgetLimit: prefs.data.large_budget_limit || 0
           }});
 
           console.log('✅ Data pulled successfully');
@@ -542,13 +546,15 @@ export const useStore = create<UserState>()(
                   wallet_amount: e.walletAmount,
                   exchange_rate: e.exchangeRate,
                   date: e.date,
-                  is_work: e.isWork || false
+                  is_work: e.isWork || false,
+                  is_large: e.isLarge || false
                })), { onConflict: 'id' }),
                supabase.from('user_preferences').upsert({
                   user_id: user.id,
                   base_currency: state.preferences.baseCurrency,
                   saved_colors: state.preferences.savedColors,
                   work_budget_limit: state.preferences.workBudgetLimit || 0,
+                  large_budget_limit: state.preferences.largeBudgetLimit || 0,
                   updated_at: new Date().toISOString()
                }, { onConflict: 'user_id' })
             ]);

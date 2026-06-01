@@ -27,21 +27,25 @@ export function ExpensesView() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [isWorkMode, setIsWorkMode] = useState(false);
+  const [viewMode, setViewMode] = useState<'personal' | 'work' | 'large'>('personal');
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
 
-  const filteredExpenses = expenses.filter(e => isWorkMode ? !!e.isWork : !e.isWork);
+  const filteredExpenses = expenses.filter(e => {
+    if (viewMode === 'work') return !!e.isWork;
+    if (viewMode === 'large') return !!e.isLarge;
+    return !e.isWork && !e.isLarge;
+  });
   const dayExpenses = filteredExpenses.filter(e => isSameDay(new Date(e.date), selectedDate));
   const excludeIds = new Set(categories.filter(c => {
     const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
     return c.excludeFromBudget || (parent && parent.excludeFromBudget);
   }).map(c => c.id));
   const totalSpentToday = dayExpenses
-    .filter(e => isWorkMode || !excludeIds.has(e.categoryId))
+    .filter(e => viewMode !== 'personal' || !excludeIds.has(e.categoryId))
     .reduce((sum, e) => sum + e.convertedAmount, 0);
 
   const totalSpentMonth = filteredExpenses
-    .filter(e => e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (isWorkMode || !excludeIds.has(e.categoryId)))
+    .filter(e => e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (viewMode !== 'personal' || !excludeIds.has(e.categoryId)))
     .reduce((sum, e) => sum + e.convertedAmount, 0);
 
   // Group daily expenses by category
@@ -75,30 +79,39 @@ export function ExpensesView() {
     <div className="flex flex-col gap-8 pb-32">
        <header className="py-12 flex flex-col items-center justify-center text-center gap-2">
         <h1 className="text-3xl font-black text-white px-6">
-          {isWorkMode ? 'Рабочие Траты' : 'Обзор Трат'}
+          {viewMode === 'work' ? 'Рабочие Траты' : viewMode === 'large' ? 'Крупные Покупки' : 'Обзор Трат'}
         </h1>
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
-          {isWorkMode ? 'Служебные расходы' : 'История и Календарь'}
+          {viewMode === 'work' ? 'Служебные расходы' : viewMode === 'large' ? 'Особые траты' : 'История и Календарь'}
         </p>
 
         <div className="mt-6 flex bg-black/40 p-1 rounded-2xl border border-white/5 backdrop-blur-md">
           <button 
-            onClick={() => setIsWorkMode(false)}
+            onClick={() => setViewMode('personal')}
             className={cn(
               "px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2",
-              !isWorkMode ? "bg-white text-black shadow-xl" : "text-white/40"
+              viewMode === 'personal' ? "bg-white text-black shadow-xl" : "text-white/40"
             )}
           >
             Личные
           </button>
           <button 
-            onClick={() => setIsWorkMode(true)}
+            onClick={() => setViewMode('work')}
             className={cn(
               "px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2",
-              isWorkMode ? "bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.3)]" : "text-white/40"
+              viewMode === 'work' ? "bg-amber-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.3)]" : "text-white/40"
             )}
           >
             Рабочие
+          </button>
+          <button 
+            onClick={() => setViewMode('large')}
+            className={cn(
+              "px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2",
+              viewMode === 'large' ? "bg-purple-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)]" : "text-white/40"
+            )}
+          >
+            Крупные
           </button>
         </div>
       </header>
@@ -145,7 +158,7 @@ export function ExpensesView() {
                     <span className="text-xl font-black text-white/60">${totalSpentMonth.toFixed(1)}</span>
                   </div>
                   
-                  {isWorkMode && (preferences.workBudgetLimit || 0) > 0 && (
+                  {viewMode === 'work' && (preferences.workBudgetLimit || 0) > 0 && (
                     <div className="mt-6 flex flex-col gap-2 w-full max-w-[200px]">
                       <div className="flex justify-between items-end">
                         <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Месячный лимит</span>
@@ -177,13 +190,57 @@ export function ExpensesView() {
                     </div>
                   )}
 
-                  {isWorkMode && (!preferences.workBudgetLimit || preferences.workBudgetLimit === 0) && (
+                  {viewMode === 'work' && (!preferences.workBudgetLimit || preferences.workBudgetLimit === 0) && (
                     <button 
                       onClick={() => {
                         const val = prompt('Установите лимит для рабочих трат:', '0');
                         if (val !== null) useStore.getState().updatePreferences({ workBudgetLimit: parseFloat(val) || 0 });
                       }}
                       className="mt-6 px-6 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] font-black uppercase text-amber-500 tracking-widest hover:bg-amber-500/20 transition-all"
+                    >
+                      Установить лимит
+                    </button>
+                  )}
+
+                  {viewMode === 'large' && (preferences.largeBudgetLimit || 0) > 0 && (
+                    <div className="mt-6 flex flex-col gap-2 w-full max-w-[200px]">
+                      <div className="flex justify-between items-end">
+                        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Месячный лимит</span>
+                        <span className="text-sm font-black text-purple-500">
+                          {Math.round((totalSpentMonth / (preferences.largeBudgetLimit || 1)) * 100)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                        <motion.div 
+                          className="h-full bg-purple-500"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, (expenses.filter(e => e.isLarge && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.largeBudgetLimit || 1)) * 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[9px] font-black text-white/10 uppercase tracking-[0.2em]">
+                          Лимит: {preferences.largeBudgetLimit} {baseCurrency}
+                        </span>
+                        <button 
+                          onClick={() => {
+                            const val = prompt('Введите новый лимит для крупных покупок:', preferences.largeBudgetLimit?.toString());
+                            if (val !== null) useStore.getState().updatePreferences({ largeBudgetLimit: parseFloat(val) || 0 });
+                          }}
+                          className="text-[8px] font-black uppercase tracking-widest text-purple-500/40 hover:text-purple-500 transition-colors"
+                        >
+                          Изменить лимит
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {viewMode === 'large' && (!preferences.largeBudgetLimit || preferences.largeBudgetLimit === 0) && (
+                    <button 
+                      onClick={() => {
+                        const val = prompt('Установите лимит для крупных покупок:', '0');
+                        if (val !== null) useStore.getState().updatePreferences({ largeBudgetLimit: parseFloat(val) || 0 });
+                      }}
+                      className="mt-6 px-6 py-2 bg-purple-500/10 border border-purple-500/20 rounded-xl text-[10px] font-black uppercase text-purple-500 tracking-widest hover:bg-purple-500/20 transition-all"
                     >
                       Установить лимит
                     </button>
@@ -307,7 +364,7 @@ export function ExpensesView() {
         onClick={() => setIsModalOpen(true)}
         className={cn(
           "fixed bottom-32 right-8 w-20 h-20 rounded-[32px] flex items-center justify-center text-white shadow-2xl active:scale-95 hover:scale-105 transition-all z-40 group",
-          isWorkMode ? "bg-amber-500 shadow-amber-500/20" : "bg-accent shadow-accent/20"
+          viewMode === 'work' ? "bg-amber-500 shadow-amber-500/20" : viewMode === 'large' ? "bg-purple-500 shadow-purple-500/20" : "bg-accent shadow-accent/20"
         )}
       >
         <Plus size={36} strokeWidth={4} className="group-hover:rotate-90 transition-transform duration-300" />
@@ -317,6 +374,7 @@ export function ExpensesView() {
         isOpen={isModalOpen} 
         onClose={() => { setIsModalOpen(false); setEditingExpense(null); }} 
         editingExpense={editingExpense}
+        initialViewMode={viewMode}
       />
     </div>
   );
