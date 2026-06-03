@@ -9,6 +9,7 @@ import { Settings, User as UserIcon, LogOut, Wallet, CircleDollarSign } from 'lu
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { convertAmount } from '@/lib/exchange';
+import { CapitalsModal } from '@/components/ui/capitals-modal';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, setUser, pullData, pushData, wallets, 
@@ -18,6 +19,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [scrolled, setScrolled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isCapitalsModalOpen, setIsCapitalsModalOpen] = useState(false);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -131,12 +133,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </div>
           )}
           
-             <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/20 rounded-xl">
-                <div className="w-4 h-4 bg-accent rounded-full flex items-center justify-center">
-                   <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                </div>
-                <span className="text-sm font-black text-accent">{totalBalance.toFixed(1)} {preferences.baseCurrency}</span>
-             </div>
+             <button 
+                onClick={() => setIsCapitalsModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-transparent hover:bg-white/5 rounded-xl transition-colors"
+             >
+                <span className="text-sm font-black text-white/90 tracking-tight">
+                  <span className="text-accent mr-0.5">$</span>{totalBalance.toFixed(1)}
+                </span>
+             </button>
           </div>
       </header>
 
@@ -147,6 +151,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <BottomNav />
       
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setAuthModalOpen(false)} />
+      <CapitalsModal isOpen={isCapitalsModalOpen} onClose={() => setIsCapitalsModalOpen(false)} />
     </div>
   );
 }

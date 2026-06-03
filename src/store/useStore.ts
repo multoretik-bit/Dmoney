@@ -462,10 +462,7 @@ export const useStore = create<UserState>()(
           })) });
 
           if (exps.data) {
-            const localExpenses = useStore.getState().expenses;
-            set({ expenses: exps.data.map((e: any) => {
-              const localE = localExpenses.find(le => le.id === e.id);
-              return {
+            set({ expenses: exps.data.map((e: any) => ({
                  id: e.id,
                  originalAmount: e.amount,
                  originalCurrency: e.currency,
@@ -476,18 +473,16 @@ export const useStore = create<UserState>()(
                  walletId: e.wallet_id,
                  date: e.date,
                  isWork: e.is_work,
-                 isLarge: localE ? localE.isLarge : false
-              };
-            }) });
+                 isLarge: e.is_large
+            })) });
           }
 
           if (prefs.data) {
-            const localPrefs = useStore.getState().preferences;
             set({ preferences: {
               baseCurrency: prefs.data.base_currency,
               savedColors: prefs.data.saved_colors || [],
               workBudgetLimit: prefs.data.work_budget_limit || 0,
-              largeBudgetLimit: localPrefs.largeBudgetLimit || 0
+              largeBudgetLimit: prefs.data.large_budget_limit || 0
             }});
           }
 
@@ -555,13 +550,15 @@ export const useStore = create<UserState>()(
                   wallet_amount: e.walletAmount,
                   exchange_rate: e.exchangeRate,
                   date: e.date,
-                  is_work: e.isWork || false
+                  is_work: e.isWork || false,
+                  is_large: e.isLarge || false
                })), { onConflict: 'id' }),
                supabase.from('user_preferences').upsert({
                   user_id: user.id,
                   base_currency: state.preferences.baseCurrency,
                   saved_colors: state.preferences.savedColors,
                   work_budget_limit: state.preferences.workBudgetLimit || 0,
+                  large_budget_limit: state.preferences.largeBudgetLimit || 0,
                   updated_at: new Date().toISOString()
                }, { onConflict: 'user_id' })
             ]);

@@ -14,9 +14,12 @@ import {
   Activity,
   Edit2,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  ChevronLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format, subMonths, addMonths } from 'date-fns';
+import { ru } from 'date-fns/locale';
 import { AddExpenseModal } from '../expenses/add-expense-modal';
 import { AddCategoryModal } from '../categories/add-category-modal';
 
@@ -30,12 +33,9 @@ export function BudgetView() {
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
   const [isSelectingExisting, setIsSelectingExisting] = useState<string | null>(null); // blockId
   const { ref: dragScrollRef, props: dragScrollProps } = useDragScroll();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const currentMonthStr = useMemo(() => new Date().toISOString().substring(0, 7), []);
-  const currentMonthName = useMemo(() => {
-    const name = new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  }, []);
+  const currentMonthStr = useMemo(() => format(currentMonth, 'yyyy-MM'), [currentMonth]);
 
   const currentMonthExpenses = useMemo(() => 
     expenses.filter(e => e.date.startsWith(currentMonthStr) && !e.isWork),
@@ -194,9 +194,29 @@ export function BudgetView() {
         <h1 className="text-3xl font-black text-white px-6">
           {viewMode === 'execute' ? 'Траты и Бюджет' : 'Планирование'}
         </h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 mb-2">
-          {currentMonthName}
-        </p>
+        
+        <div className="flex justify-between items-center bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md mt-4 mb-2 w-full max-w-[240px]">
+          <button 
+            onClick={() => setCurrentMonth(prev => subMonths(prev, 1))} 
+            className="p-2 text-white/20 hover:text-white transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div className="flex flex-col items-center min-w-[120px]">
+            <span className="text-sm font-black uppercase tracking-widest text-white leading-none">
+              {format(currentMonth, 'MMMM', { locale: ru })}
+            </span>
+            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-1">
+              {format(currentMonth, 'yyyy')}
+            </span>
+          </div>
+          <button 
+            onClick={() => setCurrentMonth(prev => addMonths(prev, 1))} 
+            className="p-2 text-white/20 hover:text-white transition-colors"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
 
         {viewMode === 'execute' ? (
           <div className="w-full px-8 flex flex-col gap-3">
