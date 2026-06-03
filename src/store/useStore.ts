@@ -391,8 +391,7 @@ export const useStore = create<UserState>()(
                 balance: w.balance,
                 icon: w.icon,
                 color: w.color,
-                target_amount: w.targetAmount,
-                sort_order: w.sortOrder
+                target_amount: w.targetAmount
              })), { onConflict: 'id' });
              if (error) console.error('❌ Sync error (updateWalletOrder):', error);
           }
@@ -510,18 +509,22 @@ export const useStore = create<UserState>()(
             color: f.color
           })) });
 
-          if (walls.data) set({ wallets: walls.data.map((w: any) => ({
-            id: w.id,
-            portfolioId: w.portfolio_id,
-            folderId: w.folder_id,
-            name: w.name,
-            currency: w.currency,
-            balance: w.balance,
-            icon: w.icon,
-            color: w.color,
-            targetAmount: w.target_amount,
-            sortOrder: w.sort_order || 0
-          })) });
+          const currentWallets = useStore.getState().wallets;
+          if (walls.data) set({ wallets: walls.data.map((w: any) => {
+            const existing = currentWallets.find(ew => ew.id === w.id);
+            return {
+              id: w.id,
+              portfolioId: w.portfolio_id,
+              folderId: w.folder_id,
+              name: w.name,
+              currency: w.currency,
+              balance: w.balance,
+              icon: w.icon,
+              color: w.color,
+              targetAmount: w.target_amount,
+              sortOrder: w.sort_order ?? existing?.sortOrder ?? 0
+            };
+          }) });
 
           if (exps.data) {
             set({ expenses: exps.data.map((e: any) => ({
@@ -599,8 +602,7 @@ export const useStore = create<UserState>()(
                   balance: w.balance,
                   icon: w.icon,
                   color: w.color,
-                  target_amount: w.targetAmount,
-                  sort_order: w.sortOrder || 0
+                  target_amount: w.targetAmount
                })), { onConflict: 'id' }),
                supabase.from('transactions').upsert(state.expenses.map(e => ({
                   id: e.id,

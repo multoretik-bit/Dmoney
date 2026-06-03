@@ -232,8 +232,6 @@ export function WalletsView() {
                           baseCurrency={baseCurrency} 
                           onDelete={() => deleteWallet(w.id)} 
                           onEdit={() => handleEditWallet(w)} 
-                          onMoveUp={idx > 0 ? () => updateWalletOrder(w.id, 'up') : undefined}
-                          onMoveDown={idx < folderWallets.length - 1 ? () => updateWalletOrder(w.id, 'down') : undefined}
                           className={cn(
                             "rounded-[32px]", // Ensure rounded corners are applied
                             idx % 3 === 0 ? "neon-border-blue" : idx % 3 === 1 ? "neon-border-purple" : "neon-border-green"
@@ -258,8 +256,6 @@ export function WalletsView() {
               baseCurrency={baseCurrency} 
               onDelete={() => deleteWallet(w.id)} 
               onEdit={() => handleEditWallet(w)} 
-              onMoveUp={idx > 0 ? () => updateWalletOrder(w.id, 'up') : undefined}
-              onMoveDown={idx < arr.length - 1 ? () => updateWalletOrder(w.id, 'down') : undefined}
               className={cn(
                 "rounded-[32px]",
                 idx % 3 === 0 ? "neon-border-blue" : idx % 3 === 1 ? "neon-border-purple" : "neon-border-green"
@@ -287,16 +283,12 @@ function WalletCard({
   baseCurrency, 
   onDelete, 
   onEdit,
-  onMoveUp,
-  onMoveDown,
   className
 }: { 
   wallet: Wallet; 
   baseCurrency: string; 
   onDelete: () => void; 
   onEdit: () => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
   className?: string;
 }) {
   const balanceInUSD = convertAmount(wallet.balance, wallet.currency, baseCurrency);
@@ -325,22 +317,6 @@ function WalletCard({
               <span className="text-lg font-black text-white">${balanceInUSD.toFixed(1)}</span>
            </div>
            <div className="flex flex-col gap-1">
-             {onMoveUp && (
-               <button 
-                 onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
-                 className="p-1 px-2 hover:text-white text-white/40 transition-colors"
-               >
-                 <ChevronUp size={16} />
-               </button>
-             )}
-             {onMoveDown && (
-               <button 
-                 onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
-                 className="p-1 px-2 hover:text-white text-white/40 transition-colors"
-               >
-                 <ChevronDown size={16} />
-               </button>
-             )}
              <button 
                onClick={(e) => { e.stopPropagation(); onEdit(); }}
                className="p-1 px-2 hover:text-white text-white/40 transition-colors"

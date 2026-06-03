@@ -5,7 +5,7 @@ import { generateUUID } from '@/lib/uuid';
 import { useState, useEffect } from 'react';
 import { useStore, Wallet } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Globe, Check, LayoutGrid, FolderIcon, ChevronDown, Target } from 'lucide-react';
+import { X, Globe, Check, LayoutGrid, FolderIcon, ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { ColorPicker } from '@/components/ui/color-picker';
@@ -21,7 +21,7 @@ export function AddWalletModal({
   onClose: () => void; 
   editingWallet?: Wallet | null;
 }) {
-  const { addWallet, updateWallet, portfolios, folders, preferences } = useStore();
+  const { addWallet, updateWallet, updateWalletOrder, portfolios, folders, preferences } = useStore();
   
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('0');
@@ -195,6 +195,28 @@ export function AddWalletModal({
                    />
                 </div>
               </div>
+
+              {editingWallet && (
+                <div className="flex justify-between items-center bg-white/5 p-4 rounded-[24px] border border-white/5">
+                   <span className="text-[10px] font-black uppercase text-white/50 tracking-widest px-2">Порядок в списке</span>
+                   <div className="flex gap-2">
+                     <button 
+                       type="button"
+                       onClick={(e) => { e.preventDefault(); updateWalletOrder(editingWallet.id, 'up'); }} 
+                       className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-white"
+                     >
+                       <ChevronUp size={20} />
+                     </button>
+                     <button 
+                       type="button"
+                       onClick={(e) => { e.preventDefault(); updateWalletOrder(editingWallet.id, 'down'); }} 
+                       className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-white"
+                     >
+                       <ChevronDown size={20} />
+                     </button>
+                   </div>
+                </div>
+              )}
             </div>
 
             <button 
