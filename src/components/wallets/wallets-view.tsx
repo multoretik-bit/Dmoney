@@ -2,14 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, FolderPlus, Palette, CreditCard, Target, ChevronLeft } from 'lucide-react';
+import { Plus, Trash2, Edit2, Wallet as WalletIcon, FolderIcon, ChevronRight, ChevronDown, ChevronUp, FolderPlus, Palette, CreditCard, Target, ChevronLeft } from 'lucide-react';
 import { useStore, Wallet, Portfolio, Folder } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
 import { AddPortfolioModal, AddFolderModal } from './portfolio-folder-modals';
 import { convertAmount } from '@/lib/exchange';
 import { useDragScroll } from '@/hooks/useDragScroll';
-import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export function WalletsView() {
   const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, updatePortfolioOrder, updateWalletOrder, preferences } = useStore();
@@ -288,6 +287,8 @@ function WalletCard({
   baseCurrency, 
   onDelete, 
   onEdit,
+  onMoveUp,
+  onMoveDown,
   className
 }: { 
   wallet: Wallet; 
