@@ -135,7 +135,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           
              <button 
                 onClick={() => setIsCapitalsModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-transparent hover:bg-white/5 rounded-xl transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-white/5 rounded-xl transition-colors"
              >
                 <span className="text-sm font-black text-white/90 tracking-tight">
                   <span className="text-accent mr-0.5">$</span>{totalBalance.toFixed(1)}
