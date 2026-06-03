@@ -9,9 +9,10 @@ import { AddWalletModal } from './add-wallet-modal';
 import { AddPortfolioModal, AddFolderModal } from './portfolio-folder-modals';
 import { convertAmount } from '@/lib/exchange';
 import { useDragScroll } from '@/hooks/useDragScroll';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export function WalletsView() {
-  const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, updatePortfolioOrder, preferences } = useStore();
+  const { portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet, updatePortfolioOrder, updateWalletOrder, preferences } = useStore();
   const { baseCurrency } = preferences;
   
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('');
@@ -180,7 +181,9 @@ export function WalletsView() {
         <div className="flex flex-col gap-4">
           {portfolioFolders.map(folder => {
             const isExpanded = expandedFolders.includes(folder.id);
-            const folderWallets = portfolioWallets.filter(w => w.folderId === folder.id);
+            const folderWallets = portfolioWallets
+              .filter(w => w.folderId === folder.id)
+              .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
             
             return (
               <div key={folder.id} className="flex flex-col gap-3">
@@ -230,6 +233,8 @@ export function WalletsView() {
                           baseCurrency={baseCurrency} 
                           onDelete={() => deleteWallet(w.id)} 
                           onEdit={() => handleEditWallet(w)} 
+                          onMoveUp={idx > 0 ? () => updateWalletOrder(w.id, 'up') : undefined}
+                          onMoveDown={idx < folderWallets.length - 1 ? () => updateWalletOrder(w.id, 'down') : undefined}
                           className={cn(
                             "rounded-[32px]", // Ensure rounded corners are applied
                             idx % 3 === 0 ? "neon-border-blue" : idx % 3 === 1 ? "neon-border-purple" : "neon-border-green"
@@ -244,13 +249,18 @@ export function WalletsView() {
           })}
 
           {/* Uncategorized Wallets */}
-          {portfolioWallets.filter(w => !w.folderId).map((w, idx) => (
+          {portfolioWallets
+            .filter(w => !w.folderId)
+            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+            .map((w, idx, arr) => (
             <WalletCard 
               key={w.id} 
               wallet={w} 
               baseCurrency={baseCurrency} 
               onDelete={() => deleteWallet(w.id)} 
               onEdit={() => handleEditWallet(w)} 
+              onMoveUp={idx > 0 ? () => updateWalletOrder(w.id, 'up') : undefined}
+              onMoveDown={idx < arr.length - 1 ? () => updateWalletOrder(w.id, 'down') : undefined}
               className={cn(
                 "rounded-[32px]",
                 idx % 3 === 0 ? "neon-border-blue" : idx % 3 === 1 ? "neon-border-purple" : "neon-border-green"
@@ -284,6 +294,8 @@ function WalletCard({
   baseCurrency: string; 
   onDelete: () => void; 
   onEdit: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   className?: string;
 }) {
   const balanceInUSD = convertAmount(wallet.balance, wallet.currency, baseCurrency);
@@ -313,6 +325,22 @@ function WalletCard({
               <span className="text-[9px] font-black text-accent uppercase tracking-widest">{wallet.currency}</span>
            </div>
            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+             {onMoveUp && (
+               <button 
+                 onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+                 className="p-1 px-2 hover:text-white text-white/20 transition-colors"
+               >
+                 <ChevronUp size={12} />
+               </button>
+             )}
+             {onMoveDown && (
+               <button 
+                 onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+                 className="p-1 px-2 hover:text-white text-white/20 transition-colors"
+               >
+                 <ChevronDown size={12} />
+               </button>
+             )}
              <button 
                onClick={(e) => { e.stopPropagation(); onEdit(); }}
                className="p-1 px-2 hover:text-white text-white/20 transition-colors"
@@ -329,7 +357,7 @@ function WalletCard({
         </div>
       </div>
 
-      {wallet.targetAmount && wallet.targetAmount > 0 && (
+      {(wallet.targetAmount ?? 0) > 0 && (
         <div className="flex flex-col gap-3 bg-white/[0.02] p-4 rounded-[24px] border border-white/5 relative overflow-hidden group/goal">
           <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover/goal:opacity-100 transition-opacity" />
           <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest relative z-10">

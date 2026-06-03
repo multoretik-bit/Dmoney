@@ -51,6 +51,7 @@ CREATE TABLE wallets (
   target_amount NUMERIC DEFAULT 0,
   icon TEXT,
   color TEXT,
+  sort_order NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

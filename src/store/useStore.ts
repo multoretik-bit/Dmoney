@@ -40,6 +40,7 @@ export interface Wallet {
   icon?: string;
   color?: string;
   targetAmount?: number;
+  sortOrder?: number;
 }
 
 export interface Expense {
@@ -97,6 +98,7 @@ interface UserState {
   updateWallet: (id: string, updates: Partial<Wallet>) => void;
   updateWalletBalance: (walletId: string, amountChange: number) => void;
   deleteWallet: (id: string) => Promise<void>;
+  updateWalletOrder: (id: string, direction: 'up' | 'down') => Promise<void>;
 
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, expense: Expense) => void;
@@ -339,6 +341,65 @@ export const useStore = create<UserState>()(
       updateWalletBalance: (walletId, amountChange) => set((state) => ({
         wallets: state.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance + amountChange } : w)
       })),
+      updateWalletOrder: async (id, direction) => {
+        const state = useStore.getState();
+        if (state.isReordering) return;
+        set({ isReordering: true });
+
+        try {
+          const wallet = state.wallets.find(w => w.id === id);
+          if (!wallet) return;
+
+          // Get siblings (wallets in the same portfolio and folder)
+          const siblings = state.wallets
+            .filter(w => w.portfolioId === wallet.portfolioId && w.folderId === wallet.folderId)
+            .sort((a, b) => {
+               if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
+               return a.id.localeCompare(b.id);
+            });
+
+          const currentIndex = siblings.findIndex(w => w.id === id);
+          const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+          if (newIndex < 0 || newIndex >= siblings.length) return;
+
+          const newSiblings = [...siblings];
+          const temp = newSiblings[currentIndex];
+          newSiblings[currentIndex] = newSiblings[newIndex];
+          newSiblings[newIndex] = temp;
+
+          const updatedWithNewOrders = newSiblings.map((w, idx) => ({
+             ...w,
+             sortOrder: idx
+          }));
+
+          const updatedWallets = state.wallets.map(w => {
+             const updatedSibling = updatedWithNewOrders.find(u => u.id === w.id);
+             return updatedSibling || w;
+          });
+
+          set({ wallets: updatedWallets });
+          
+          if (state.user) {
+             const { error } = await supabase.from('wallets').upsert(updatedWithNewOrders.map(w => ({
+                id: w.id,
+                user_id: state.user!.id,
+                portfolio_id: w.portfolioId,
+                folder_id: w.folderId,
+                name: w.name,
+                currency: w.currency,
+                balance: w.balance,
+                icon: w.icon,
+                color: w.color,
+                target_amount: w.targetAmount,
+                sort_order: w.sortOrder
+             })), { onConflict: 'id' });
+             if (error) console.error('❌ Sync error (updateWalletOrder):', error);
+          }
+        } finally {
+          set({ isReordering: false });
+        }
+      },
       deleteWallet: async (id) => {
         const { user } = useStore.getState();
         if (user) {
@@ -458,7 +519,8 @@ export const useStore = create<UserState>()(
             balance: w.balance,
             icon: w.icon,
             color: w.color,
-            targetAmount: w.target_amount
+            targetAmount: w.target_amount,
+            sortOrder: w.sort_order || 0
           })) });
 
           if (exps.data) {
@@ -537,7 +599,8 @@ export const useStore = create<UserState>()(
                   balance: w.balance,
                   icon: w.icon,
                   color: w.color,
-                  target_amount: w.targetAmount
+                  target_amount: w.targetAmount,
+                  sort_order: w.sortOrder || 0
                })), { onConflict: 'id' }),
                supabase.from('transactions').upsert(state.expenses.map(e => ({
                   id: e.id,
