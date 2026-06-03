@@ -322,64 +322,63 @@ function WalletCard({
         <div className="flex items-center gap-4 flex-shrink-0">
            <div className="flex flex-col items-end">
               <span className="text-lg font-black text-white">${balanceInUSD.toFixed(1)}</span>
-              <span className="text-[9px] font-black text-accent uppercase tracking-widest">{wallet.currency}</span>
            </div>
-           <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+           <div className="flex flex-col gap-1">
              {onMoveUp && (
                <button 
                  onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
-                 className="p-1 px-2 hover:text-white text-white/20 transition-colors"
+                 className="p-1 px-2 hover:text-white text-white/40 transition-colors"
                >
-                 <ChevronUp size={12} />
+                 <ChevronUp size={16} />
                </button>
              )}
              {onMoveDown && (
                <button 
                  onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
-                 className="p-1 px-2 hover:text-white text-white/20 transition-colors"
+                 className="p-1 px-2 hover:text-white text-white/40 transition-colors"
                >
-                 <ChevronDown size={12} />
+                 <ChevronDown size={16} />
                </button>
              )}
              <button 
                onClick={(e) => { e.stopPropagation(); onEdit(); }}
-               className="p-1 px-2 hover:text-white text-white/20 transition-colors"
+               className="p-1 px-2 hover:text-white text-white/40 transition-colors"
              >
-               <Edit2 size={12} />
+               <Edit2 size={16} />
              </button>
              <button 
                onClick={(e) => { e.stopPropagation(); onDelete(); }}
-               className="p-1 px-2 hover:text-red-500 text-white/20 transition-colors"
+               className="p-1 px-2 hover:text-red-500 text-white/40 transition-colors"
              >
-               <Trash2 size={12} />
+               <Trash2 size={16} />
              </button>
            </div>
         </div>
       </div>
 
-      {(wallet.targetAmount ?? 0) > 0 && (
+      {wallet.targetAmount && Number(wallet.targetAmount) > 0 ? (
         <div className="flex flex-col gap-3 bg-white/[0.02] p-4 rounded-[24px] border border-white/5 relative overflow-hidden group/goal">
           <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover/goal:opacity-100 transition-opacity" />
           <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest relative z-10">
             <div className="flex items-center gap-2 text-white/50">
               <Target size={12} className="text-accent" />
-              <span>Цель: {wallet.targetAmount.toFixed(0)} {wallet.currency}</span>
+              <span>Цель: {Number(wallet.targetAmount).toFixed(0)} {wallet.currency}</span>
             </div>
             <div className="flex items-center gap-1">
-               <span className="text-accent font-black">{Math.round((wallet.balance / wallet.targetAmount) * 100)}%</span>
+               <span className="text-accent font-black">{Math.round((wallet.balance / Number(wallet.targetAmount)) * 100)}%</span>
             </div>
           </div>
           <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden relative z-10 p-[1px]">
             <motion.div 
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, (wallet.balance / wallet.targetAmount) * 100)}%` }}
+              animate={{ width: `${Math.min(100, (wallet.balance / Number(wallet.targetAmount)) * 100)}%` }}
               className="h-full bg-gradient-to-r from-accent to-accent-light rounded-full relative shadow-[0_0_15px_rgba(59,130,246,0.5)]"
             >
                <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)] animate-shimmer" />
             </motion.div>
           </div>
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 }
