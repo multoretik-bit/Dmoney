@@ -295,19 +295,19 @@ function WalletCard({
       style={{ borderLeftColor: wallet.color || '#3b82f6' }}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
-           <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center text-2xl border border-white/5 shadow-inner">
+        <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
+           <div className="w-12 h-12 flex-shrink-0 bg-white/[0.03] rounded-2xl flex items-center justify-center text-2xl border border-white/5 shadow-inner">
               {wallet.icon || <CreditCard size={20} className="text-white/20" />}
            </div>
-           <div className="flex flex-col gap-1 min-w-0">
+           <div className="flex flex-col gap-1 min-w-0 flex-1">
               <span className="text-base font-black text-white leading-tight truncate">{wallet.name}</span>
-              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest truncate">
                  {wallet.balance.toFixed(1)} {wallet.currency}
               </span>
            </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-shrink-0">
            <div className="flex flex-col items-end">
               <span className="text-lg font-black text-white">${balanceInUSD.toFixed(1)}</span>
               <span className="text-[9px] font-black text-accent uppercase tracking-widest">{wallet.currency}</span>

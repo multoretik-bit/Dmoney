@@ -117,19 +117,19 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                       key={portfolio.id}
                       className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group"
                     >
-                      <div className="flex items-center gap-4 relative z-10">
+                      <div className="flex items-center gap-4 relative z-10 flex-1 min-w-0 pr-4">
                         <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-lg"
+                          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-lg flex-shrink-0"
                           style={{ backgroundColor: portfolio.color + '20', color: portfolio.color }}
                         >
                           {portfolio.icon}
                         </div>
-                        <div>
-                          <h3 className="font-bold text-white">{portfolio.name}</h3>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-white truncate">{portfolio.name}</h3>
                           <p className="text-sm text-white/50">Портфель</p>
                         </div>
                       </div>
-                      <div className="text-right relative z-10">
+                      <div className="text-right relative z-10 flex-shrink-0">
                         <span className="font-black text-lg text-white">
                           {portfolio.total.toFixed(1)}
                         </span>
