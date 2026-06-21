@@ -1,10 +1,34 @@
 'use client';
 
+import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
-  const handleLogin = async () => {
-    // Demo login for MVP
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+    
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/expenses`,
+      },
+    });
+
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage('Ссылка для входа отправлена на вашу почту!');
+    }
+    setLoading(false);
+  };
+
+  const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -24,9 +48,32 @@ export default function LoginPage() {
           <p className="text-textMuted text-lg uppercase tracking-widest text-sm">Finances in control</p>
         </div>
         
+        <form onSubmit={handleLogin} className="w-full flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="Ваш Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder-white/40 outline-none focus:border-accent transition-colors"
+            required
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-14 bg-white text-black font-semibold rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-3 shadow-lg disabled:opacity-50"
+          >
+            {loading ? 'Отправка...' : 'Войти по почте (Magic Link)'}
+          </button>
+          {message && <p className="text-center text-sm mt-2 text-white/80">{message}</p>}
+        </form>
+
+        <div className="w-full h-px bg-white/10 relative">
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#0d1117] px-4 text-xs text-white/40 uppercase tracking-widest">Или</span>
+        </div>
+
         <button
-          onClick={handleLogin}
-          className="w-full h-14 bg-white text-black font-semibold rounded-2xl active:scale-95 transition-transform flex items-center justify-center gap-3 shadow-lg"
+          onClick={handleGoogleLogin}
+          className="w-full h-14 bg-white/5 border border-white/10 text-white font-semibold rounded-2xl hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center gap-3"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -34,7 +81,7 @@ export default function LoginPage() {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Войти через Google
+          Продолжить с Google
         </button>
       </div>
     </div>
