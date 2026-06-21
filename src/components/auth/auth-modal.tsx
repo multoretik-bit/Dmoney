@@ -2,32 +2,49 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Check, AlertCircle, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { X, Mail, Check, AlertCircle, ArrowRight, Loader2, ShieldCheck, KeyRound } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/store/useStore';
 
 export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const { setUser } = useStore();
 
-  const handleAuth = async () => {
+  const handleSendCode = async () => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
     try {
       const { error: loginError } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
       });
       if (loginError) throw loginError;
-      setSuccess(true);
+      setStep('otp');
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+      if (verifyError) throw verifyError;
+      setUser(data.user);
+      onClose();
+    } catch (err: any) {
+      setError(err.message === 'Token has expired or is invalid' ? 'Неверный код или срок его действия истек' : err.message);
     } finally {
       setLoading(false);
     }
@@ -69,7 +86,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                  ВХОД ПО ПОЧТЕ
                </h2>
                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">
-                 БЕЗ ПАРОЛЕЙ. ПРОСТО ВВЕДИТЕ EMAIL.
+                 БЕЗ ПАРОЛЕЙ И ССЫЛОК. ПО КОДУ ИЗ ПИСЬМА.
                </p>
             </div>
           </div>
@@ -86,15 +103,51 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
               </motion.div>
             )}
 
-            {success ? (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }} 
-                animate={{ opacity: 1, y: 0 }}
-                className="p-5 bg-green-500/10 border border-green-500/20 rounded-[24px] flex items-center gap-4 text-green-500 text-xs font-black uppercase tracking-widest text-center"
-              >
-                <Check size={20} className="shrink-0" />
-                Ссылка для входа отправлена на вашу почту! Проверьте входящие.
-              </motion.div>
+            {step === 'otp' ? (
+              <>
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }} 
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-5 bg-green-500/10 border border-green-500/20 rounded-[24px] flex items-center gap-4 text-green-500 text-xs font-black uppercase tracking-widest text-center"
+                >
+                  <Check size={20} className="shrink-0" />
+                  Код отправлен на {email}. Проверьте почту!
+                </motion.div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="relative group">
+                    <KeyRound className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-accent transition-colors" size={20} />
+                    <input 
+                      type="text" 
+                      placeholder="Введите 6-значный код"
+                      className="w-full bg-black/20 border border-white/5 rounded-[32px] py-7 pl-16 pr-6 text-white text-xl font-bold outline-none focus:border-accent/40 transition-all placeholder:text-white/10 placeholder:font-black placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-xs tracking-widest"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleVerifyOtp}
+                  disabled={loading || otp.length < 6}
+                  className="mt-6 h-20 bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-accent/20 shadow-2xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group"
+                >
+                  {loading ? (
+                    <Loader2 className="animate-spin" size={28} />
+                  ) : (
+                    <>
+                      <span className="tracking-widest">ПОДТВЕРДИТЬ</span>
+                      <ArrowRight size={28} strokeWidth={3} className="group-hover:translate-x-2 transition-transform" />
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => { setStep('email'); setOtp(''); setError(null); }}
+                  className="text-xs text-white/40 uppercase tracking-widest hover:text-white transition-colors mt-2 text-center w-full"
+                >
+                  Изменить email
+                </button>
+              </>
             ) : (
               <>
                 <div className="flex flex-col gap-4">
@@ -111,7 +164,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                 </div>
 
                 <button 
-                  onClick={handleAuth}
+                  onClick={handleSendCode}
                   disabled={loading || !email}
                   className="mt-6 h-20 bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-accent/20 shadow-2xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group"
                 >
@@ -119,7 +172,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                     <Loader2 className="animate-spin" size={28} />
                   ) : (
                     <>
-                      <span className="tracking-widest">ПОЛУЧИТЬ ССЫЛКУ</span>
+                      <span className="tracking-widest">ОТПРАВИТЬ КОД</span>
                       <ArrowRight size={28} strokeWidth={3} className="group-hover:translate-x-2 transition-transform" />
                     </>
                   )}
