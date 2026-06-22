@@ -334,10 +334,33 @@ export const useStore = create<UserState>()(
         }));
       },
 
-      addWallet: (wallet) => set((state) => ({ wallets: [...state.wallets, wallet] })),
-      updateWallet: (id, updates) => set((state) => ({
-        wallets: state.wallets.map(w => w.id === id ? { ...w, ...updates } : w)
-      })),
+      addWallet: (wallet) => set((state) => {
+        const siblings = state.wallets.filter(w => w.portfolioId === wallet.portfolioId && (w.folderId || undefined) === (wallet.folderId || undefined));
+        const sortOrder = wallet.sortOrder !== undefined ? wallet.sortOrder : (
+          siblings.length > 0 ? Math.max(...siblings.map(w => w.sortOrder || 0)) + 1 : 0
+        );
+        return { wallets: [...state.wallets, { ...wallet, sortOrder }] };
+      }),
+      updateWallet: (id, updates) => set((state) => {
+        const wallets = state.wallets.map(w => {
+          if (w.id === id) {
+            const portfolioChanged = updates.portfolioId !== undefined && updates.portfolioId !== w.portfolioId;
+            const folderChanged = updates.folderId !== undefined && (updates.folderId || undefined) !== (w.folderId || undefined);
+            
+            let sortOrder = w.sortOrder;
+            if (portfolioChanged || folderChanged) {
+              const newPortfolioId = updates.portfolioId !== undefined ? updates.portfolioId : w.portfolioId;
+              const newFolderId = updates.folderId !== undefined ? updates.folderId : w.folderId;
+              const siblings = state.wallets.filter(sw => sw.portfolioId === newPortfolioId && (sw.folderId || undefined) === (newFolderId || undefined) && sw.id !== id);
+              sortOrder = siblings.length > 0 ? Math.max(...siblings.map(sw => sw.sortOrder || 0)) + 1 : 0;
+            }
+            
+            return { ...w, ...updates, sortOrder };
+          }
+          return w;
+        });
+        return { wallets };
+      }),
       updateWalletBalance: (walletId, amountChange) => set((state) => ({
         wallets: state.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance + amountChange } : w)
       })),
@@ -352,7 +375,7 @@ export const useStore = create<UserState>()(
 
           // Get siblings (wallets in the same portfolio and folder)
           const siblings = state.wallets
-            .filter(w => w.portfolioId === wallet.portfolioId && w.folderId === wallet.folderId)
+            .filter(w => w.portfolioId === wallet.portfolioId && (w.folderId || undefined) === (wallet.folderId || undefined))
             .sort((a, b) => {
                if ((a.sortOrder || 0) !== (b.sortOrder || 0)) return (a.sortOrder || 0) - (b.sortOrder || 0);
                return a.id.localeCompare(b.id);
@@ -385,13 +408,14 @@ export const useStore = create<UserState>()(
                 id: w.id,
                 user_id: state.user!.id,
                 portfolio_id: w.portfolioId,
-                folder_id: w.folderId,
+                folder_id: w.folderId || null,
                 name: w.name,
                 currency: w.currency,
                 balance: w.balance,
                 icon: w.icon,
                 color: w.color,
-                target_amount: w.targetAmount
+                target_amount: w.targetAmount,
+                sort_order: w.sortOrder || 0
              })), { onConflict: 'id' });
              if (error) console.error('❌ Sync error (updateWalletOrder):', error);
           }
@@ -596,13 +620,14 @@ export const useStore = create<UserState>()(
                   id: w.id,
                   user_id: user.id,
                   portfolio_id: w.portfolioId,
-                  folder_id: w.folderId,
+                  folder_id: w.folderId || null,
                   name: w.name,
                   currency: w.currency,
                   balance: w.balance,
                   icon: w.icon,
                   color: w.color,
-                  target_amount: w.targetAmount
+                  target_amount: w.targetAmount,
+                  sort_order: w.sortOrder || 0
                })), { onConflict: 'id' }),
                supabase.from('transactions').upsert(state.expenses.map(e => ({
                   id: e.id,
