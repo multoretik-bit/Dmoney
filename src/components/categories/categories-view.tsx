@@ -14,7 +14,7 @@ import { fetchCBRRates, CBRResponse } from '@/lib/cbr';
 import { useEffect } from 'react';
 
 export function CategoriesView() {
-  const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences, updateCategoryOrder } = useStore();
+  const { user, setUser, pullData, pushData, setAuthModalOpen, categories, portfolios, wallets, preferences, updatePreferences, updateCategoryOrder } = useStore();
   const { baseCurrency = 'USD' } = preferences || {};
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -228,6 +228,166 @@ export function CategoriesView() {
                 </div>
              </div>
           </div>
+        </div>
+      </section>
+
+      {/* Gamification Settings: Свободные деньги */}
+      <section className="flex flex-col gap-4 mt-6">
+        <div className="flex items-center gap-3 px-2">
+          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Свободные Деньги (Геймификация)</span>
+          <div className="h-px bg-white/5 flex-1" />
+        </div>
+
+        <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-6 shadow-xl">
+          <p className="text-xs font-bold text-white/40 mb-2">Настройте лимит для личного капитала. При превышении этого лимита избыток («свободные деньги») будет автоматически предлагаться распределить между другими капиталами.</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Personal Capital Config */}
+            <div className="flex flex-col gap-4 p-5 bg-white/5 rounded-3xl border border-white/5">
+              <span className="text-xs font-black text-accent uppercase tracking-wider">Личный Капитал</span>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-white/30 uppercase">Портфель</label>
+                <select
+                  className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
+                  value={preferences.personalPortfolioId || ''}
+                  onChange={(e) => updatePreferences({ personalPortfolioId: e.target.value })}
+                >
+                  <option value="">Выберите портфель</option>
+                  {portfolios.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-white/30 uppercase">Лимит личного капитала ({baseCurrency})</label>
+                <input
+                  type="number"
+                  className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
+                  value={preferences.personalPortfolioLimit || ''}
+                  onChange={(e) => updatePreferences({ personalPortfolioLimit: parseFloat(e.target.value) || 0 })}
+                  placeholder="Например, 1000"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-white/30 uppercase">Счет списания</label>
+                <select
+                  className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
+                  value={preferences.sourceWalletId || ''}
+                  onChange={(e) => updatePreferences({ sourceWalletId: e.target.value })}
+                >
+                  <option value="">Выберите счет</option>
+                  {wallets.filter(w => w.portfolioId === preferences.personalPortfolioId).map(w => (
+                    <option key={w.id} value={w.id}>{w.icon} {w.name} ({w.balance} {w.currency})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Target Capitals Config */}
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Work Capital */}
+              <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
+                <span className="text-[10px] font-black text-white uppercase tracking-wider">Рабочий Капитал</span>
+                <select
+                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  value={preferences.workPortfolioId || ''}
+                  onChange={(e) => updatePreferences({ workPortfolioId: e.target.value })}
+                >
+                  <option value="">Портфель</option>
+                  {portfolios.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
+                </select>
+                <select
+                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  value={preferences.workWalletId || ''}
+                  onChange={(e) => updatePreferences({ workWalletId: e.target.value })}
+                >
+                  <option value="">Целевой счет</option>
+                  {wallets.filter(w => w.portfolioId === preferences.workPortfolioId).map(w => (
+                    <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none w-20 text-center"
+                    value={preferences.workPercentage ?? 50}
+                    onChange={(e) => updatePreferences({ workPercentage: parseInt(e.target.value) || 0 })}
+                  />
+                  <span className="text-xs font-bold text-white/40">%</span>
+                </div>
+              </div>
+
+              {/* Invest Capital */}
+              <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
+                <span className="text-[10px] font-black text-white uppercase tracking-wider">Инвестиционный</span>
+                <select
+                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  value={preferences.investPortfolioId || ''}
+                  onChange={(e) => updatePreferences({ investPortfolioId: e.target.value })}
+                >
+                  <option value="">Портфель</option>
+                  {portfolios.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
+                </select>
+                <select
+                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  value={preferences.investWalletId || ''}
+                  onChange={(e) => updatePreferences({ investWalletId: e.target.value })}
+                >
+                  <option value="">Целевой счет</option>
+                  {wallets.filter(w => w.portfolioId === preferences.investPortfolioId).map(w => (
+                    <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none w-20 text-center"
+                    value={preferences.investPercentage ?? 30}
+                    onChange={(e) => updatePreferences({ investPercentage: parseInt(e.target.value) || 0 })}
+                  />
+                  <span className="text-xs font-bold text-white/40">%</span>
+                </div>
+              </div>
+
+              {/* Savings Capital */}
+              <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
+                <span className="text-[10px] font-black text-white uppercase tracking-wider">Сберегательный</span>
+                <select
+                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  value={preferences.savingsPortfolioId || ''}
+                  onChange={(e) => updatePreferences({ savingsPortfolioId: e.target.value })}
+                >
+                  <option value="">Портфель</option>
+                  {portfolios.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
+                </select>
+                <select
+                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  value={preferences.savingsWalletId || ''}
+                  onChange={(e) => updatePreferences({ savingsWalletId: e.target.value })}
+                >
+                  <option value="">Целевой счет</option>
+                  {wallets.filter(w => w.portfolioId === preferences.savingsPortfolioId).map(w => (
+                    <option key={w.id} value={w.id}>{w.icon} {w.name}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none w-20 text-center"
+                    value={preferences.savingsPercentage ?? 20}
+                    onChange={(e) => updatePreferences({ savingsPercentage: parseInt(e.target.value) || 0 })}
+                  />
+                  <span className="text-xs font-bold text-white/40">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {((preferences.workPercentage || 0) + (preferences.investPercentage || 0) + (preferences.savingsPercentage || 0)) !== 100 && (
+            <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider text-center">
+              ⚠️ Сумма процентов должна быть равна 100% (Сейчас: {(preferences.workPercentage || 0) + (preferences.investPercentage || 0) + (preferences.savingsPercentage || 0)}%)
+            </p>
+          )}
         </div>
       </section>
 

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { convertAmount } from '@/lib/exchange';
 
 export interface Category {
   id: string;
@@ -62,6 +63,18 @@ export interface UserPreferences {
   savedColors: string[];
   workBudgetLimit?: number;
   largeBudgetLimit?: number;
+  personalPortfolioId?: string;
+  personalPortfolioLimit?: number;
+  workPortfolioId?: string;
+  investPortfolioId?: string;
+  savingsPortfolioId?: string;
+  workPercentage?: number;
+  investPercentage?: number;
+  savingsPercentage?: number;
+  sourceWalletId?: string;
+  workWalletId?: string;
+  investWalletId?: string;
+  savingsWalletId?: string;
 }
 
 interface UserState {
@@ -103,6 +116,7 @@ interface UserState {
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, expense: Expense) => void;
   deleteExpense: (id: string) => void;
+  transferFunds: (fromWalletId: string, toWalletId: string, amount: number) => Promise<void>;
   pullData: () => Promise<void>;
   pushData: () => Promise<void>;
   updateCategoryOrder: (id: string, direction: 'up' | 'down') => Promise<void>;
@@ -114,6 +128,9 @@ export const useStore = create<UserState>()(
       preferences: {
         baseCurrency: 'USD',
         savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
+        workPercentage: 50,
+        investPercentage: 30,
+        savingsPercentage: 20,
       },
       categories: [
         { id: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Дом', icon: '🏠', color: '#8b5cf6', sortOrder: 0 },
@@ -483,6 +500,62 @@ export const useStore = create<UserState>()(
           wallets: updatedWallets
         };
       }),
+
+      transferFunds: async (fromWalletId, toWalletId, amount) => {
+        const state = useStore.getState();
+        const fromWallet = state.wallets.find(w => w.id === fromWalletId);
+        const toWallet = state.wallets.find(w => w.id === toWalletId);
+        if (!fromWallet || !toWallet) return;
+
+        const fromAmount = amount;
+        const toAmount = convertAmount(amount, fromWallet.currency, toWallet.currency);
+
+        const updatedWallets = state.wallets.map(w => {
+          if (w.id === fromWalletId) {
+            return { ...w, balance: Number(w.balance || 0) - fromAmount };
+          }
+          if (w.id === toWalletId) {
+            return { ...w, balance: Number(w.balance || 0) + toAmount };
+          }
+          return w;
+        });
+
+        set({ wallets: updatedWallets });
+
+        if (state.user) {
+          const fromWalletUpdated = updatedWallets.find(w => w.id === fromWalletId)!;
+          const toWalletUpdated = updatedWallets.find(w => w.id === toWalletId)!;
+          
+          await supabase.from('wallets').upsert([
+            {
+              id: fromWalletUpdated.id,
+              user_id: state.user.id,
+              portfolio_id: fromWalletUpdated.portfolioId,
+              folder_id: fromWalletUpdated.folderId || null,
+              name: fromWalletUpdated.name,
+              currency: fromWalletUpdated.currency,
+              balance: fromWalletUpdated.balance,
+              icon: fromWalletUpdated.icon,
+              color: fromWalletUpdated.color,
+              target_amount: fromWalletUpdated.targetAmount,
+              sort_order: fromWalletUpdated.sortOrder || 0
+            },
+            {
+              id: toWalletUpdated.id,
+              user_id: state.user.id,
+              portfolio_id: toWalletUpdated.portfolioId,
+              folder_id: toWalletUpdated.folderId || null,
+              name: toWalletUpdated.name,
+              currency: toWalletUpdated.currency,
+              balance: toWalletUpdated.balance,
+              icon: toWalletUpdated.icon,
+              color: toWalletUpdated.color,
+              target_amount: toWalletUpdated.targetAmount,
+              sort_order: toWalletUpdated.sortOrder || 0
+            }
+          ], { onConflict: 'id' });
+        }
+      },
 
       pullData: async () => {
         const { data: { user } } = await supabase.auth.getUser();
