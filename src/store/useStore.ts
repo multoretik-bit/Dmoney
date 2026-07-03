@@ -640,11 +640,24 @@ export const useStore = create<UserState>()(
           }
 
           if (prefs.data) {
+            const currentPrefs = useStore.getState().preferences;
             set({ preferences: {
-              baseCurrency: prefs.data.base_currency,
-              savedColors: prefs.data.saved_colors || [],
-              workBudgetLimit: prefs.data.work_budget_limit || 0,
-              largeBudgetLimit: prefs.data.large_budget_limit || 0
+              baseCurrency: prefs.data.base_currency || currentPrefs.baseCurrency,
+              savedColors: prefs.data.saved_colors || currentPrefs.savedColors || [],
+              workBudgetLimit: prefs.data.work_budget_limit !== undefined ? (prefs.data.work_budget_limit || 0) : currentPrefs.workBudgetLimit,
+              largeBudgetLimit: prefs.data.large_budget_limit !== undefined ? (prefs.data.large_budget_limit || 0) : currentPrefs.largeBudgetLimit,
+              personalPortfolioId: prefs.data.personal_portfolio_id !== undefined ? prefs.data.personal_portfolio_id : currentPrefs.personalPortfolioId,
+              personalPortfolioLimit: prefs.data.personal_portfolio_limit !== undefined ? prefs.data.personal_portfolio_limit : currentPrefs.personalPortfolioLimit,
+              workPortfolioId: prefs.data.work_portfolio_id !== undefined ? prefs.data.work_portfolio_id : currentPrefs.workPortfolioId,
+              investPortfolioId: prefs.data.invest_portfolio_id !== undefined ? prefs.data.invest_portfolio_id : currentPrefs.investPortfolioId,
+              savingsPortfolioId: prefs.data.savings_portfolio_id !== undefined ? prefs.data.savings_portfolio_id : currentPrefs.savingsPortfolioId,
+              workPercentage: prefs.data.work_percentage !== undefined ? prefs.data.work_percentage : currentPrefs.workPercentage,
+              investPercentage: prefs.data.invest_percentage !== undefined ? prefs.data.invest_percentage : currentPrefs.investPercentage,
+              savingsPercentage: prefs.data.savings_percentage !== undefined ? prefs.data.savings_percentage : currentPrefs.savingsPercentage,
+              sourceWalletId: prefs.data.source_wallet_id !== undefined ? prefs.data.source_wallet_id : currentPrefs.sourceWalletId,
+              workWalletId: prefs.data.work_wallet_id !== undefined ? prefs.data.work_wallet_id : currentPrefs.workWalletId,
+              investWalletId: prefs.data.invest_wallet_id !== undefined ? prefs.data.invest_wallet_id : currentPrefs.investWalletId,
+              savingsWalletId: prefs.data.savings_wallet_id !== undefined ? prefs.data.savings_wallet_id : currentPrefs.savingsWalletId,
             }});
           }
 
@@ -659,6 +672,45 @@ export const useStore = create<UserState>()(
          if (!user) return;
          
          const state = useStore.getState();
+          
+         const prefDataWithAll = {
+           user_id: user.id,
+           base_currency: state.preferences.baseCurrency,
+           saved_colors: state.preferences.savedColors,
+           work_budget_limit: state.preferences.workBudgetLimit || 0,
+           large_budget_limit: state.preferences.largeBudgetLimit || 0,
+           personal_portfolio_id: state.preferences.personalPortfolioId || null,
+           personal_portfolio_limit: state.preferences.personalPortfolioLimit || null,
+           work_portfolio_id: state.preferences.workPortfolioId || null,
+           invest_portfolio_id: state.preferences.investPortfolioId || null,
+           savings_portfolio_id: state.preferences.savingsPortfolioId || null,
+           work_percentage: state.preferences.workPercentage || null,
+           invest_percentage: state.preferences.investPercentage || null,
+           savings_percentage: state.preferences.savingsPercentage || null,
+           source_wallet_id: state.preferences.sourceWalletId || null,
+           work_wallet_id: state.preferences.workWalletId || null,
+           invest_wallet_id: state.preferences.investWalletId || null,
+           savings_wallet_id: state.preferences.savingsWalletId || null,
+           updated_at: new Date().toISOString()
+         };
+
+         const prefDataFallback = {
+           user_id: user.id,
+           base_currency: state.preferences.baseCurrency,
+           saved_colors: state.preferences.savedColors,
+           work_budget_limit: state.preferences.workBudgetLimit || 0,
+           large_budget_limit: state.preferences.largeBudgetLimit || 0,
+           updated_at: new Date().toISOString()
+         };
+
+         const prefUpsert = (async () => {
+            const res = await supabase.from('user_preferences').upsert(prefDataWithAll, { onConflict: 'user_id' });
+            if (res.error) {
+               console.warn('⚠️ Failed to upsert all preferences, falling back to standard columns...', res.error);
+               return supabase.from('user_preferences').upsert(prefDataFallback, { onConflict: 'user_id' });
+            }
+            return res;
+         })();
          
          try {
             console.log('☁️ Pushing data to Supabase...');
@@ -716,15 +768,8 @@ export const useStore = create<UserState>()(
                   is_work: e.isWork || false,
                   is_large: e.isLarge || false
                })), { onConflict: 'id' }),
-               supabase.from('user_preferences').upsert({
-                  user_id: user.id,
-                  base_currency: state.preferences.baseCurrency,
-                  saved_colors: state.preferences.savedColors,
-                  work_budget_limit: state.preferences.workBudgetLimit || 0,
-                  large_budget_limit: state.preferences.largeBudgetLimit || 0,
-                  updated_at: new Date().toISOString()
-               }, { onConflict: 'user_id' })
-            ]);
+               prefUpsert
+             ]);
 
             const firstError = results.find(r => r.error)?.error;
             if (firstError) {
