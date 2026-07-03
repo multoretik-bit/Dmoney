@@ -13,36 +13,93 @@
   }
 
   body {
-    @apply bg-[#020617] text-slate-100 antialiased;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
+    @apply text-slate-100 antialiased;
+    background-color: #060B14;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 10% 5%, rgba(59, 130, 246, 0.1) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 90% 95%, rgba(139, 92, 246, 0.08) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 30% at 50% 50%, rgba(16, 185, 129, 0.03) 0%, transparent 70%);
     background-attachment: fixed;
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
-  }
-  
-  .glass-card {
-    @apply bg-[#0b101b] border border-white/5 shadow-2xl;
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
+  .glass-card {
+    background: linear-gradient(145deg, #0d1626 0%, #090e1a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  }
+
+  .glass-elevated {
+    background: linear-gradient(145deg, #111d30 0%, #0c1422 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Gradient hero cards */
+  .gradient-card-blue {
+    background: linear-gradient(145deg, rgba(30, 58, 138, 0.3) 0%, rgba(9, 14, 26, 1) 65%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(59, 130, 246, 0.05) inset;
+  }
+
+  .gradient-card-purple {
+    background: linear-gradient(145deg, rgba(88, 28, 135, 0.3) 0%, rgba(9, 14, 26, 1) 65%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Gradient text */
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 50%, #818cf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-violet {
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Refined neon borders — use category color via inline style instead */
   .neon-border-blue {
-    box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.3);
-    border-left: 4px solid #3b82f6;
+    border-left: 2px solid rgba(59, 130, 246, 0.7);
+    box-shadow: -4px 0 16px -6px rgba(59, 130, 246, 0.4);
   }
 
   .neon-border-purple {
-    box-shadow: 0 0 15px -3px rgba(139, 92, 246, 0.3);
-    border-left: 4px solid #8b5cf6;
+    border-left: 2px solid rgba(139, 92, 246, 0.7);
+    box-shadow: -4px 0 16px -6px rgba(139, 92, 246, 0.4);
   }
 
   .neon-border-green {
-    box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.3);
-    border-left: 4px solid #10b981;
+    border-left: 2px solid rgba(16, 185, 129, 0.7);
+    box-shadow: -4px 0 16px -6px rgba(16, 185, 129, 0.4);
+  }
+
+  /* Glow utilities */
+  .glow-blue {
+    box-shadow: 0 0 30px -5px rgba(59, 130, 246, 0.5);
+  }
+
+  .glow-sm-blue {
+    box-shadow: 0 0 15px -4px rgba(59, 130, 246, 0.4);
+  }
+
+  /* Surface for nested elements */
+  .surface {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 }
 

@@ -17,39 +17,60 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#020617]/90 backdrop-blur-xl border-t border-white/5 pb-safe rounded-t-[32px]">
-      <div className="flex justify-around items-center h-20 px-6 max-w-5xl mx-auto">
-        {NAV_ITEMS.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="relative flex flex-col items-center justify-center w-full h-full gap-1 tap-highlight-transparent"
-            >
-              <div
-                className={cn(
-                  'p-2 rounded-2xl transition-all duration-300 relative z-10 flex flex-col items-center gap-1',
-                  isActive ? 'text-accent' : 'text-white/20'
-                )}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
+      <div className="mx-4 mb-4 max-w-xl xl:max-w-5xl xl:mx-auto">
+        <div
+          className="flex justify-around items-center h-[68px] px-2 rounded-[26px]"
+          style={{
+            background: 'linear-gradient(145deg, rgba(13,22,38,0.97) 0%, rgba(9,14,26,0.97) 100%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.06) inset',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+          }}
+        >
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="relative flex flex-col items-center justify-center flex-1 h-full gap-1"
               >
-                <Icon strokeWidth={isActive ? 3 : 2} size={24} />
-                <span
-                  className={cn(
-                    'text-[9px] font-black uppercase tracking-widest transition-colors duration-200',
-                    isActive ? 'text-accent' : 'text-white/20'
+                <div className="relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl">
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-pill"
+                      className="absolute inset-0 rounded-2xl"
+                      style={{
+                        background: 'rgba(59,130,246,0.12)',
+                        border: '1px solid rgba(59,130,246,0.2)',
+                      }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                    />
                   )}
-                >
-                  {item.label}
-                </span>
-                {isActive && (
-                  <div className="absolute -inset-1 bg-accent/5 rounded-2xl -z-10" />
-                )}
-              </div>
-            </Link>
-          );
-        })}
+                  <Icon
+                    size={21}
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                    className={cn(
+                      'relative z-10 transition-colors duration-200',
+                      isActive ? 'text-blue-400' : 'text-white/25'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'relative z-10 text-[9px] font-black uppercase tracking-widest transition-colors duration-200',
+                      isActive ? 'text-blue-400' : 'text-white/20'
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

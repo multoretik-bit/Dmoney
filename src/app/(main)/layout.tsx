@@ -5,14 +5,14 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { AuthModal } from '@/components/auth/auth-modal';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
-import { Settings, User as UserIcon, LogOut, Wallet, CircleDollarSign } from 'lucide-react';
+import { CircleDollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { convertAmount } from '@/lib/exchange';
 import { CapitalsModal } from '@/components/ui/capitals-modal';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, setUser, pullData, pushData, wallets, 
+  const { user, setUser, pullData, pushData, wallets,
     categories, portfolios, folders, expenses, preferences,
     isAuthModalOpen, setAuthModalOpen
   } = useStore();
@@ -48,7 +48,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Auto-push changes to Supabase
   useEffect(() => {
     if (!user) return;
-    
+
     const timeoutId = setTimeout(async () => {
       setSyncStatus('syncing');
       try {
@@ -57,7 +57,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       } catch {
         setSyncStatus('error');
       }
-    }, 2000); // 2 second debounce
+    }, 2000);
 
     return () => clearTimeout(timeoutId);
   }, [user, categories, portfolios, folders, wallets, expenses, preferences, pushData]);
@@ -79,7 +79,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             setSyncStatus('syncing');
             await pullData();
             setSyncStatus('synced');
-          }, 500); // 500ms debounce for incoming changes
+          }, 500);
         }
       )
       .subscribe();
@@ -95,61 +95,95 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setUser(null);
   };
 
-  const totalBalance = (wallets || []).reduce((acc, w) => 
+  const totalBalance = (wallets || []).reduce((acc, w) =>
     acc + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency), 0
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col pt-safe relative">
-      {/* Premium Header - dHabits Style */}
+    <div className="min-h-screen bg-background text-slate-100 flex flex-col pt-safe relative">
+      {/* Header */}
       <header className={cn(
-        "fixed top-0 left-0 right-0 z-[100] transition-all duration-300 px-6 py-4 flex items-center justify-between",
-        scrolled ? "bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 py-3" : "bg-transparent"
+        "fixed top-0 left-0 right-0 z-[100] transition-all duration-300 px-5 py-4 flex items-center justify-between",
+        scrolled
+          ? "bg-[#060B14]/80 backdrop-blur-2xl border-b border-white/[0.06] py-3"
+          : "bg-transparent"
       )}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-            <CircleDollarSign className="text-white" size={24} />
+        {/* Logo */}
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #818cf8 100%)',
+              boxShadow: '0 0 20px rgba(59,130,246,0.4)',
+            }}
+          >
+            <CircleDollarSign className="text-white" size={20} />
           </div>
-          <span className="text-xl font-black tracking-tighter text-white">DMoney</span>
+          <span
+            className="text-xl font-black tracking-tighter"
+            style={{
+              background: 'linear-gradient(135deg, #93c5fd 0%, #60a5fa 50%, #a78bfa 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            DMoney
+          </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Sync dot — mobile only */}
+          {user && (
+            <div
+              className={cn(
+                'w-2 h-2 rounded-full transition-all duration-500',
+                syncStatus === 'syncing' ? 'bg-blue-400 animate-pulse' :
+                syncStatus === 'synced' ? 'bg-emerald-400' :
+                syncStatus === 'error' ? 'bg-red-400' : 'bg-white/15'
+              )}
+            />
+          )}
+
+          {/* Sync label — desktop */}
           {user && (
             <div className={cn(
-              "hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all duration-500",
-              syncStatus === 'syncing' ? "bg-accent/10 border-accent/20" : 
-              syncStatus === 'error' ? "bg-red-500/10 border-red-500/20" : "bg-white/5 border-white/5"
+              "hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all duration-500",
+              syncStatus === 'syncing'
+                ? "bg-blue-500/10 border-blue-500/20"
+                : syncStatus === 'error'
+                  ? "bg-red-500/10 border-red-500/20"
+                  : "bg-white/[0.04] border-white/[0.06]"
             )}>
-              <div className={cn(
-                "w-2 h-2 rounded-full",
-                syncStatus === 'syncing' ? "bg-accent animate-pulse" :
-                syncStatus === 'synced' ? "bg-emerald-500" :
-                syncStatus === 'error' ? "bg-red-500" : "bg-white/20"
-              )} />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
-                {syncStatus === 'syncing' ? 'Syncing...' : 
-                 syncStatus === 'error' ? 'Sync Error' : 'Cloud Synced'}
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/35">
+                {syncStatus === 'syncing' ? 'Sync...' :
+                 syncStatus === 'error' ? 'Error' : 'Synced'}
               </span>
             </div>
           )}
-          
-             <button 
-                onClick={() => setIsCapitalsModalOpen(true)}
-                className="flex items-center gap-1 px-3 py-1.5 bg-transparent hover:bg-white/5 rounded-xl transition-colors"
-             >
-                <span className="text-sm font-black text-white/90 tracking-tight">
-                  <span className="text-accent mr-0.5">$</span>{totalBalance.toFixed(1)}
-                </span>
-             </button>
-          </div>
+
+          {/* Balance button */}
+          <button
+            onClick={() => setIsCapitalsModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all active:scale-95"
+            style={{
+              background: 'rgba(59,130,246,0.1)',
+              border: '1px solid rgba(59,130,246,0.2)',
+            }}
+          >
+            <span className="text-sm font-black text-blue-300 tracking-tight">
+              ${totalBalance.toFixed(1)}
+            </span>
+          </button>
+        </div>
       </header>
 
-      <main className="flex-1 w-full max-w-5xl mx-auto relative pb-32 overflow-x-hidden pt-24 px-6">
+      <main className="flex-1 w-full max-w-5xl mx-auto relative pb-36 overflow-x-hidden pt-24 px-5">
         {children}
       </main>
-      
+
       <BottomNav />
-      
+
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setAuthModalOpen(false)} />
       <CapitalsModal isOpen={isCapitalsModalOpen} onClose={() => setIsCapitalsModalOpen(false)} />
     </div>
