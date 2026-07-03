@@ -58,6 +58,12 @@ export interface Expense {
   isLarge?: boolean;
 }
 
+export interface DailyCapitalEntry {
+  date: string;
+  overallTotal: number;
+  portfolioTotals: { [id: string]: number };
+}
+
 export interface UserPreferences {
   baseCurrency: string;
   savedColors: string[];
@@ -120,6 +126,8 @@ interface UserState {
   pullData: () => Promise<void>;
   pushData: () => Promise<void>;
   updateCategoryOrder: (id: string, direction: 'up' | 'down') => Promise<void>;
+  capitalHistory: DailyCapitalEntry[];
+  recordDailyCapital: () => void;
 }
 
 export const useStore = create<UserState>()(
@@ -143,12 +151,49 @@ export const useStore = create<UserState>()(
       folders: [],
       wallets: [],
       expenses: [],
+      capitalHistory: [],
       user: null,
       isAuthModalOpen: false,
       isReordering: false,
 
       setUser: (user) => set({ user }),
       setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
+      
+      recordDailyCapital: () => {
+        const state = useStore.getState();
+        const today = new Date().toLocaleDateString('sv');
+        
+        const portfolioTotals: { [id: string]: number } = {};
+        let overallTotal = 0;
+        
+        state.portfolios.forEach(portfolio => {
+          const portfolioWallets = state.wallets.filter(w => w.portfolioId === portfolio.id);
+          const totalInBase = portfolioWallets.reduce((sum, w) => {
+            return sum + convertAmount(Number(w.balance || 0), w.currency, state.preferences.baseCurrency);
+          }, 0);
+          portfolioTotals[portfolio.id] = Number(totalInBase.toFixed(1));
+          overallTotal += totalInBase;
+        });
+        
+        const newEntry: DailyCapitalEntry = {
+          date: today,
+          overallTotal: Number(overallTotal.toFixed(1)),
+          portfolioTotals
+        };
+        
+        const history = [...(state.capitalHistory || [])];
+        const existingIndex = history.findIndex(e => e.date === today);
+        
+        if (existingIndex >= 0) {
+          history[existingIndex] = newEntry;
+        } else {
+          history.push(newEntry);
+        }
+        
+        history.sort((a, b) => a.date.localeCompare(b.date));
+        set({ capitalHistory: history });
+      },
+
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
       addSavedColor: (color) => set((state) => {
         if (state.preferences.savedColors.includes(color)) return state;
@@ -659,8 +704,13 @@ export const useStore = create<UserState>()(
               investWalletId: prefs.data.invest_wallet_id !== undefined ? prefs.data.invest_wallet_id : currentPrefs.investWalletId,
               savingsWalletId: prefs.data.savings_wallet_id !== undefined ? prefs.data.savings_wallet_id : currentPrefs.savingsWalletId,
             }});
+            
+            if (prefs.data.capital_history) {
+              set({ capitalHistory: prefs.data.capital_history });
+            }
           }
 
+          useStore.getState().recordDailyCapital();
           console.log('✅ Data pulled successfully');
         } catch (error) {
           console.error('❌ Error pulling data:', error);
@@ -691,6 +741,7 @@ export const useStore = create<UserState>()(
            work_wallet_id: state.preferences.workWalletId || null,
            invest_wallet_id: state.preferences.investWalletId || null,
            savings_wallet_id: state.preferences.savingsWalletId || null,
+           capital_history: state.capitalHistory || [],
            updated_at: new Date().toISOString()
          };
 
