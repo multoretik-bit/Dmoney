@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
-import { X, ChevronDown, TrendingUp, Calendar } from 'lucide-react';
-import { useState } from 'react';
+import { X, ChevronDown, TrendingUp, Calendar, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 interface CapitalsModalProps {
@@ -17,6 +17,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   const [selectedCurrency, setSelectedCurrency] = useState(preferences.baseCurrency);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'list' | 'chart'>('list');
+  const [selectedPointIdx, setSelectedPointIdx] = useState<number | null>(null);
 
   // Calculate totals for each portfolio in selected currency
   const portfolioTotals = portfolios.map(portfolio => {
@@ -32,7 +33,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
 
   const overallTotal = portfolioTotals.reduce((sum, p) => sum + p.total, 0);
 
-  // Generate chart data based on history, converted to selected currency
+  // Generate chart data based on history
   const todayStr = new Date().toLocaleDateString('sv');
   let chartEntries = [...(capitalHistory || [])];
   
@@ -41,46 +42,37 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   if (!hasToday && overallTotal > 0) {
     const currentPortfolioTotals: { [id: string]: number } = {};
     portfolioTotals.forEach(p => {
-      currentPortfolioTotals[p.id] = p.total;
+      // Calculate in base currency for history compatibility
+      const portfolioWallets = wallets.filter(w => w.portfolioId === p.id);
+      const totalInBase = portfolioWallets.reduce((sum, w) => {
+        return sum + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency);
+      }, 0);
+      currentPortfolioTotals[p.id] = totalInBase;
     });
+
+    const totalInBase = portfolios.reduce((sum, portfolio) => {
+      const portfolioWallets = wallets.filter(w => w.portfolioId === portfolio.id);
+      return sum + portfolioWallets.reduce((s, w) => s + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency), 0);
+    }, 0);
+
     chartEntries.push({
       date: todayStr,
-      overallTotal: overallTotal,
+      overallTotal: totalInBase,
       portfolioTotals: currentPortfolioTotals
     });
   }
 
-  // If we don't have enough history to draw a chart, let's back-fill some days to make it look premium
-  if (chartEntries.length < 5) {
-    const today = new Date();
-    chartEntries = Array.from({ length: 7 }).map((_, i) => {
-      const day = new Date(today);
-      day.setDate(today.getDate() - (6 - i));
-      const dateStr = day.toLocaleDateString('sv');
-      const existing = (capitalHistory || []).find(h => h.date === dateStr);
-      if (existing) return existing;
-
-      // Mock slightly ascending trend
-      const randomFactor = 0.96 + (i * 0.01) + (Math.random() * 0.015);
-      const mockTotal = overallTotal * randomFactor;
-      
-      const mockPortfolioTotals: { [id: string]: number } = {};
-      portfolioTotals.forEach(p => {
-        mockPortfolioTotals[p.id] = p.total * randomFactor;
-      });
-
-      return {
-        date: dateStr,
-        overallTotal: mockTotal,
-        portfolioTotals: mockPortfolioTotals
-      };
-    });
-  }
-
-  // Sort and pick last 7 entries for weekly dynamics
+  // Sort entries chronologically
   chartEntries = chartEntries
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-7);
+    .slice(-30); // Show last 30 entries maximum
+
+  // Set default selected point to the last entry when modal opens or tab changes
+  useEffect(() => {
+    if (chartEntries.length > 0) {
+      setSelectedPointIdx(chartEntries.length - 1);
+    }
+  }, [activeTab, capitalHistory]);
 
   // Helper to convert history entry amount from base currency to selected currency
   const getConvertedHistoryAmount = (amountInBase: number) => {
@@ -91,24 +83,28 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   const historyValues = chartEntries.map(e => getConvertedHistoryAmount(e.overallTotal));
   const maxVal = Math.max(...historyValues, 1) * 1.05;
   const minVal = Math.min(...historyValues, 0) * 0.95;
-  const range = maxVal - minVal;
+  const range = maxVal - minVal || 1;
 
   // Generate SVG coordinates for overall path
   const width = 360;
   const height = 140;
   const points = chartEntries.map((e, idx) => {
-    const x = (idx / (chartEntries.length - 1)) * (width - 20) + 10;
-    const y = height - ((getConvertedHistoryAmount(e.overallTotal) - minVal) / range) * (height - 30) - 15;
+    const x = chartEntries.length > 1 
+      ? (idx / (chartEntries.length - 1)) * (width - 30) + 15 
+      : width / 2;
+    const y = height - ((getConvertedHistoryAmount(e.overallTotal) - minVal) / range) * (height - 40) - 20;
     return { x, y, value: getConvertedHistoryAmount(e.overallTotal), date: e.date };
   });
 
-  const pathD = points.reduce((acc, p, idx) => {
-    return acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`);
-  }, '');
+  const pathD = chartEntries.length > 1 
+    ? points.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '') 
+    : '';
 
-  const areaD = points.length > 0 
+  const areaD = chartEntries.length > 1 && points.length > 0 
     ? `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z` 
     : '';
+
+  const selectedEntry = selectedPointIdx !== null ? chartEntries[selectedPointIdx] : null;
 
   return (
     <AnimatePresence>
@@ -260,118 +256,179 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
               ) : (
                 /* Chart View */
                 <div className="flex flex-col gap-5">
-                  <div className="bg-white/5 border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp size={16} className="text-accent" />
-                        <span className="text-sm font-bold text-white/70">Динамика за последние 7 дней</span>
+                  {chartEntries.length < 2 ? (
+                    <div className="flex flex-col items-center justify-center py-12 px-6 bg-white/5 border border-white/5 rounded-2xl text-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-accent">
+                        <Info size={24} />
                       </div>
-                      <div className="text-xs text-white/40 flex items-center gap-1">
-                        <Calendar size={12} />
-                        История баланса
-                      </div>
+                      <span className="font-bold text-white text-sm">Данные о динамике отсутствуют</span>
+                      <p className="text-xs text-white/40 max-w-[280px]">
+                        Приложение автоматически записывает ежедневный баланс ваших счетов. Зайдите завтра, чтобы увидеть график в динамике.
+                      </p>
                     </div>
-
-                    {/* SVG Chart */}
-                    <div className="relative w-full flex items-center justify-center bg-slate-900/50 rounded-xl p-3 border border-white/5">
-                      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
-                        <defs>
-                          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
-                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        
-                        {/* Grid lines */}
-                        <line x1="0" y1={height * 0.25} x2={width} y2={height * 0.25} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
-                        <line x1="0" y1={height * 0.5} x2={width} y2={height * 0.5} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
-                        <line x1="0" y1={height * 0.75} x2={width} y2={height * 0.75} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
-
-                        {/* Area path */}
-                        {areaD && <path d={areaD} fill="url(#chartGradient)" />}
-
-                        {/* Line path */}
-                        {pathD && (
-                          <path 
-                            d={pathD} 
-                            fill="none" 
-                            stroke="#3b82f6" 
-                            strokeWidth="3" 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                          />
-                        )}
-
-                        {/* Data point dots */}
-                        {points.map((p, idx) => (
-                          <g key={idx} className="group/dot cursor-pointer">
-                            <circle 
-                              cx={p.x} 
-                              cy={p.y} 
-                              r="4" 
-                              fill="#0f172a" 
-                              stroke="#3b82f6" 
-                              strokeWidth="2.5" 
-                              className="transition-all duration-200 hover:r-6" 
-                            />
-                            <circle 
-                              cx={p.x} 
-                              cy={p.y} 
-                              r="8" 
-                              fill="#3b82f6" 
-                              fillOpacity="0" 
-                              className="hover:fill-opacity-10 transition-all duration-200"
-                            />
-                          </g>
-                        ))}
-                      </svg>
-                    </div>
-
-                    {/* Chart Legend & Stats */}
-                    <div className="flex justify-between text-[11px] text-white/40 px-2 mt-1">
-                      <span>{chartEntries[0] ? new Date(chartEntries[0].date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : ''}</span>
-                      <span>{chartEntries[chartEntries.length - 1] ? new Date(chartEntries[chartEntries.length - 1].date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : ''}</span>
-                    </div>
-                  </div>
-
-                  {/* List of historical checkpoints */}
-                  <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
-                    {chartEntries.slice().reverse().map((entry, idx) => {
-                      const amount = getConvertedHistoryAmount(entry.overallTotal);
-                      const prevEntry = chartEntries[chartEntries.length - 1 - idx - 1];
-                      let pctChange = 0;
-                      if (prevEntry) {
-                        const prevAmount = getConvertedHistoryAmount(prevEntry.overallTotal);
-                        if (prevAmount > 0) {
-                          pctChange = ((amount - prevAmount) / prevAmount) * 100;
-                        }
-                      }
-
-                      return (
-                        <div key={entry.date} className="flex items-center justify-between p-3.5 rounded-xl bg-white/5 border border-white/5">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-white text-sm">
-                              {new Date(entry.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })}
-                            </span>
-                            <span className="text-xs text-white/40">Контрольная точка</span>
+                  ) : (
+                    <>
+                      <div className="bg-white/5 border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp size={16} className="text-accent" />
+                            <span className="text-sm font-bold text-white/70">Динамика развития</span>
                           </div>
-                          <div className="text-right">
-                            <span className="font-black text-white block">
-                              {amount.toFixed(1)} {selectedCurrency}
-                            </span>
-                            {pctChange !== 0 && (
-                              <span className={cn(
-                                "text-xs font-bold",
-                                pctChange > 0 ? "text-emerald-400" : "text-rose-400"
-                              )}>
-                                {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
-                              </span>
-                            )}
+                          <div className="text-xs text-white/40 flex items-center gap-1">
+                            <Calendar size={12} />
+                            История баланса
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        {/* SVG Chart */}
+                        <div className="relative w-full flex items-center justify-center bg-slate-900/50 rounded-xl p-3 border border-white/5">
+                          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
+                            <defs>
+                              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                              </linearGradient>
+                            </defs>
+                            
+                            {/* Grid lines */}
+                            <line x1="0" y1={height * 0.25} x2={width} y2={height * 0.25} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                            <line x1="0" y1={height * 0.5} x2={width} y2={height * 0.5} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+                            <line x1="0" y1={height * 0.75} x2={width} y2={height * 0.75} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
+
+                            {/* Area path */}
+                            {areaD && <path d={areaD} fill="url(#chartGradient)" />}
+
+                            {/* Line path */}
+                            {pathD && (
+                              <path 
+                                d={pathD} 
+                                fill="none" 
+                                stroke="#3b82f6" 
+                                strokeWidth="3" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                              />
+                            )}
+
+                            {/* Data point dots */}
+                            {points.map((p, idx) => (
+                              <g 
+                                key={idx} 
+                                className="group/dot cursor-pointer"
+                                onClick={() => setSelectedPointIdx(idx)}
+                              >
+                                <circle 
+                                  cx={p.x} 
+                                  cy={p.y} 
+                                  r={selectedPointIdx === idx ? "6" : "4"} 
+                                  fill={selectedPointIdx === idx ? "#3b82f6" : "#0f172a"} 
+                                  stroke="#3b82f6" 
+                                  strokeWidth="2.5" 
+                                  className="transition-all duration-150" 
+                                />
+                                <circle 
+                                  cx={p.x} 
+                                  cy={p.y} 
+                                  r="12" 
+                                  fill="#3b82f6" 
+                                  fillOpacity="0" 
+                                  className="hover:fill-opacity-10 transition-all duration-150"
+                                />
+                              </g>
+                            ))}
+                          </svg>
+                        </div>
+
+                        {/* Chart Legend & Stats */}
+                        <div className="flex justify-between text-[11px] text-white/40 px-2 mt-1">
+                          <span>{chartEntries[0] ? new Date(chartEntries[0].date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : ''}</span>
+                          <span>{chartEntries[chartEntries.length - 1] ? new Date(chartEntries[chartEntries.length - 1].date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Details of Selected Point */}
+                      {selectedEntry && (
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+                          <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                            <span className="text-xs text-white/50 font-bold uppercase tracking-wider">
+                              Детализация на {new Date(selectedEntry.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                            <span className="text-xs font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full">
+                              {getConvertedHistoryAmount(selectedEntry.overallTotal).toFixed(1)} {selectedCurrency}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {portfolios.map(portfolio => {
+                              const amountInBase = selectedEntry.portfolioTotals[portfolio.id] || 0;
+                              const amountInSelected = getConvertedHistoryAmount(amountInBase);
+                              
+                              return (
+                                <div key={portfolio.id} className="flex justify-between items-center text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{portfolio.icon}</span>
+                                    <span className="text-white/80 font-medium">{portfolio.name}</span>
+                                  </div>
+                                  <span className="font-bold text-white">
+                                    {amountInSelected.toFixed(1)} {selectedCurrency}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* List of historical checkpoints */}
+                      <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1 mt-1">
+                        {chartEntries.slice().reverse().map((entry, idx) => {
+                          const originalIdx = chartEntries.length - 1 - idx;
+                          const amount = getConvertedHistoryAmount(entry.overallTotal);
+                          const prevEntry = chartEntries[originalIdx - 1];
+                          let pctChange = 0;
+                          if (prevEntry) {
+                            const prevAmount = getConvertedHistoryAmount(prevEntry.overallTotal);
+                            if (prevAmount > 0) {
+                              pctChange = ((amount - prevAmount) / prevAmount) * 100;
+                            }
+                          }
+
+                          return (
+                            <button 
+                              key={entry.date} 
+                              onClick={() => setSelectedPointIdx(originalIdx)}
+                              className={cn(
+                                "w-full text-left flex items-center justify-between p-3 rounded-xl transition-all border",
+                                selectedPointIdx === originalIdx 
+                                  ? "bg-accent/10 border-accent/30 shadow-md" 
+                                  : "bg-white/5 border-white/5 hover:bg-white/10"
+                              )}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-bold text-white text-sm">
+                                  {new Date(entry.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                                </span>
+                                <span className="text-xs text-white/40">Нажмите для просмотра счетов</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-black text-white block">
+                                  {amount.toFixed(1)} {selectedCurrency}
+                                </span>
+                                {pctChange !== 0 && (
+                                  <span className={cn(
+                                    "text-xs font-bold",
+                                    pctChange > 0 ? "text-emerald-400" : "text-rose-400"
+                                  )}>
+                                    {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
