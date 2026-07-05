@@ -46,8 +46,8 @@ export function CategoriesView() {
   };
 
   const allCategories = useMemo(() => categories || [], [categories]);
-  
-  const headCategories = useMemo(() => 
+
+  const headCategories = useMemo(() =>
     allCategories
       .filter(c => !c.parentId)
       .sort((a, b) => {
@@ -62,37 +62,32 @@ export function CategoriesView() {
   }, [allCategories, headCategories]);
 
   return (
-    <div className="p-6 flex flex-col gap-10 bg-[#0d1117] min-h-screen text-white pb-40">
-      <header className="pt-12 px-2">
-        <h1 className="text-4xl font-black uppercase tracking-tight text-white/90">Опции</h1>
+    <div className="flex flex-col gap-9 min-h-screen pb-40">
+      <header className="pt-8">
+        <h1 className="text-2xl font-semibold text-white tracking-tight">Опции</h1>
       </header>
 
       {/* Account Info */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 px-2">
-          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Аккаунт</span>
-          <div className="h-px bg-white/5 flex-1" />
-        </div>
-        
+      <section className="flex flex-col gap-3">
+        <span className="text-[12px] font-medium text-textMuted px-1">Аккаунт</span>
+
         {user ? (
-          <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-6 shadow-xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 blur-3xl -mr-16 -mt-16 group-hover:bg-accent/10 transition-all" />
-            
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-accent/10 rounded-[32px] flex items-center justify-center text-accent shadow-inner">
-                <UserIcon size={32} strokeWidth={3} />
+          <div className="surface rounded-2xl p-6 flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-accent-dim rounded-2xl flex items-center justify-center text-accent flex-shrink-0">
+                <UserIcon size={24} />
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                   <Mail size={12} className="text-white/20" />
-                   <span className="text-lg font-black tracking-tight text-white truncate">{user.email}</span>
+                   <Mail size={12} className="text-white/25 flex-shrink-0" />
+                   <span className="text-[15px] font-medium text-white truncate">{user.email}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                   <Fingerprint size={12} className="text-white/20" />
-                   <span className="text-[10px] font-black uppercase tracking-widest text-white/20 select-all truncate">ID: {user.id}</span>
+                   <Fingerprint size={12} className="text-white/25 flex-shrink-0" />
+                   <span className="text-[11px] text-textSubtle select-all truncate">ID: {user.id}</span>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={async () => {
                   setIsSyncing(true);
                   try {
@@ -104,38 +99,38 @@ export function CategoriesView() {
                 }}
                 disabled={isSyncing}
                 className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all border border-white/5",
-                  isSyncing ? "bg-accent/20 text-accent animate-spin" : "bg-white/5 text-white/40 hover:bg-white/10"
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all flex-shrink-0",
+                  isSyncing ? "bg-accent-dim text-accent animate-spin" : "bg-white/5 text-white/40 hover:bg-white/10"
                 )}
                 title="Force Sync"
               >
-                <RefreshCw size={20} />
+                <RefreshCw size={18} />
               </button>
             </div>
 
-            <button 
+            <button
               onClick={async () => {
                  await supabase.auth.signOut();
                  setUser(null);
               }}
-              className="w-full h-16 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-[24px] border border-red-500/20 transition-all font-black uppercase tracking-widest flex items-center justify-center gap-3"
+              className="w-full h-12 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded-xl transition-all font-medium text-sm flex items-center justify-center gap-2.5"
             >
-              <LogOut size={20} />
+              <LogOut size={16} />
               Выйти из аккаунта
             </button>
           </div>
         ) : (
-          <div className="bg-[#1c2128] rounded-[48px] p-10 border border-white/5 flex flex-col items-center gap-6 shadow-xl text-center">
-             <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center text-white/20 mb-2">
-                <UserIcon size={32} />
+          <div className="surface rounded-2xl p-8 flex flex-col items-center gap-5 text-center">
+             <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center text-white/25">
+                <UserIcon size={26} />
              </div>
-             <div className="flex flex-col gap-2">
-               <p className="font-black text-white/40 uppercase tracking-widest text-xs">Вы не вошли в аккаунт</p>
-               <p className="text-white/20 text-[10px] px-10">Войдите, чтобы синхронизировать данные между устройствами.</p>
+             <div className="flex flex-col gap-1.5">
+               <p className="font-medium text-white/70 text-sm">Вы не вошли в аккаунт</p>
+               <p className="text-textSubtle text-[12px] px-6">Войдите, чтобы синхронизировать данные между устройствами.</p>
              </div>
-             <button 
+             <button
                onClick={() => setAuthModalOpen(true)}
-               className="w-full h-16 bg-accent text-white rounded-[24px] shadow-2xl shadow-accent/20 transition-all active:scale-95 font-black uppercase tracking-widest flex items-center justify-center gap-3"
+               className="w-full h-12 bg-accent text-white rounded-xl transition-all active:scale-95 font-medium text-sm flex items-center justify-center gap-2.5"
              >
                Войти в аккаунт
              </button>
@@ -144,111 +139,99 @@ export function CategoriesView() {
       </section>
 
       {/* Currency Selection & Exchange Rates */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 px-2">
-          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Настройки</span>
-          <div className="h-px bg-white/5 flex-1" />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-4 shadow-xl">
+      <section className="flex flex-col gap-3">
+        <span className="text-[12px] font-medium text-textMuted px-1">Настройки</span>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="surface rounded-2xl p-6 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
-                    <Globe size={24} />
+              <div className="flex items-center gap-3.5">
+                 <div className="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center text-success">
+                    <Globe size={20} />
                  </div>
                  <div className="flex flex-col">
-                   <span className="font-black text-white uppercase text-[9px] tracking-[0.2em] mb-1">Основная валюта</span>
-                   <span className="text-xs font-bold text-white/40">Используется для расчетов</span>
+                   <span className="font-medium text-white text-[13px] mb-0.5">Основная валюта</span>
+                   <span className="text-[12px] text-textMuted">Используется для расчетов</span>
                  </div>
               </div>
                <div className="relative group">
-                  <select 
-                    className="bg-white/5 pl-6 pr-10 py-4 rounded-2xl text-accent font-black border border-white/5 outline-none appearance-none cursor-pointer focus:border-accent/30 transition-all"
+                  <select
+                    className="bg-white/5 pl-4 pr-9 py-3 rounded-xl text-accent font-medium text-sm outline-none appearance-none cursor-pointer focus:bg-white/10 transition-all"
                     value={baseCurrency}
                     onChange={(e) => updatePreferences({ baseCurrency: e.target.value })}
                   >
-                    {['USD', 'EUR', 'RUB', 'KZT', 'THB', 'KGS'].map(c => <option key={c} value={c} className="bg-[#1c2128]">{c}</option>)}
+                    {['USD', 'EUR', 'RUB', 'KZT', 'THB', 'KGS'].map(c => <option key={c} value={c} className="bg-surface">{c}</option>)}
                   </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none group-hover:text-accent transition-colors" size={16} />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" size={14} />
                </div>
             </div>
           </div>
 
-          <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-4 shadow-xl overflow-hidden relative group">
-             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <RefreshCw size={48} />
-             </div>
-             
-             <div className="flex flex-col gap-4 relative z-10">
-                <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
-                         <CircleDollarSign size={20} />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Курсы ЦБ РФ</span>
+          <div className="surface rounded-2xl p-6 flex flex-col gap-4">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                   <div className="w-9 h-9 bg-accent-dim rounded-lg flex items-center justify-center text-accent">
+                      <CircleDollarSign size={18} />
                    </div>
-                   {cbrData && (
-                      <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">
-                         Обновлено {new Date(cbrData.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                   )}
+                   <span className="text-[12px] font-medium text-textMuted">Курсы ЦБ РФ</span>
                 </div>
+                {cbrData && (
+                   <span className="text-[11px] text-textSubtle">
+                      Обновлено {new Date(cbrData.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                   </span>
+                )}
+             </div>
 
-                <div className="flex items-center gap-6 overflow-x-auto hide-scrollbar py-1">
-                   {cbrData ? (
-                      ['USD', 'EUR', 'KZT', 'THB', 'KGS'].map(code => {
-                         const val = cbrData.Valute[code];
-                         if (!val) return null;
-                         const rate = (val.Value / val.Nominal).toFixed(2);
-                         const diff = val.Value - val.Previous;
-                         return (
-                            <div key={code} className="flex flex-col gap-1 flex-shrink-0">
-                               <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-black text-white">{code}</span>
-                                  <span className={cn(
-                                     "text-[8px] font-bold",
-                                     diff >= 0 ? "text-emerald-500" : "text-red-500"
-                                  )}>
-                                     {diff >= 0 ? '↑' : '↓'}
-                                  </span>
-                               </div>
-                               <span className="text-lg font-black text-accent tracking-tighter">
-                                  {rate}
+             <div className="flex items-center gap-5 overflow-x-auto hide-scrollbar py-1">
+                {cbrData ? (
+                   ['USD', 'EUR', 'KZT', 'THB', 'KGS'].map(code => {
+                      const val = cbrData.Valute[code];
+                      if (!val) return null;
+                      const rate = (val.Value / val.Nominal).toFixed(2);
+                      const diff = val.Value - val.Previous;
+                      return (
+                         <div key={code} className="flex flex-col gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-1.5">
+                               <span className="text-xs font-medium text-white">{code}</span>
+                               <span className={cn(
+                                  "text-[10px] font-medium",
+                                  diff >= 0 ? "text-success" : "text-danger"
+                               )}>
+                                  {diff >= 0 ? '↑' : '↓'}
                                </span>
                             </div>
-                         );
-                      })
-                   ) : (
-                      <div className="flex items-center gap-2 text-white/20 py-2">
-                         <RefreshCw size={12} className="animate-spin" />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Загрузка курсов...</span>
-                      </div>
-                   )}
-                </div>
+                            <span className="text-base font-semibold text-accent tabular-nums">
+                               {rate}
+                            </span>
+                         </div>
+                      );
+                   })
+                ) : (
+                   <div className="flex items-center gap-2 text-textSubtle py-2">
+                      <RefreshCw size={12} className="animate-spin" />
+                      <span className="text-[12px]">Загрузка курсов...</span>
+                   </div>
+                )}
              </div>
           </div>
         </div>
       </section>
 
       {/* Gamification Settings: Свободные деньги */}
-      <section className="flex flex-col gap-4 mt-6">
-        <div className="flex items-center gap-3 px-2">
-          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Свободные Деньги (Геймификация)</span>
-          <div className="h-px bg-white/5 flex-1" />
-        </div>
+      <section className="flex flex-col gap-3">
+        <span className="text-[12px] font-medium text-textMuted px-1">Свободные деньги (геймификация)</span>
 
-        <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-6 shadow-xl">
-          <p className="text-xs font-bold text-white/40 mb-2">Настройте лимит для личного капитала. При превышении этого лимита избыток («свободные деньги») будет автоматически предлагаться распределить между другими капиталами.</p>
+        <div className="surface rounded-2xl p-6 flex flex-col gap-5">
+          <p className="text-[13px] text-textMuted leading-relaxed">Настройте лимит для личного капитала. При превышении этого лимита избыток («свободные деньги») будет автоматически предлагаться распределить между другими капиталами.</p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Personal Capital Config */}
-            <div className="flex flex-col gap-4 p-5 bg-white/5 rounded-3xl border border-white/5">
-              <span className="text-xs font-black text-accent uppercase tracking-wider">Личный Капитал</span>
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-white/30 uppercase">Портфель</label>
+            <div className="flex flex-col gap-3 p-4 surface-sunken rounded-2xl">
+              <span className="text-[12px] font-medium text-accent">Личный капитал</span>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] text-textSubtle">Портфель</label>
                 <select
-                  className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2.5 rounded-lg text-white text-sm outline-none"
                   value={preferences.personalPortfolioId || ''}
                   onChange={(e) => updatePreferences({ personalPortfolioId: e.target.value })}
                 >
@@ -257,21 +240,21 @@ export function CategoriesView() {
                 </select>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-white/30 uppercase">Лимит личного капитала ({baseCurrency})</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] text-textSubtle">Лимит личного капитала ({baseCurrency})</label>
                 <input
                   type="number"
-                  className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2.5 rounded-lg text-white text-sm outline-none"
                   value={preferences.personalPortfolioLimit || ''}
                   onChange={(e) => updatePreferences({ personalPortfolioLimit: parseFloat(e.target.value) || 0 })}
                   placeholder="Например, 1000"
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-white/30 uppercase">Счет списания</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] text-textSubtle">Счет списания</label>
                 <select
-                  className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2.5 rounded-lg text-white text-sm outline-none"
                   value={preferences.sourceWalletId || ''}
                   onChange={(e) => updatePreferences({ sourceWalletId: e.target.value })}
                 >
@@ -284,12 +267,12 @@ export function CategoriesView() {
             </div>
 
             {/* Target Capitals Config */}
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Work Capital */}
-              <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
-                <span className="text-[10px] font-black text-white uppercase tracking-wider">Рабочий Капитал</span>
+              <div className="flex flex-col gap-2.5 p-3.5 surface-sunken rounded-2xl">
+                <span className="text-[11px] font-medium text-white">Рабочий капитал</span>
                 <select
-                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none"
                   value={preferences.workPortfolioId || ''}
                   onChange={(e) => updatePreferences({ workPortfolioId: e.target.value })}
                 >
@@ -297,7 +280,7 @@ export function CategoriesView() {
                   {portfolios.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
                 </select>
                 <select
-                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none"
                   value={preferences.workWalletId || ''}
                   onChange={(e) => updatePreferences({ workWalletId: e.target.value })}
                 >
@@ -309,19 +292,19 @@ export function CategoriesView() {
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none w-20 text-center"
+                    className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none w-20 text-center"
                     value={preferences.workPercentage ?? 50}
                     onChange={(e) => updatePreferences({ workPercentage: parseInt(e.target.value) || 0 })}
                   />
-                  <span className="text-xs font-bold text-white/40">%</span>
+                  <span className="text-xs text-textMuted">%</span>
                 </div>
               </div>
 
               {/* Invest Capital */}
-              <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
-                <span className="text-[10px] font-black text-white uppercase tracking-wider">Инвестиционный</span>
+              <div className="flex flex-col gap-2.5 p-3.5 surface-sunken rounded-2xl">
+                <span className="text-[11px] font-medium text-white">Инвестиционный</span>
                 <select
-                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none"
                   value={preferences.investPortfolioId || ''}
                   onChange={(e) => updatePreferences({ investPortfolioId: e.target.value })}
                 >
@@ -329,7 +312,7 @@ export function CategoriesView() {
                   {portfolios.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
                 </select>
                 <select
-                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none"
                   value={preferences.investWalletId || ''}
                   onChange={(e) => updatePreferences({ investWalletId: e.target.value })}
                 >
@@ -341,19 +324,19 @@ export function CategoriesView() {
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none w-20 text-center"
+                    className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none w-20 text-center"
                     value={preferences.investPercentage ?? 30}
                     onChange={(e) => updatePreferences({ investPercentage: parseInt(e.target.value) || 0 })}
                   />
-                  <span className="text-xs font-bold text-white/40">%</span>
+                  <span className="text-xs text-textMuted">%</span>
                 </div>
               </div>
 
               {/* Savings Capital */}
-              <div className="flex flex-col gap-3 p-4 bg-white/5 rounded-3xl border border-white/5">
-                <span className="text-[10px] font-black text-white uppercase tracking-wider">Сберегательный</span>
+              <div className="flex flex-col gap-2.5 p-3.5 surface-sunken rounded-2xl">
+                <span className="text-[11px] font-medium text-white">Сберегательный</span>
                 <select
-                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none"
                   value={preferences.savingsPortfolioId || ''}
                   onChange={(e) => updatePreferences({ savingsPortfolioId: e.target.value })}
                 >
@@ -361,7 +344,7 @@ export function CategoriesView() {
                   {portfolios.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
                 </select>
                 <select
-                  className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none"
+                  className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none"
                   value={preferences.savingsWalletId || ''}
                   onChange={(e) => updatePreferences({ savingsWalletId: e.target.value })}
                 >
@@ -373,43 +356,43 @@ export function CategoriesView() {
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    className="bg-black/30 p-2.5 rounded-xl text-white text-xs font-bold border border-white/5 outline-none w-20 text-center"
+                    className="bg-black/20 p-2 rounded-lg text-white text-xs outline-none w-20 text-center"
                     value={preferences.savingsPercentage ?? 20}
                     onChange={(e) => updatePreferences({ savingsPercentage: parseInt(e.target.value) || 0 })}
                   />
-                  <span className="text-xs font-bold text-white/40">%</span>
+                  <span className="text-xs text-textMuted">%</span>
                 </div>
               </div>
             </div>
           </div>
-          
+
           {((preferences.workPercentage || 0) + (preferences.investPercentage || 0) + (preferences.savingsPercentage || 0)) !== 100 && (
-            <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider text-center">
-              ⚠️ Сумма процентов должна быть равна 100% (Сейчас: {(preferences.workPercentage || 0) + (preferences.investPercentage || 0) + (preferences.savingsPercentage || 0)}%)
+            <p className="text-danger text-[12px] font-medium text-center">
+              Сумма процентов должна быть равна 100% (сейчас: {(preferences.workPercentage || 0) + (preferences.investPercentage || 0) + (preferences.savingsPercentage || 0)}%)
             </p>
           )}
         </div>
       </section>
 
-      <div className="flex justify-between items-center mt-6 px-2">
-        <div className="flex flex-col">
-           <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 mb-1">Настройка</span>
-           <h2 className="text-2xl font-black uppercase tracking-widest text-white/60">Бюджетные Блоки</h2>
+      <div className="flex justify-between items-center px-1">
+        <div className="flex flex-col gap-1">
+           <span className="text-[12px] font-medium text-textMuted">Настройка</span>
+           <h2 className="text-lg font-semibold text-white/80">Бюджетные блоки</h2>
         </div>
-        <button 
-          onClick={() => { setInitialParentId(undefined); setEditingCategory(null); setIsModalOpen(true); }} 
-          className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-black shadow-2xl active:scale-90 transition-all font-black"
+        <button
+          onClick={() => { setInitialParentId(undefined); setEditingCategory(null); setIsModalOpen(true); }}
+          className="w-11 h-11 bg-accent rounded-2xl flex items-center justify-center text-white active:scale-90 transition-all"
           title="Создать новый блок"
         >
-          <Plus size={28} strokeWidth={4} />
+          <Plus size={20} />
         </button>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         {headCategories.length === 0 ? (
-          <div className="py-20 flex flex-col items-center justify-center gap-4 text-white/10">
-             <Plus size={48} strokeWidth={1} />
-             <span className="text-[10px] font-black uppercase tracking-[0.4em]">Нет созданных блоков</span>
+          <div className="py-16 flex flex-col items-center justify-center gap-3 text-white/15">
+             <Plus size={36} strokeWidth={1.5} />
+             <span className="text-[12px] font-medium">Нет созданных блоков</span>
           </div>
         ) : (
           headCategories.map(head => {
@@ -420,103 +403,91 @@ export function CategoriesView() {
                 return a.id.localeCompare(b.id);
               });
             const isExpanded = expandedHeads[head.id];
-            
+
             return (
-              <div key={head.id} className="flex flex-col gap-3">
-                <div 
-                  className="flex items-center gap-3"
-                >
-                  <button 
+              <div key={head.id} className="flex flex-col gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleHead(head.id)}
-                    style={{ 
-                      background: `linear-gradient(145deg, ${head.color}15, ${head.color}05)`,
-                      borderColor: `${head.color}20`
-                    }}
-                    className="flex-1 flex items-center justify-between p-7 rounded-[40px] border shadow-2xl active:scale-[0.98] transition-all group relative overflow-hidden"
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHead(head.id); } }}
+                    className="flex-1 flex items-center justify-between p-5 rounded-2xl surface surface-hover active:scale-[0.99] transition-all group cursor-pointer"
                   >
-                    <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
-                    <div className="flex items-center gap-5 relative z-10">
-                       <div className="w-14 h-14 rounded-[22px] flex items-center justify-center text-3xl shadow-2xl" style={{ backgroundColor: head.color, color: 'white' }}>
+                    <div className="flex items-center gap-4">
+                       <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: head.color }}>
                           {head.icon}
                        </div>
-                       <div className="flex flex-col items-start">
-                          <span className="text-xl font-black tracking-tight text-white">{head.name}</span>
-                       </div>
+                       <span className="text-[15px] font-medium text-white">{head.name}</span>
                     </div>
-                    <div className="flex items-center gap-4 relative z-10">
-                       <button 
+                    <div className="flex items-center gap-3">
+                       <button
                           onClick={(e) => { e.stopPropagation(); openEdit(head); }}
-                          className="p-2.5 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                          className="p-2 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100"
                        >
-                          <Edit2 size={16} />
+                          <Edit2 size={14} />
                        </button>
-                       {isExpanded ? <ChevronDown size={22} className="text-white/20" /> : <ChevronRight size={22} className="text-white/20" />}
+                       {isExpanded ? <ChevronDown size={18} className="text-white/30" /> : <ChevronRight size={18} className="text-white/30" />}
                     </div>
-                  </button>
-                  
+                  </div>
+
                   {/* Reordering controls for block */}
                   <div className="flex flex-col gap-1">
-                     <button 
+                     <button
                        onClick={() => updateCategoryOrder(head.id, 'up')}
-                       className="p-3 bg-white/5 rounded-2xl text-white/20 hover:text-white hover:bg-white/10 transition-all"
+                       className="p-2.5 bg-white/[0.04] rounded-xl text-white/30 hover:text-white hover:bg-white/[0.08] transition-all"
                      >
-                       <ArrowUp size={20} />
+                       <ArrowUp size={16} />
                      </button>
-                     <button 
+                     <button
                        onClick={() => updateCategoryOrder(head.id, 'down')}
-                       className="p-3 bg-white/5 rounded-2xl text-white/20 hover:text-white hover:bg-white/10 transition-all"
+                       className="p-2.5 bg-white/[0.04] rounded-xl text-white/30 hover:text-white hover:bg-white/[0.08] transition-all"
                      >
-                       <ArrowDown size={20} />
+                       <ArrowDown size={16} />
                      </button>
                   </div>
                 </div>
 
                 {isExpanded && (
-                  <div className="flex flex-col gap-3 px-6">
+                  <div className="flex flex-col gap-2 pl-4">
                     {subs.map(sub => (
-                      <div 
-                        key={sub.id} 
-                        style={{ 
-                          background: `linear-gradient(145deg, ${sub.color}10, transparent)`,
-                          borderColor: `${sub.color}15`
-                        }}
-                        className="p-5 rounded-3xl flex items-center justify-between border group relative"
+                      <div
+                        key={sub.id}
+                        className="p-4 rounded-xl flex items-center justify-between surface-sunken group"
                       >
-                         <div className="flex items-center gap-4">
-                           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-black/20" style={{ color: sub.color }}>
+                         <div className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: `${sub.color}18` }}>
                               {sub.icon}
                            </div>
-                           <span className="font-bold text-white/80">{sub.name}</span>
+                           <span className="text-sm font-medium text-white/80">{sub.name}</span>
                          </div>
-                         <div className="flex items-center gap-3">
-                            {/* Reordering controls for category */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all mr-2">
-                               <button 
+                         <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all mr-1">
+                               <button
                                  onClick={() => updateCategoryOrder(sub.id, 'up')}
-                                 className="p-2 text-white/20 hover:text-white"
+                                 className="p-1.5 text-white/30 hover:text-white"
                                >
-                                 <ArrowUp size={16} />
+                                 <ArrowUp size={14} />
                                </button>
-                               <button 
+                               <button
                                  onClick={() => updateCategoryOrder(sub.id, 'down')}
-                                 className="p-2 text-white/20 hover:text-white"
+                                 className="p-1.5 text-white/30 hover:text-white"
                                >
-                                 <ArrowDown size={16} />
+                                 <ArrowDown size={14} />
                                </button>
                             </div>
-                            <button 
+                            <button
                               onClick={() => openEdit(sub)}
-                              className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                              className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100"
                             >
-                              <Edit2 size={14} />
+                              <Edit2 size={13} />
                             </button>
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
                          </div>
                       </div>
                     ))}
-                    <button 
+                    <button
                       onClick={() => openAddSub(head.id)}
-                      className="p-5 bg-white/5 rounded-[24px] border border-dashed border-white/10 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white/40 hover:bg-white/10 transition-all font-black"
+                      className="p-4 surface-sunken rounded-xl border border-dashed border-white/10 text-[12px] font-medium text-white/30 hover:text-white/60 hover:bg-white/[0.05] transition-all"
                     >
                       + Добавить категорию в блок
                     </button>
@@ -528,28 +499,25 @@ export function CategoriesView() {
         )}
 
         {orphanedCategories.length > 0 && (
-          <div className="mt-10 flex flex-col gap-4">
-             <div className="flex items-center gap-3 px-2">
-                <span className="text-[11px] font-black uppercase tracking-[0.4em] text-red-500/50">Потерянные категории</span>
-                <div className="h-px bg-red-500/10 flex-1" />
-             </div>
-             <div className="flex flex-col gap-3">
+          <div className="mt-6 flex flex-col gap-3">
+             <span className="text-[12px] font-medium text-danger/70 px-1">Потерянные категории</span>
+             <div className="flex flex-col gap-2">
                 {orphanedCategories.map(sub => (
-                   <div 
-                    key={sub.id} 
-                    className="p-5 rounded-3xl flex items-center justify-between border border-red-500/10 bg-red-500/5 group"
+                   <div
+                    key={sub.id}
+                    className="p-4 rounded-xl flex items-center justify-between bg-danger/5 border border-danger/10 group"
                    >
-                     <div className="flex items-center gap-4">
-                       <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-black/20">
+                     <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg bg-black/20">
                           {sub.icon}
                        </div>
-                       <span className="font-bold text-white/80">{sub.name}</span>
+                       <span className="text-sm font-medium text-white/80">{sub.name}</span>
                      </div>
-                     <button 
+                     <button
                        onClick={() => openEdit(sub)}
-                       className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white"
+                       className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5"
                      >
-                        <Edit2 size={14} />
+                        <Edit2 size={13} />
                      </button>
                    </div>
                 ))}
@@ -558,9 +526,9 @@ export function CategoriesView() {
         )}
       </div>
 
-      <AddCategoryModal 
-        isOpen={isModalOpen} 
-        onClose={() => { setIsModalOpen(false); setEditingCategory(null); }} 
+      <AddCategoryModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setEditingCategory(null); }}
         initialParentId={initialParentId}
         editingCategory={editingCategory}
         hideBudgetLimit={true}

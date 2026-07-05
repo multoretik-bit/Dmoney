@@ -42,124 +42,65 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="min-h-screen text-slate-100 flex flex-col items-center justify-center p-6 relative overflow-hidden"
-      style={{
-        background: '#060B14',
-        backgroundImage: `
-          radial-gradient(ellipse 70% 50% at 15% 10%, rgba(59,130,246,0.12) 0%, transparent 55%),
-          radial-gradient(ellipse 50% 40% at 85% 90%, rgba(139,92,246,0.08) 0%, transparent 55%)
-        `,
-      }}
-    >
-      {/* Ambient glow orbs */}
-      <div
-        className="absolute top-1/4 right-0 w-72 h-72 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', filter: 'blur(40px)' }}
-      />
-      <div
-        className="absolute bottom-1/4 left-0 w-72 h-72 rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)', filter: 'blur(40px)' }}
-      />
-
+    <div className="min-h-screen text-white/90 flex flex-col items-center justify-center p-6 bg-background">
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
         className="relative z-10 w-full max-w-sm flex flex-col items-center gap-8"
       >
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-16 h-16 rounded-[22px] flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #818cf8 100%)',
-              boxShadow: '0 0 40px rgba(59,130,246,0.4), 0 0 80px rgba(59,130,246,0.1)',
-            }}
-          >
-            <CircleDollarSign size={32} className="text-white" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-accent">
+            <CircleDollarSign size={28} className="text-white" />
           </div>
           <div className="text-center">
-            <h1
-              className="text-4xl font-black tracking-tight"
-              style={{
-                background: 'linear-gradient(135deg, #93c5fd 0%, #60a5fa 50%, #a78bfa 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
               DMoney
             </h1>
-            <p className="text-white/30 text-[11px] uppercase tracking-[0.4em] font-bold mt-1">
-              Finances in control
+            <p className="text-textMuted text-[13px] mt-1">
+              Финансы под контролем
             </p>
           </div>
         </div>
 
         {/* Card */}
-        <div
-          className="w-full rounded-[28px] p-6 flex flex-col gap-5"
-          style={{
-            background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-          }}
-        >
+        <div className="w-full surface rounded-3xl p-6 flex flex-col gap-5">
           {sent ? (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               className="flex flex-col items-center gap-3 py-4 text-center"
             >
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}
-              >
-                <Mail size={22} className="text-emerald-400" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-success/10">
+                <Mail size={22} className="text-success" />
               </div>
-              <p className="text-white font-bold">Проверьте почту</p>
-              <p className="text-white/40 text-sm">{message}</p>
+              <p className="text-white font-medium">Проверьте почту</p>
+              <p className="text-textMuted text-sm">{message}</p>
             </motion.div>
           ) : (
             <>
               <div>
-                <h2 className="text-lg font-black text-white">Войти в аккаунт</h2>
-                <p className="text-white/35 text-[13px] mt-0.5">Введите email для входа по ссылке</p>
+                <h2 className="text-base font-semibold text-white">Войти в аккаунт</h2>
+                <p className="text-textMuted text-[13px] mt-0.5">Введите email для входа по ссылке</p>
               </div>
 
               <form onSubmit={handleLogin} className="flex flex-col gap-3">
                 <div className="relative">
-                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25" />
+                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
                   <input
                     type="email"
-                    placeholder="Ваш Email"
+                    placeholder="Ваш email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 rounded-2xl text-white placeholder-white/25 text-sm font-medium outline-none transition-all"
-                    style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                    }}
-                    onFocus={e => {
-                      e.target.style.border = '1px solid rgba(59,130,246,0.4)';
-                      e.target.style.background = 'rgba(59,130,246,0.06)';
-                    }}
-                    onBlur={e => {
-                      e.target.style.border = '1px solid rgba(255,255,255,0.08)';
-                      e.target.style.background = 'rgba(255,255,255,0.05)';
-                    }}
+                    className="w-full pl-11 pr-4 py-3.5 rounded-2xl text-white placeholder-white/25 text-sm font-medium outline-none transition-all bg-white/[0.05] focus:bg-accent-dim"
                     required
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #818cf8 100%)',
-                    boxShadow: '0 4px 20px rgba(59,130,246,0.35)',
-                  }}
+                  className="w-full h-12 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 bg-accent text-white"
                 >
                   {loading ? 'Отправка...' : (
                     <>
@@ -169,25 +110,21 @@ export default function LoginPage() {
                   )}
                 </button>
                 {message && !sent && (
-                  <p className="text-center text-sm text-red-400/80">{message}</p>
+                  <p className="text-center text-sm text-danger/90">{message}</p>
                 )}
               </form>
 
               {/* Divider */}
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-white/[0.06]" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/20">или</span>
+                <span className="text-[12px] text-textSubtle">или</span>
                 <div className="h-px flex-1 bg-white/[0.06]" />
               </div>
 
               {/* Google button */}
               <button
                 onClick={handleGoogleLogin}
-                className="w-full h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-3 transition-all active:scale-95"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
+                className="w-full h-12 rounded-2xl font-medium text-sm flex items-center justify-center gap-3 transition-all active:scale-95 bg-white/[0.04] hover:bg-white/[0.07]"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

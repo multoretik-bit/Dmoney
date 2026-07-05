@@ -18,15 +18,15 @@ interface AddCategoryModalProps {
   hideBudgetLimit?: boolean;
 }
 
-export function AddCategoryModal({ 
-  isOpen, 
-  onClose, 
-  initialParentId, 
+export function AddCategoryModal({
+  isOpen,
+  onClose,
+  initialParentId,
   editingCategory,
   hideBudgetLimit = false
 }: AddCategoryModalProps) {
   const { addCategory, updateCategory, deleteCategory, categories, preferences } = useStore();
-  
+
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<string | undefined>(undefined);
   const [color, setColor] = useState(preferences.savedColors[0]);
@@ -63,18 +63,18 @@ export function AddCategoryModal({
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    
+
     // Calculate next sort order if new
     const siblings = categories.filter(c => (c.parentId || undefined) === (parentId || undefined));
-    const nextSortOrder = siblings.length > 0 
-      ? Math.max(...siblings.map(s => s.sortOrder)) + 1 
+    const nextSortOrder = siblings.length > 0
+      ? Math.max(...siblings.map(s => s.sortOrder)) + 1
       : 0;
 
     if (editingCategory) {
-      await updateCategory(editingCategory.id, { 
-        name: name.trim(), 
-        parentId: parentId || undefined, 
-        color, 
+      await updateCategory(editingCategory.id, {
+        name: name.trim(),
+        parentId: parentId || undefined,
+        color,
         icon,
         budgetLimit: hideBudgetLimit ? (editingCategory.budgetLimit || 0) : (parseFloat(budgetLimit) || 0),
         excludeFromBudget
@@ -91,7 +91,7 @@ export function AddCategoryModal({
         excludeFromBudget
       });
     }
-    
+
     onClose();
   };
 
@@ -101,52 +101,48 @@ export function AddCategoryModal({
 
   return (
     <AnimatePresence>
-      <motion.div 
-        className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md px-6"
+      <motion.div
+        className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm px-6"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <motion.div 
-          className="glass-card w-full max-w-xl max-h-[90vh] rounded-[48px] p-8 flex flex-col gap-8 shadow-2xl relative border-t-4 border-t-accent overflow-hidden"
-          initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+        <motion.div
+          className="surface w-full max-w-xl max-h-[90vh] rounded-4xl p-6 flex flex-col gap-6 shadow-card-lg relative overflow-hidden"
+          initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* HEADER */}
           <div className="flex flex-col items-center gap-2 relative">
-             <button 
-                onClick={onClose} 
-                className="absolute right-0 top-0 p-3 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all"
+             <button
+                onClick={onClose}
+                className="absolute right-0 top-0 p-2.5 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
-              
-              <div className="w-14 h-14 bg-accent/20 rounded-[24px] flex items-center justify-center text-accent mb-2 shadow-xl shadow-accent/10">
-                <Layers size={28} strokeWidth={3} />
+
+              <div className="w-11 h-11 bg-accent-dim rounded-2xl flex items-center justify-center text-accent mb-1">
+                <Layers size={20} />
               </div>
-              <h2 className="text-2xl font-black uppercase tracking-[0.3em] text-white/90 text-center">
-                {editingCategory 
-                  ? (editingCategory.parentId ? 'Изменить категорию' : 'Изменить блок') 
-                  : (parentId ? 'Новая Категория' : 'Новый Блок')}
+              <h2 className="text-lg font-semibold text-white text-center">
+                {editingCategory
+                  ? (editingCategory.parentId ? 'Изменить категорию' : 'Изменить блок')
+                  : (parentId ? 'Новая категория' : 'Новый блок')}
               </h2>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 hide-scrollbar flex flex-col gap-10 pb-4">
+          <div className="flex-1 overflow-y-auto pr-1 hide-scrollbar flex flex-col gap-8 pb-2">
              {/* Name & Icon Preview */}
-             <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 px-2">
-                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Название и Иконка</span>
-                   <div className="h-px bg-white/5 flex-1" />
-                </div>
-                <div className="flex gap-4">
-                  <div 
-                    className="w-20 h-20 rounded-[28px] flex items-center justify-center text-3xl shadow-2xl border-4 transition-all shrink-0 relative overflow-hidden"
-                    style={{ backgroundColor: color, borderLeftColor: 'rgba(255,255,255,0.2)', borderTopColor: 'rgba(255,255,255,0.2)' }}
+             <div className="flex flex-col gap-3">
+                <span className="text-[12px] font-medium text-textMuted px-1">Название и иконка</span>
+                <div className="flex gap-3">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                    style={{ backgroundColor: color }}
                   >
-                    <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-                    <span className="relative z-10">{icon}</span>
+                    <span>{icon}</span>
                   </div>
-                  <input 
-                    className="flex-1 bg-black/20 p-6 rounded-[28px] text-xl font-black text-white outline-none border border-white/5 focus:border-accent/30 transition-all font-black"
+                  <input
+                    className="flex-1 bg-black/20 p-5 rounded-2xl text-lg font-semibold text-white outline-none focus:bg-black/30 transition-all"
                     placeholder="Напр. Аренда, Еда..."
                     value={name} onChange={e => setName(e.target.value)}
                     autoFocus
@@ -155,16 +151,13 @@ export function AddCategoryModal({
              </div>
 
              {!hideBudgetLimit && (
-             <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 px-2">
-                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Бюджет (Лимит)</span>
-                   <div className="h-px bg-white/5 flex-1" />
-                </div>
-                <div className="bg-black/20 p-6 rounded-[28px] border border-white/5 flex items-center justify-between">
-                   <span className="text-xl font-black text-white">$</span>
-                   <input 
+             <div className="flex flex-col gap-3">
+                <span className="text-[12px] font-medium text-textMuted px-1">Бюджет (лимит)</span>
+                <div className="bg-black/20 p-5 rounded-2xl flex items-center justify-between">
+                   <span className="text-lg font-semibold text-white">$</span>
+                   <input
                       type="number"
-                      className="bg-transparent text-xl font-black text-white outline-none text-right w-32 font-black"
+                      className="bg-transparent text-lg font-semibold text-white outline-none text-right w-32"
                       placeholder="0.0"
                       value={budgetLimit} onChange={e => setBudgetLimit(e.target.value)}
                    />
@@ -172,75 +165,72 @@ export function AddCategoryModal({
              </div>
              )}
 
-             <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 px-2">
-                   <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Внутри Блока (Расположение)</span>
-                   <div className="h-px bg-white/5 flex-1" />
-                </div>
+             <div className="flex flex-col gap-3">
+                <span className="text-[12px] font-medium text-textMuted px-1">Внутри блока (расположение)</span>
                 <div className="relative group">
-                  <select 
-                      className="w-full bg-black/20 p-5 rounded-[24px] text-white/90 outline-none border border-white/5 appearance-none font-black uppercase tracking-widest text-[11px] pr-12 focus:border-accent/30 transition-all font-black"
+                  <select
+                      className="w-full bg-black/20 p-4 rounded-2xl text-white/90 outline-none appearance-none font-medium text-sm pr-10 focus:bg-black/30 transition-all"
                       value={parentId || ''} onChange={e => setParentId(e.target.value || undefined)}
                   >
-                    <option value="" className="bg-[#020617]">Сделать основным Блоком</option>
+                    <option value="" className="bg-surface">Сделать основным блоком</option>
                     {headCategories.map(c => (
-                      <option key={c.id} value={c.id} className="bg-[#020617]">{c.name}</option>
+                      <option key={c.id} value={c.id} className="bg-surface">{c.name}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 group-hover:text-accent transition-colors" size={20} />
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/25 group-hover:text-accent transition-colors" size={18} />
                 </div>
              </div>
 
-             <div className="flex flex-col gap-4">
-               <button 
+             <div className="flex flex-col gap-3">
+               <button
                  onClick={() => setExcludeFromBudget(!excludeFromBudget)}
                  className={cn(
-                   "flex items-center gap-4 p-5 rounded-[24px] border transition-all text-left",
-                   excludeFromBudget ? "bg-accent/10 border-accent/30 text-accent" : "bg-black/20 border-white/5 hover:border-white/10 text-white/60"
+                   "flex items-center gap-4 p-4 rounded-2xl border transition-all text-left",
+                   excludeFromBudget ? "bg-accent-dim border-accent/30 text-accent" : "bg-black/20 border-transparent hover:bg-black/30 text-white/60"
                  )}
                >
                  <div className={cn(
-                   "w-6 h-6 rounded-lg flex items-center justify-center border transition-all",
+                   "w-5 h-5 rounded-md flex items-center justify-center border transition-all flex-shrink-0",
                    excludeFromBudget ? "bg-accent border-accent text-white" : "border-white/20 bg-black/40"
                  )}>
-                   {excludeFromBudget && <Check size={14} strokeWidth={4} />}
+                   {excludeFromBudget && <Check size={12} strokeWidth={3} />}
                  </div>
                  <div className="flex flex-col flex-1">
-                   <span className="font-black text-sm text-white">Не учитывать в бюджете</span>
-                   <span className="text-[10px] font-black uppercase tracking-widest leading-tight mt-1 opacity-50">Такие траты будут отображаться снизу как &quot;Вне плана&quot;</span>
+                   <span className="font-medium text-sm text-white">Не учитывать в бюджете</span>
+                   <span className="text-[11px] leading-tight mt-0.5 opacity-60">Такие траты будут отображаться снизу как &quot;Вне плана&quot;</span>
                  </div>
                </button>
              </div>
 
-             <div className="flex flex-col gap-10">
+             <div className="flex flex-col gap-8">
                 <ColorPicker color={color} onChange={setColor} />
                 <IconPicker icon={icon} onChange={setIcon} />
              </div>
           </div>
 
-           <div className="flex gap-4 mt-2">
+           <div className="flex gap-3">
             {editingCategory && (
-              <button 
+              <button
                 onClick={() => showDeleteConfirm ? handleDelete() : setShowDeleteConfirm(true)}
                 className={cn(
-                  "flex-1 h-20 rounded-[32px] flex items-center justify-center gap-3 transition-all shadow-xl font-black text-lg",
-                  showDeleteConfirm ? "bg-red-500 text-white" : "bg-white/5 text-red-500 border border-red-500/20"
+                  "flex-1 h-14 rounded-2xl flex items-center justify-center gap-2.5 transition-all font-semibold text-sm",
+                  showDeleteConfirm ? "bg-danger text-white" : "bg-white/5 text-danger"
                 )}
               >
-                {showDeleteConfirm ? <AlertTriangle size={24} /> : <Trash2 size={24} />}
-                {showDeleteConfirm ? 'УДАЛИТЬ?' : 'УДАЛИТЬ'}
+                {showDeleteConfirm ? <AlertTriangle size={18} /> : <Trash2 size={18} />}
+                {showDeleteConfirm ? 'Удалить?' : 'Удалить'}
               </button>
             )}
-            <button 
+            <button
               onClick={handleSave}
               disabled={!name.trim()}
               className={cn(
-                "h-20 bg-accent text-white text-xl font-black rounded-[32px] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-accent/20 shadow-2xl disabled:opacity-30 disabled:grayscale",
+                "h-14 bg-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2.5 active:scale-95 transition-all disabled:opacity-30",
                 editingCategory ? "flex-1" : "w-full"
               )}
             >
-              <Check size={28} strokeWidth={4} />
-              {editingCategory ? 'СОХРАНИТЬ' : 'СОЗДАТЬ'}
+              <Check size={20} />
+              {editingCategory ? 'Сохранить' : 'Создать'}
             </button>
            </div>
         </motion.div>

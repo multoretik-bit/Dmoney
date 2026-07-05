@@ -12,17 +12,17 @@ import { ColorPicker } from '@/components/ui/color-picker';
 import { CurrencyPicker } from '@/components/ui/currency-picker';
 import { IconPicker } from '@/components/ui/icon-picker';
 
-export function AddWalletModal({ 
-  isOpen, 
-  onClose, 
-  editingWallet 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
+export function AddWalletModal({
+  isOpen,
+  onClose,
+  editingWallet
+}: {
+  isOpen: boolean;
+  onClose: () => void;
   editingWallet?: Wallet | null;
 }) {
   const { addWallet, updateWallet, updateWalletOrder, portfolios, folders, preferences } = useStore();
-  
+
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('0');
   const [portfolioId, setPortfolioId] = useState(portfolios[0]?.id || '');
@@ -60,7 +60,7 @@ export function AddWalletModal({
 
   const handleSave = () => {
     if (!name.trim() || !portfolioId) return;
-    
+
     const walletData = {
       portfolioId,
       folderId: folderId || undefined,
@@ -81,7 +81,7 @@ export function AddWalletModal({
         ...walletData
       });
     }
-    
+
     onClose();
   };
 
@@ -90,48 +90,48 @@ export function AddWalletModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          className="fixed inset-0 z-[160] flex flex-col items-center justify-end bg-black/80 backdrop-blur-sm px-4 pb-4"
+        <motion.div
+          className="fixed inset-0 z-[160] flex flex-col items-center justify-end bg-black/70 backdrop-blur-sm px-4 pb-4"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
-          <motion.div 
-            className="bg-[#0d1117] w-full max-w-xl max-h-[95vh] rounded-[40px] p-8 flex flex-col gap-6 border border-white/10 shadow-2xl overflow-y-auto hide-scrollbar"
+          <motion.div
+            className="surface w-full max-w-xl max-h-[95vh] rounded-4xl p-6 flex flex-col gap-5 shadow-card-lg overflow-y-auto hide-scrollbar"
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-2">
-               <h2 className="text-sm font-black uppercase tracking-widest text-white/40">
-                 {editingWallet ? 'Edit Account' : 'New Account'}
+            <div className="flex justify-between items-center mb-1">
+               <h2 className="text-[13px] font-medium text-textMuted">
+                 {editingWallet ? 'Изменить счет' : 'Новый счет'}
                </h2>
-               <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/40"><X size={20} /></button>
+               <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/40"><X size={18} /></button>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               {/* Location Selector (Portfolio & Folder) */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                  <div className="flex flex-col gap-2">
-                   <label className="text-[9px] font-black uppercase text-white/20 tracking-widest px-1 flex items-center gap-2">
-                     <LayoutGrid size={10} /> Capital
+                   <label className="text-[11px] text-textSubtle px-1 flex items-center gap-1.5">
+                     <LayoutGrid size={11} /> Капитал
                    </label>
-                   <select 
-                     className="bg-white/5 p-4 rounded-2xl text-xs font-black text-white outline-none border border-white/5 appearance-none"
+                   <select
+                     className="bg-white/5 p-3.5 rounded-xl text-sm font-medium text-white outline-none appearance-none"
                      value={portfolioId} onChange={e => { setPortfolioId(e.target.value); setFolderId(''); }}
                    >
-                     {portfolios.map(p => <option key={p.id} value={p.id} className="bg-[#0d1117]">{p.name}</option>)}
+                     {portfolios.map(p => <option key={p.id} value={p.id} className="bg-surface">{p.name}</option>)}
                    </select>
                  </div>
                  <div className="flex flex-col gap-2">
-                   <label className="text-[9px] font-black uppercase text-white/20 tracking-widest px-1 flex items-center gap-2">
-                     <FolderIcon size={10} /> Folder (Optional)
+                   <label className="text-[11px] text-textSubtle px-1 flex items-center gap-1.5">
+                     <FolderIcon size={11} /> Папка (опционально)
                    </label>
-                   <select 
-                     className="bg-white/5 p-4 rounded-2xl text-xs font-black text-white outline-none border border-white/5 appearance-none"
+                   <select
+                     className="bg-white/5 p-3.5 rounded-xl text-sm font-medium text-white outline-none appearance-none"
                      value={folderId} onChange={e => setFolderId(e.target.value)}
                    >
-                     <option value="" className="bg-[#0d1117]">None</option>
-                     {filteredFolders.map(f => <option key={f.id} value={f.id} className="bg-[#0d1117]">{f.name}</option>)}
+                     <option value="" className="bg-surface">Нет</option>
+                     {filteredFolders.map(f => <option key={f.id} value={f.id} className="bg-surface">{f.name}</option>)}
                    </select>
                  </div>
               </div>
@@ -141,55 +141,55 @@ export function AddWalletModal({
 
               <IconPicker icon={icon} onChange={setIcon} />
 
-              <div className="bg-white/5 p-6 rounded-[32px] border border-white/5 flex flex-col gap-4">
+              <div className="bg-white/[0.04] p-5 rounded-3xl flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                   <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Account Name</label>
-                   <input 
-                      className="bg-transparent text-xl font-black text-white outline-none placeholder-white/5"
-                      placeholder="My Wallet..."
+                   <label className="text-[11px] text-textSubtle">Название счета</label>
+                   <input
+                      className="bg-transparent text-lg font-semibold text-white outline-none placeholder-white/10"
+                      placeholder="Мой кошелек..."
                       value={name} onChange={e => setName(e.target.value)}
                    />
                 </div>
 
-                <div className="h-px bg-white/5 mx-[-24px]" />
+                <div className="h-px bg-white/5 mx-[-20px]" />
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="flex flex-col gap-2">
-                     <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Currency</label>
-                     <button 
+                     <label className="text-[11px] text-textSubtle">Валюта</label>
+                     <button
                        type="button"
                        onClick={() => setIsCurrencyPickerOpen(true)}
-                       className="bg-transparent text-lg font-black text-white outline-none flex items-center justify-between group"
+                       className="bg-transparent text-base font-semibold text-white outline-none flex items-center justify-between group"
                      >
                        {currency}
-                       <ChevronDown size={14} className="text-white/20 group-hover:text-accent transition-colors" />
+                       <ChevronDown size={14} className="text-white/25 group-hover:text-accent transition-colors" />
                      </button>
-                     <CurrencyPicker 
-                        isOpen={isCurrencyPickerOpen} 
-                        onClose={() => setIsCurrencyPickerOpen(false)} 
+                     <CurrencyPicker
+                        isOpen={isCurrencyPickerOpen}
+                        onClose={() => setIsCurrencyPickerOpen(false)}
                         selectedCurrency={currency}
                         onSelect={setCurrency}
                      />
                    </div>
                    <div className="flex flex-col gap-2 border-l border-white/5 pl-4">
-                     <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Balance</label>
-                     <input 
+                     <label className="text-[11px] text-textSubtle">Баланс</label>
+                     <input
                         type="number"
-                        className="bg-transparent text-lg font-black text-white outline-none w-full"
+                        className="bg-transparent text-base font-semibold text-white outline-none w-full"
                         value={balance} onChange={e => setBalance(e.target.value)}
                      />
                    </div>
                 </div>
 
-                <div className="h-px bg-white/5 mx-[-24px]" />
+                <div className="h-px bg-white/5 mx-[-20px]" />
 
                 <div className="flex flex-col gap-2">
-                   <label className="text-[9px] font-black uppercase text-white/20 tracking-widest flex items-center gap-2">
-                     <Target size={10} /> Цель накопления (необязательно)
+                   <label className="text-[11px] text-textSubtle flex items-center gap-1.5">
+                     <Target size={11} /> Цель накопления (необязательно)
                    </label>
-                   <input 
+                   <input
                       type="number"
-                      className="bg-transparent text-lg font-black text-white outline-none w-full"
+                      className="bg-transparent text-base font-semibold text-white outline-none w-full"
                       placeholder="0"
                       value={targetAmount} onChange={e => setTargetAmount(e.target.value)}
                    />
@@ -197,35 +197,35 @@ export function AddWalletModal({
               </div>
 
               {editingWallet && (
-                <div className="flex justify-between items-center bg-white/5 p-4 rounded-[24px] border border-white/5">
-                   <span className="text-[10px] font-black uppercase text-white/50 tracking-widest px-2">Порядок в списке</span>
+                <div className="flex justify-between items-center bg-white/[0.04] p-3.5 rounded-2xl">
+                   <span className="text-[12px] font-medium text-white/60 px-1">Порядок в списке</span>
                    <div className="flex gap-2">
-                     <button 
+                     <button
                        type="button"
-                       onClick={(e) => { e.preventDefault(); updateWalletOrder(editingWallet.id, 'up'); }} 
-                       className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-white"
+                       onClick={(e) => { e.preventDefault(); updateWalletOrder(editingWallet.id, 'up'); }}
+                       className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-white"
                      >
-                       <ChevronUp size={20} />
+                       <ChevronUp size={18} />
                      </button>
-                     <button 
+                     <button
                        type="button"
-                       onClick={(e) => { e.preventDefault(); updateWalletOrder(editingWallet.id, 'down'); }} 
-                       className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-white"
+                       onClick={(e) => { e.preventDefault(); updateWalletOrder(editingWallet.id, 'down'); }}
+                       className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-white"
                      >
-                       <ChevronDown size={20} />
+                       <ChevronDown size={18} />
                      </button>
                    </div>
                 </div>
               )}
             </div>
 
-            <button 
+            <button
               onClick={handleSave}
               disabled={!name.trim() || !portfolioId}
-              className="mt-2 min-h-[72px] bg-white text-black text-lg font-black rounded-3xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
+              className="mt-1 min-h-[60px] bg-accent text-white text-base font-semibold rounded-2xl active:scale-95 transition-all disabled:opacity-30 flex items-center justify-center gap-2.5"
             >
-              <Check size={28} strokeWidth={4} />
-              {editingWallet ? 'SAVE CHANGES' : 'SAVE ACCOUNT'}
+              <Check size={20} />
+              {editingWallet ? 'Сохранить изменения' : 'Сохранить счет'}
             </button>
           </motion.div>
         </motion.div>
