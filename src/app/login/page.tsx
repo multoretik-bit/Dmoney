@@ -51,11 +51,11 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-accent">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center gradient-accent glow-accent">
             <CircleDollarSign size={28} className="text-white" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">
+            <h1 className="text-2xl font-semibold tracking-tight text-gradient">
               DMoney
             </h1>
             <p className="text-textMuted text-[13px] mt-1">
@@ -100,7 +100,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 bg-accent text-white"
+                  className="w-full h-12 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 gradient-accent glow-accent text-white"
                 >
                   {loading ? 'Отправка...' : (
                     <>

@@ -91,7 +91,7 @@ export function AddPortfolioModal({
           <button
             onClick={handleSave}
             disabled={!name.trim()}
-            className="h-14 bg-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2.5 active:scale-95 transition-all disabled:opacity-30"
+            className="h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2.5 active:scale-95 transition-all disabled:opacity-30"
           >
             <Check size={20} />
             {editingPortfolio ? 'Сохранить изменения' : 'Создать'}
@@ -176,7 +176,7 @@ export function AddFolderModal({
           <button
             onClick={handleSave}
             disabled={!name.trim()}
-            className="h-14 bg-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2.5 active:scale-95 transition-all disabled:opacity-30"
+            className="h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2.5 active:scale-95 transition-all disabled:opacity-30"
           >
             <FolderPlus size={20} />
             {editingFolder ? 'Сохранить изменения' : 'Добавить папку'}

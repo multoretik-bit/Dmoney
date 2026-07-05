@@ -33,7 +33,8 @@ export function BottomNav() {
                   {isActive && (
                     <motion.div
                       layoutId="nav-pill"
-                      className="absolute inset-0 rounded-xl bg-accent-dim"
+                      className="absolute inset-0 rounded-xl"
+                      style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.22) 0%, rgba(139,92,246,0.16) 100%)' }}
                       transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                     />
                   )}

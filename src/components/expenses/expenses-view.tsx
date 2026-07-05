@@ -64,10 +64,10 @@ export function ExpensesView() {
   };
 
   const accentColor = viewMode === 'work'
-    ? { text: '#f59e0b', dim: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' }
+    ? { text: '#f59e0b', dim: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', gradient: 'linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%)' }
     : viewMode === 'large'
-      ? { text: '#8b5cf6', dim: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.25)' }
-      : { text: '#60a5fa', dim: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)' };
+      ? { text: '#8b5cf6', dim: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.25)', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' }
+      : { text: '#60a5fa', dim: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)', gradient: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' };
 
   return (
     <div className="flex flex-col gap-6 pb-32">
@@ -97,7 +97,7 @@ export function ExpensesView() {
               "px-4 py-2 text-[13px] font-medium rounded-lg transition-all duration-200",
               viewMode === 'work' ? "text-white" : "text-white/50 hover:text-white/70"
             )}
-            style={viewMode === 'work' ? { background: '#f59e0b' } : {}}
+            style={viewMode === 'work' ? { background: 'linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%)' } : {}}
           >
             Рабочие
           </button>
@@ -107,7 +107,7 @@ export function ExpensesView() {
               "px-4 py-2 text-[13px] font-medium rounded-lg transition-all duration-200",
               viewMode === 'large' ? "text-white" : "text-white/50 hover:text-white/70"
             )}
-            style={viewMode === 'large' ? { background: '#8b5cf6' } : {}}
+            style={viewMode === 'large' ? { background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' } : {}}
           >
             Крупные
           </button>
@@ -140,8 +140,12 @@ export function ExpensesView() {
         </div>
 
         {/* Summary Card */}
-        <div className="rounded-2xl p-6 flex flex-col gap-6 surface">
-          <div className="flex flex-col items-center text-center">
+        <div className="rounded-2xl p-6 flex flex-col gap-6 surface relative overflow-hidden">
+          <div
+            className="absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-40 pointer-events-none opacity-60"
+            style={{ background: accentColor.gradient, filter: 'blur(60px)', opacity: 0.18 }}
+          />
+          <div className="flex flex-col items-center text-center relative z-10">
             <span className="text-[12px] text-textMuted">
               {isSameDay(selectedDate, new Date()) ? 'Траты за сегодня' : format(selectedDate, 'd MMMM', { locale: ru })}
             </span>
@@ -172,7 +176,7 @@ export function ExpensesView() {
                 <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: accentColor.text }}
+                    style={{ background: accentColor.gradient }}
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (expenses.filter(e => e.isWork && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.workBudgetLimit || 1)) * 100)}%` }}
                   />
@@ -220,7 +224,7 @@ export function ExpensesView() {
                 <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ background: accentColor.text }}
+                    style={{ background: accentColor.gradient }}
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, (expenses.filter(e => e.isLarge && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.largeBudgetLimit || 1)) * 100)}%` }}
                   />
@@ -258,7 +262,7 @@ export function ExpensesView() {
           </div>
 
           {/* Mini bar chart */}
-          <div className="h-12 flex items-end justify-between gap-1 px-1">
+          <div className="h-12 flex items-end justify-between gap-1 px-1 relative z-10">
             {eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) }).map((date, i) => {
               const dayTotal = filteredExpenses.filter(e => isSameDay(new Date(e.date), date)).reduce((sum, e) => sum + e.convertedAmount, 0);
               const monthMax = Math.max(...eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) }).map(d =>
@@ -300,7 +304,7 @@ export function ExpensesView() {
                   key={i}
                   onClick={() => setSelectedDate(date)}
                   className="relative flex flex-col items-center justify-center h-10 rounded-xl transition-all active:scale-90"
-                  style={isSelected ? { background: accentColor.text } : {}}
+                  style={isSelected ? { background: accentColor.gradient } : {}}
                 >
                   <span className={cn(
                     "text-[13px] font-medium transition-colors tabular-nums",
@@ -382,8 +386,8 @@ export function ExpensesView() {
       {/* FAB */}
       <button
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-32 right-5 w-14 h-14 rounded-2xl flex items-center justify-center text-white active:scale-95 hover:opacity-90 transition-all z-40 shadow-card-lg"
-        style={{ background: accentColor.text }}
+        className="fixed bottom-32 right-5 w-14 h-14 rounded-2xl flex items-center justify-center text-white active:scale-95 hover:opacity-90 transition-all z-40 shadow-card-lg glow-accent"
+        style={{ background: accentColor.gradient }}
       >
         <Plus size={24} strokeWidth={2.5} />
       </button>

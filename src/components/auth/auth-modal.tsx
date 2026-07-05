@@ -123,7 +123,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                   />
                 </div>
 
-                <button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} className="mt-2 h-14 bg-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
+                <button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} className="mt-2 h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
                   {loading ? <Loader2 className="animate-spin" size={20} /> : (
                     <><span>Подтвердить</span><ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
                   )}
@@ -143,7 +143,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                   />
                 </div>
 
-                <button onClick={handlePasswordLogin} disabled={loading || !password} className="mt-2 h-14 bg-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
+                <button onClick={handlePasswordLogin} disabled={loading || !password} className="mt-2 h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
                   {loading ? <Loader2 className="animate-spin" size={20} /> : (
                     <><span>Войти</span><ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
                   )}
@@ -163,7 +163,7 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
                   />
                 </div>
 
-                <button onClick={handleSendCode} disabled={loading || !email} className="mt-2 h-14 bg-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
+                <button onClick={handleSendCode} disabled={loading || !email} className="mt-2 h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
                   {loading ? <Loader2 className="animate-spin" size={20} /> : (
                     <><span>Отправить код</span><ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
                   )}

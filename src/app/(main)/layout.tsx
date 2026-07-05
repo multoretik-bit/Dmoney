@@ -110,10 +110,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       )}>
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center gradient-accent glow-accent">
             <CircleDollarSign className="text-white" size={18} />
           </div>
-          <span className="text-[15px] font-semibold tracking-tight text-white">
+          <span className="text-[15px] font-semibold tracking-tight text-gradient">
             DMoney
           </span>
         </div>

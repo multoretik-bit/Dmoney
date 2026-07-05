@@ -230,7 +230,8 @@ export function BudgetView() {
                 <motion.div
                    initial={{ width: 0 }}
                    animate={{ width: `${Math.min(100, overallProgress)}%` }}
-                   className={cn("h-full rounded-full", overallProgress > 100 ? "bg-danger" : "bg-accent")}
+                   className="h-full rounded-full"
+                   style={{ background: overallProgress > 100 ? '#f43f5e' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
                 />
              </div>
           </div>
@@ -519,7 +520,7 @@ export function BudgetView() {
       <motion.button
         whileTap={{ scale: 0.92 }}
         onClick={() => setIsAddExpenseOpen(true)}
-        className="fixed bottom-32 right-5 w-14 h-14 bg-accent text-white rounded-2xl shadow-card-lg flex items-center justify-center active:scale-95 transition-all z-40"
+        className="fixed bottom-32 right-5 w-14 h-14 gradient-accent glow-accent text-white rounded-2xl shadow-card-lg flex items-center justify-center active:scale-95 transition-all z-40"
       >
         <Plus size={24} strokeWidth={2.5} />
       </motion.button>

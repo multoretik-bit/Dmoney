@@ -225,7 +225,7 @@ export function AddCategoryModal({
               onClick={handleSave}
               disabled={!name.trim()}
               className={cn(
-                "h-14 bg-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2.5 active:scale-95 transition-all disabled:opacity-30",
+                "h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2.5 active:scale-95 transition-all disabled:opacity-30",
                 editingCategory ? "flex-1" : "w-full"
               )}
             >

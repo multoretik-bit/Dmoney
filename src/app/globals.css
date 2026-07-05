@@ -15,7 +15,10 @@
   body {
     @apply text-white/90 antialiased;
     background-color: #0a0b0e;
-    background-image: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(59, 130, 246, 0.06) 0%, transparent 60%);
+    background-image:
+      radial-gradient(ellipse 60% 45% at 12% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 30%, rgba(139, 92, 246, 0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 45% 35% at 10% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 60%);
     background-attachment: fixed;
     font-feature-settings: "cv11", "ss01";
   }
@@ -45,6 +48,34 @@
   .surface-sunken {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Gradient accents — used sparingly on primary actions & hero moments */
+  .gradient-accent {
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  }
+
+  .gradient-accent-hover:hover {
+    background: linear-gradient(135deg, #4c8bfa 0%, #9d6ffa 100%);
+  }
+
+  .gradient-warm {
+    background: linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%);
+  }
+
+  .gradient-cool {
+    background: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #93c5fd 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-accent {
+    box-shadow: 0 8px 24px -8px rgba(59, 130, 246, 0.45);
   }
 }
 

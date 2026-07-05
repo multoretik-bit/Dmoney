@@ -130,7 +130,7 @@ export function CategoriesView() {
              </div>
              <button
                onClick={() => setAuthModalOpen(true)}
-               className="w-full h-12 bg-accent text-white rounded-xl transition-all active:scale-95 font-medium text-sm flex items-center justify-center gap-2.5"
+               className="w-full h-12 gradient-accent glow-accent text-white rounded-xl transition-all active:scale-95 font-medium text-sm flex items-center justify-center gap-2.5"
              >
                Войти в аккаунт
              </button>

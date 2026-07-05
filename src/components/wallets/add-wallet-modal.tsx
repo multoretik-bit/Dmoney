@@ -222,7 +222,7 @@ export function AddWalletModal({
             <button
               onClick={handleSave}
               disabled={!name.trim() || !portfolioId}
-              className="mt-1 min-h-[60px] bg-accent text-white text-base font-semibold rounded-2xl active:scale-95 transition-all disabled:opacity-30 flex items-center justify-center gap-2.5"
+              className="mt-1 min-h-[60px] gradient-accent glow-accent text-white text-base font-semibold rounded-2xl active:scale-95 transition-all disabled:opacity-30 flex items-center justify-center gap-2.5"
             >
               <Check size={20} />
               {editingWallet ? 'Сохранить изменения' : 'Сохранить счет'}

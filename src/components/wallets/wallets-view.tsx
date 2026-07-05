@@ -249,7 +249,7 @@ export function WalletsView() {
               backgroundColor: p.color
             }}
           >
-             <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+             <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(160deg, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.25) 100%)' }} />
              <div className="relative z-10 flex flex-col items-start gap-1">
                <span className="text-[12px] font-medium text-white/70">{p.name}</span>
                <span className="text-3xl font-semibold text-white leading-tight tabular-nums">
@@ -482,7 +482,7 @@ function WalletCard({
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, (wallet.balance / Number(wallet.targetAmount)) * 100)}%` }}
-              className="h-full bg-accent rounded-full"
+              className="h-full gradient-accent rounded-full"
             />
           </div>
         </div>

@@ -360,7 +360,7 @@ export function AddExpenseModal({
             <button
               onClick={handleSave}
               disabled={!amountInput || !categoryId || !walletId}
-              className="mt-4 min-h-[64px] bg-accent text-white text-base font-semibold rounded-3xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30"
+              className="mt-4 min-h-[64px] gradient-accent glow-accent text-white text-base font-semibold rounded-3xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30"
             >
               <Check size={20} />
               Сохранить
