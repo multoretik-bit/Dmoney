@@ -227,14 +227,14 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center px-1">
-        <label className="text-[12px] font-medium text-textMuted">Цвет</label>
-        <button
+        <label className="text-[10px] font-black uppercase text-white/20 tracking-widest">Color Palette</label>
+        <button 
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-[12px] font-medium text-accent hover:underline"
+          className="text-[9px] font-black uppercase text-accent tracking-widest hover:underline"
         >
-          {showAdvanced ? 'Быстрая палитра' : 'Расширенный выбор'}
+          {showAdvanced ? 'Quick Palette' : 'Advanced Picker'}
         </button>
       </div>
 
@@ -248,29 +248,29 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
               type="button"
               onClick={() => onChange(c)}
               className={cn(
-                "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ring-2 ring-offset-2 ring-offset-surface",
-                color === c ? "ring-white" : "ring-transparent opacity-60 hover:opacity-100"
+                "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2",
+                color === c ? "border-white scale-110 shadow-2xl" : "border-transparent opacity-40 hover:opacity-100"
               )}
-              style={{ backgroundColor: c }}
+              style={{ backgroundColor: c, boxShadow: color === c ? `0 0 20px ${c}40` : 'none' }}
             >
-              {color === c && <Check size={16} className="text-white" />}
+              {color === c && <Check size={18} className="text-white" />}
             </button>
           ))}
-          <button
+          <button 
             onClick={() => setShowAdvanced(true)}
-            className="w-9 h-9 rounded-full bg-white/5 border border-dashed border-white/20 flex items-center justify-center hover:border-white/40 transition-all"
+            className="w-10 h-10 rounded-full bg-white/5 border border-dashed border-white/20 flex items-center justify-center hover:border-white/40 transition-all"
           >
-            <Plus size={16} className="text-white/40" />
+            <Plus size={18} className="text-white/40" />
           </button>
         </div>
       )}
-
+      
       {showAdvanced && !savedColors.includes(color) && (
-        <button
+        <button 
           onClick={() => handleApplyColor(color)}
-          className="w-full h-11 bg-accent-dim rounded-xl text-[12px] font-medium text-accent hover:bg-accent/25 transition-all"
+          className="w-full h-12 bg-accent/20 border border-accent/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-accent hover:bg-accent/30 transition-all"
         >
-          Добавить в мою палитру
+          Add to my palette
         </button>
       )}
     </div>

@@ -36,7 +36,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   // Generate chart data based on history
   const todayStr = new Date().toLocaleDateString('sv');
   let chartEntries = [...(capitalHistory || [])];
-
+  
   // Make sure we have today's current value in chart data
   const hasToday = chartEntries.some(e => e.date === todayStr);
   if (!hasToday && overallTotal > 0) {
@@ -89,19 +89,19 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   const width = 360;
   const height = 140;
   const points = chartEntries.map((e, idx) => {
-    const x = chartEntries.length > 1
-      ? (idx / (chartEntries.length - 1)) * (width - 30) + 15
+    const x = chartEntries.length > 1 
+      ? (idx / (chartEntries.length - 1)) * (width - 30) + 15 
       : width / 2;
     const y = height - ((getConvertedHistoryAmount(e.overallTotal) - minVal) / range) * (height - 40) - 20;
     return { x, y, value: getConvertedHistoryAmount(e.overallTotal), date: e.date };
   });
 
-  const pathD = chartEntries.length > 1
-    ? points.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '')
+  const pathD = chartEntries.length > 1 
+    ? points.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '') 
     : '';
 
-  const areaD = chartEntries.length > 1 && points.length > 0
-    ? `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
+  const areaD = chartEntries.length > 1 && points.length > 0 
+    ? `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z` 
     : '';
 
   const selectedEntry = selectedPointIdx !== null ? chartEntries[selectedPointIdx] : null;
@@ -125,14 +125,14 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full sm:w-[460px] surface sm:rounded-3xl rounded-t-3xl shadow-card-lg overflow-hidden flex flex-col max-h-[85vh] z-[151]"
+            className="relative w-full sm:w-[460px] bg-[#0b1329]/95 border border-white/10 sm:rounded-3xl rounded-t-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[85vh] z-[151]"
           >
             {/* Header */}
-            <div className="p-6 border-b border-white/[0.06] flex items-center justify-between bg-surface/90 backdrop-blur-md sticky top-0 z-10">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#0b1329]/90 backdrop-blur-md sticky top-0 z-10">
               <div>
-                <h2 className="text-lg font-semibold text-white">Мои капиталы</h2>
-                <p className="text-sm text-textMuted mt-1">
-                  Общая сумма: <span className="text-accent font-semibold tabular-nums">{overallTotal.toFixed(1)} {selectedCurrency}</span>
+                <h2 className="text-xl font-black text-white">Мои Капиталы</h2>
+                <p className="text-sm text-white/50 mt-1">
+                  Общая сумма: <span className="text-accent font-bold">{overallTotal.toFixed(1)} {selectedCurrency}</span>
                 </p>
               </div>
               <button
@@ -144,12 +144,12 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex p-1 bg-white/[0.04] m-4 rounded-xl">
+            <div className="flex border-b border-white/5 p-1 bg-white/5 m-4 rounded-xl">
               <button
                 onClick={() => setActiveTab('list')}
                 className={cn(
-                  "flex-1 py-2 text-center text-sm font-medium rounded-lg transition-colors",
-                  activeTab === 'list' ? "bg-accent text-white" : "text-white/50 hover:text-white"
+                  "flex-1 py-2 text-center text-sm font-bold rounded-lg transition-colors",
+                  activeTab === 'list' ? "bg-accent text-white" : "text-white/60 hover:text-white"
                 )}
               >
                 Список счетов
@@ -157,30 +157,30 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
               <button
                 onClick={() => setActiveTab('chart')}
                 className={cn(
-                  "flex-1 py-2 text-center text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5",
-                  activeTab === 'chart' ? "bg-accent text-white" : "text-white/50 hover:text-white"
+                  "flex-1 py-2 text-center text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5",
+                  activeTab === 'chart' ? "bg-accent text-white" : "text-white/60 hover:text-white"
                 )}
               >
                 <TrendingUp size={16} />
-                Динамика
+                Динамика развития
               </button>
             </div>
 
             {/* Body */}
             <div className="p-6 pt-0 overflow-y-auto custom-scrollbar flex flex-col gap-4 flex-grow">
-
+              
               {activeTab === 'list' ? (
                 <>
                   {/* Currency Selector */}
                   <div className="relative z-20">
                     <button
                       onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
-                      className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] transition-colors"
+                      className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
                     >
-                      <span className="text-sm text-white/60">Валюта отображения</span>
+                      <span className="text-sm font-medium text-white/70">Валюта отображения</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-white">{selectedCurrency}</span>
-                        <ChevronDown size={16} className={cn("text-white/40 transition-transform duration-300", isCurrencyDropdownOpen && "rotate-180")} />
+                        <span className="font-bold text-white">{selectedCurrency}</span>
+                        <ChevronDown size={16} className={cn("text-white/50 transition-transform duration-300", isCurrencyDropdownOpen && "rotate-180")} />
                       </div>
                     </button>
 
@@ -190,7 +190,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute top-full left-0 right-0 mt-2 surface-raised rounded-2xl shadow-card-lg overflow-hidden"
+                          className="absolute top-full left-0 right-0 mt-2 bg-[#172554] border border-white/10 rounded-2xl shadow-xl overflow-hidden"
                         >
                           {AVAILABLE_CURRENCIES.map(currency => (
                             <button
@@ -201,11 +201,11 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                               }}
                               className={cn(
                                 "w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors",
-                                selectedCurrency === currency ? "bg-accent-dim" : ""
+                                selectedCurrency === currency ? "bg-accent/10" : ""
                               )}
                             >
-                              <span className="font-medium text-white">{currency}</span>
-                              {selectedCurrency === currency && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
+                              <span className="font-bold text-white">{currency}</span>
+                              {selectedCurrency === currency && <div className="w-2 h-2 rounded-full bg-accent" />}
                             </button>
                           ))}
                         </motion.div>
@@ -214,34 +214,40 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                   </div>
 
                   {/* Portfolios List */}
-                  <div className="space-y-2.5 mt-1">
+                  <div className="space-y-3 mt-2">
                     {portfolioTotals.map(portfolio => (
                       <div
                         key={portfolio.id}
-                        className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.04]"
+                        className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group"
                       >
-                        <div className="flex items-center gap-3.5 flex-1 min-w-0 pr-4">
+                        <div className="flex items-center gap-4 relative z-10 flex-1 min-w-0 pr-4">
                           <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                            style={{ backgroundColor: portfolio.color + '22' }}
+                            className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-lg flex-shrink-0"
+                            style={{ backgroundColor: portfolio.color + '20', color: portfolio.color }}
                           >
                             {portfolio.icon}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-medium text-white truncate text-sm">{portfolio.name}</h3>
-                            <p className="text-[12px] text-textMuted">Портфель</p>
+                            <h3 className="font-bold text-white truncate">{portfolio.name}</h3>
+                            <p className="text-sm text-white/50">Портфель</p>
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <span className="font-semibold text-white tabular-nums">
+                        <div className="text-right relative z-10 flex-shrink-0">
+                          <span className="font-black text-lg text-white">
                             {portfolio.total.toFixed(1)}
                           </span>
-                          <span className="text-sm text-textMuted ml-1">{selectedCurrency}</span>
+                          <span className="text-sm font-medium text-white/50 ml-1">{selectedCurrency}</span>
                         </div>
+
+                        {/* Subtle hover background effect */}
+                        <div 
+                          className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"
+                          style={{ backgroundColor: portfolio.color }}
+                        />
                       </div>
                     ))}
                     {portfolioTotals.length === 0 && (
-                      <div className="text-center py-8 text-textMuted">
+                      <div className="text-center py-8 text-white/50">
                         У вас пока нет капиталов (портфелей)
                       </div>
                     )}
@@ -249,41 +255,41 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                 </>
               ) : (
                 /* Chart View */
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-5">
                   {chartEntries.length < 2 ? (
-                    <div className="flex flex-col items-center justify-center py-12 px-6 bg-white/[0.04] rounded-2xl text-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center text-accent">
-                        <Info size={22} />
+                    <div className="flex flex-col items-center justify-center py-12 px-6 bg-white/5 border border-white/5 rounded-2xl text-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-accent">
+                        <Info size={24} />
                       </div>
-                      <span className="font-medium text-white text-sm">Данные о динамике отсутствуют</span>
-                      <p className="text-xs text-textMuted max-w-[280px]">
+                      <span className="font-bold text-white text-sm">Данные о динамике отсутствуют</span>
+                      <p className="text-xs text-white/40 max-w-[280px]">
                         Приложение автоматически записывает ежедневный баланс ваших счетов. Зайдите завтра, чтобы увидеть график в динамике.
                       </p>
                     </div>
                   ) : (
                     <>
-                      <div className="bg-white/[0.04] rounded-2xl p-5 flex flex-col gap-4">
+                      <div className="bg-white/5 border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <TrendingUp size={16} className="text-accent" />
-                            <span className="text-sm font-medium text-white/70">Динамика развития</span>
+                            <span className="text-sm font-bold text-white/70">Динамика развития</span>
                           </div>
-                          <div className="text-xs text-textMuted flex items-center gap-1">
+                          <div className="text-xs text-white/40 flex items-center gap-1">
                             <Calendar size={12} />
                             История баланса
                           </div>
                         </div>
 
                         {/* SVG Chart */}
-                        <div className="relative w-full flex items-center justify-center surface-sunken rounded-xl p-3">
+                        <div className="relative w-full flex items-center justify-center bg-slate-900/50 rounded-xl p-3 border border-white/5">
                           <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
                             <defs>
                               <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
+                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
                                 <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
                               </linearGradient>
                             </defs>
-
+                            
                             {/* Grid lines */}
                             <line x1="0" y1={height * 0.25} x2={width} y2={height * 0.25} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
                             <line x1="0" y1={height * 0.5} x2={width} y2={height * 0.5} stroke="rgba(255,255,255,0.05)" strokeDasharray="3,3" />
@@ -294,38 +300,38 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
 
                             {/* Line path */}
                             {pathD && (
-                              <path
-                                d={pathD}
-                                fill="none"
-                                stroke="#3b82f6"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                              <path 
+                                d={pathD} 
+                                fill="none" 
+                                stroke="#3b82f6" 
+                                strokeWidth="3" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
                               />
                             )}
 
                             {/* Data point dots */}
                             {points.map((p, idx) => (
-                              <g
-                                key={idx}
+                              <g 
+                                key={idx} 
                                 className="group/dot cursor-pointer"
                                 onClick={() => setSelectedPointIdx(idx)}
                               >
-                                <circle
-                                  cx={p.x}
-                                  cy={p.y}
-                                  r={selectedPointIdx === idx ? "5" : "3.5"}
-                                  fill={selectedPointIdx === idx ? "#3b82f6" : "#131519"}
-                                  stroke="#3b82f6"
-                                  strokeWidth="2"
-                                  className="transition-all duration-150"
+                                <circle 
+                                  cx={p.x} 
+                                  cy={p.y} 
+                                  r={selectedPointIdx === idx ? "6" : "4"} 
+                                  fill={selectedPointIdx === idx ? "#3b82f6" : "#0f172a"} 
+                                  stroke="#3b82f6" 
+                                  strokeWidth="2.5" 
+                                  className="transition-all duration-150" 
                                 />
-                                <circle
-                                  cx={p.x}
-                                  cy={p.y}
-                                  r="12"
-                                  fill="#3b82f6"
-                                  fillOpacity="0"
+                                <circle 
+                                  cx={p.x} 
+                                  cy={p.y} 
+                                  r="12" 
+                                  fill="#3b82f6" 
+                                  fillOpacity="0" 
                                   className="hover:fill-opacity-10 transition-all duration-150"
                                 />
                               </g>
@@ -334,7 +340,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                         </div>
 
                         {/* Chart Legend & Stats */}
-                        <div className="flex justify-between text-[11px] text-textSubtle px-2 mt-1">
+                        <div className="flex justify-between text-[11px] text-white/40 px-2 mt-1">
                           <span>{chartEntries[0] ? new Date(chartEntries[0].date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : ''}</span>
                           <span>{chartEntries[chartEntries.length - 1] ? new Date(chartEntries[chartEntries.length - 1].date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : ''}</span>
                         </div>
@@ -342,28 +348,28 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
 
                       {/* Details of Selected Point */}
                       {selectedEntry && (
-                        <div className="bg-white/[0.04] rounded-2xl p-4 flex flex-col gap-3">
-                          <div className="flex justify-between items-center border-b border-white/[0.06] pb-2">
-                            <span className="text-xs text-textMuted font-medium">
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
+                          <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                            <span className="text-xs text-white/50 font-bold uppercase tracking-wider">
                               Детализация на {new Date(selectedEntry.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </span>
-                            <span className="text-xs font-semibold text-accent bg-accent-dim px-2 py-0.5 rounded-full tabular-nums">
+                            <span className="text-xs font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full">
                               {getConvertedHistoryAmount(selectedEntry.overallTotal).toFixed(1)} {selectedCurrency}
                             </span>
                           </div>
-
+                          
                           <div className="space-y-2">
                             {portfolios.map(portfolio => {
                               const amountInBase = selectedEntry.portfolioTotals[portfolio.id] || 0;
                               const amountInSelected = getConvertedHistoryAmount(amountInBase);
-
+                              
                               return (
                                 <div key={portfolio.id} className="flex justify-between items-center text-sm">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-base">{portfolio.icon}</span>
-                                    <span className="text-white/80">{portfolio.name}</span>
+                                    <span className="text-lg">{portfolio.icon}</span>
+                                    <span className="text-white/80 font-medium">{portfolio.name}</span>
                                   </div>
-                                  <span className="font-medium text-white tabular-nums">
+                                  <span className="font-bold text-white">
                                     {amountInSelected.toFixed(1)} {selectedCurrency}
                                   </span>
                                 </div>
@@ -388,30 +394,30 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                           }
 
                           return (
-                            <button
-                              key={entry.date}
+                            <button 
+                              key={entry.date} 
                               onClick={() => setSelectedPointIdx(originalIdx)}
                               className={cn(
-                                "w-full text-left flex items-center justify-between p-3 rounded-xl transition-all",
-                                selectedPointIdx === originalIdx
-                                  ? "bg-accent-dim"
-                                  : "bg-white/[0.03] hover:bg-white/[0.06]"
+                                "w-full text-left flex items-center justify-between p-3 rounded-xl transition-all border",
+                                selectedPointIdx === originalIdx 
+                                  ? "bg-accent/10 border-accent/30 shadow-md" 
+                                  : "bg-white/5 border-white/5 hover:bg-white/10"
                               )}
                             >
                               <div className="flex flex-col">
-                                <span className="font-medium text-white text-sm">
+                                <span className="font-bold text-white text-sm">
                                   {new Date(entry.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
                                 </span>
-                                <span className="text-xs text-textMuted">Нажмите для просмотра счетов</span>
+                                <span className="text-xs text-white/40">Нажмите для просмотра счетов</span>
                               </div>
                               <div className="text-right">
-                                <span className="font-semibold text-white block tabular-nums">
+                                <span className="font-black text-white block">
                                   {amount.toFixed(1)} {selectedCurrency}
                                 </span>
                                 {pctChange !== 0 && (
                                   <span className={cn(
-                                    "text-xs font-medium",
-                                    pctChange > 0 ? "text-success" : "text-danger"
+                                    "text-xs font-bold",
+                                    pctChange > 0 ? "text-emerald-400" : "text-rose-400"
                                   )}>
                                     {pctChange > 0 ? '+' : ''}{pctChange.toFixed(1)}%
                                   </span>

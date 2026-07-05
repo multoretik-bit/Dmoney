@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Golos_Text } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const golosText = Golos_Text({ subsets: ["latin", "cyrillic"], weight: ["400", "500", "600", "700", "800"] });
+const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
 export const metadata: Metadata = {
   title: "dmoney",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0b0e",
+  themeColor: "#0B1C2C",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className={golosText.className}>{children}</body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }

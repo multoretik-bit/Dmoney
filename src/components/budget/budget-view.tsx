@@ -4,13 +4,13 @@ import { useState, useMemo } from 'react';
 import { useStore, Category, Expense } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDragScroll } from '@/hooks/useDragScroll';
-import {
-  Settings,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  AlertCircle,
-  Target,
+import { 
+  Settings, 
+  ChevronDown, 
+  ChevronRight, 
+  Plus, 
+  AlertCircle, 
+  Target, 
   Activity,
   Edit2,
   ArrowUp,
@@ -37,7 +37,7 @@ export function BudgetView() {
 
   const currentMonthStr = useMemo(() => format(currentMonth, 'yyyy-MM'), [currentMonth]);
 
-  const currentMonthExpenses = useMemo(() =>
+  const currentMonthExpenses = useMemo(() => 
     expenses.filter(e => e.date.startsWith(currentMonthStr) && !e.isWork),
   [expenses, currentMonthStr]);
 
@@ -59,7 +59,7 @@ export function BudgetView() {
   };
 
   const toggleBlock = (id: string) => {
-    setExpandedBlocks(prev =>
+    setExpandedBlocks(prev => 
       prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
     );
   };
@@ -78,18 +78,18 @@ export function BudgetView() {
     return categories
       .filter(c => {
         if (c.parentId) return false;
-
+        
         // Show block if it has a limit itself
         const hasLimit = (c.budgetLimit || 0) > 0;
-
+        
         // OR if it has any children with a limit
-        const hasChildrenWithLimit = categories.some(child =>
+        const hasChildrenWithLimit = categories.some(child => 
           child.parentId === c.id && (child.budgetLimit || 0) > 0
         );
 
         // EMERGENCY: Show block if it has ANY children (regardless of limit) for visibility
         const hasAnyChildren = categories.some(child => child.parentId === c.id);
-
+        
         return hasLimit || hasChildrenWithLimit || hasAnyChildren;
       })
       .sort((a, b) => {
@@ -97,7 +97,7 @@ export function BudgetView() {
         return a.id.localeCompare(b.id);
       });
   }, [categories]);
-
+  
   const categoriesByBlock = useMemo(() => {
     const map: Record<string, Category[]> = {};
     headCategories.forEach(head => {
@@ -110,31 +110,32 @@ export function BudgetView() {
     });
     return map;
   }, [categories, headCategories]);
-
+  
   // Categories that are NOT blocks themselves
-  const availableCategories = useMemo(() =>
+  const availableCategories = useMemo(() => 
     categories.filter(c => {
       // It's a "Category" if it can have a parent or it was intended as one
       // Let's say all items are categories EXCEPT those that already have sub-items (they are blocks)
       const hasSubItems = categories.some(child => child.parentId === c.id);
       return !hasSubItems;
-    }),
+    }), 
   [categories]);
 
   const addExistingToBlock = (categoryId: string, blockId: string) => {
     const cat = categories.find(c => c.id === categoryId);
     if (cat) {
+      console.log(`🔗 Linking category "${cat.name}" to block ID: ${blockId}`);
       updateCategory(cat.id, { ...cat, parentId: blockId });
     }
     setIsSelectingExisting(null);
   };
 
-  const totalPlanned = useMemo(() =>
+  const totalPlanned = useMemo(() => 
     categories.reduce((sum, c) => {
       const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
       const isExcluded = c.excludeFromBudget || (parent && parent.excludeFromBudget);
       return sum + (!isExcluded && c.budgetLimit ? c.budgetLimit : 0);
-    }, 0),
+    }, 0), 
   [categories]);
 
   const totalSpent = useMemo(() => {
@@ -173,7 +174,7 @@ export function BudgetView() {
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [categories]);
 
-  const totalUnplannedSpent = useMemo(() =>
+  const totalUnplannedSpent = useMemo(() => 
     unplannedExpenses.reduce((sum, c) => sum + (spendingByCategory[c.id] || 0), 0),
   [unplannedExpenses, spendingByCategory]);
 
@@ -188,32 +189,32 @@ export function BudgetView() {
 
   return (
     <div className="flex flex-col min-h-screen pb-40">
-      {/* Header Summary */}
-      <header className="pt-8 flex flex-col items-center justify-center text-center gap-1">
-        <h1 className="text-2xl font-semibold text-white px-6 tracking-tight">
-          {viewMode === 'execute' ? 'Траты и бюджет' : 'Планирование'}
+      {/* Header Summary - dHabits Minimalist Style */}
+      <header className="py-12 flex flex-col items-center justify-center text-center gap-2">
+        <h1 className="text-3xl font-black text-white px-6">
+          {viewMode === 'execute' ? 'Траты и Бюджет' : 'Планирование'}
         </h1>
-
-        <div className="flex justify-between items-center surface p-1.5 rounded-xl mt-4 mb-2 w-full max-w-[240px]">
-          <button
-            onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
-            className="p-2 text-white/40 hover:text-white transition-colors"
+        
+        <div className="flex justify-between items-center bg-black/40 p-2 rounded-2xl border border-white/5 backdrop-blur-md mt-4 mb-2 w-full max-w-[240px]">
+          <button 
+            onClick={() => setCurrentMonth(prev => subMonths(prev, 1))} 
+            className="p-2 text-white/20 hover:text-white transition-colors"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={20} />
           </button>
           <div className="flex flex-col items-center min-w-[120px]">
-            <span className="text-sm font-medium text-white leading-none capitalize">
+            <span className="text-sm font-black uppercase tracking-widest text-white leading-none">
               {format(currentMonth, 'MMMM', { locale: ru })}
             </span>
-            <span className="text-[11px] text-textSubtle mt-1">
+            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-1">
               {format(currentMonth, 'yyyy')}
             </span>
           </div>
-          <button
-            onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
-            className="p-2 text-white/40 hover:text-white transition-colors"
+          <button 
+            onClick={() => setCurrentMonth(prev => addMonths(prev, 1))} 
+            className="p-2 text-white/20 hover:text-white transition-colors"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={20} />
           </button>
         </div>
 
@@ -221,52 +222,51 @@ export function BudgetView() {
           <div className="w-full px-8 flex flex-col gap-3">
              <div className="flex justify-between items-end">
                 <div className="flex flex-col items-start">
-                   <span className="text-2xl font-semibold text-white tabular-nums">${totalSpent.toFixed(1)}</span>
-                   <span className="text-[12px] text-textMuted">Потрачено из ${totalPlanned.toFixed(1)}</span>
+                   <span className="text-3xl font-black text-white">${totalSpent.toFixed(1)}</span>
+                   <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Потрачено из ${totalPlanned.toFixed(1)}</span>
                 </div>
-                <span className="text-lg font-semibold text-accent tabular-nums">{Math.round(overallProgress)}%</span>
+                <span className="text-xl font-black text-accent">{Math.round(overallProgress)}%</span>
              </div>
-             <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
-                <motion.div
+             <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
                    initial={{ width: 0 }}
                    animate={{ width: `${Math.min(100, overallProgress)}%` }}
-                   className="h-full rounded-full"
-                   style={{ background: overallProgress > 100 ? '#f43f5e' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' }}
+                   className={cn("h-full rounded-full", overallProgress > 100 ? "bg-red-500" : "bg-accent")}
                 />
              </div>
           </div>
         ) : (
           <div className="w-full px-4 flex flex-col gap-4">
              <div className="flex flex-col items-center">
-                <span className="text-3xl font-semibold text-white tabular-nums">${totalPlanned.toFixed(1)}</span>
-                <span className="text-[12px] text-textMuted">Общий бюджет</span>
+                <span className="text-4xl font-black text-white">${totalPlanned.toFixed(1)}</span>
+                <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Общий бюджет</span>
              </div>
-             <div className="flex overflow-x-auto gap-2.5 py-2 no-scrollbar px-4">
+             <div className="flex overflow-x-auto gap-3 py-2 no-scrollbar px-4">
                 {blockSummaries.map(b => (
-                  <div key={b.id} className="flex-shrink-0 surface p-3 px-4 rounded-xl flex flex-col items-start gap-1">
-                     <span className="text-[11px] font-medium" style={{ color: `${b.color}` }}>{b.name}</span>
-                     <span className="text-sm font-semibold text-white tabular-nums">${b.limit.toFixed(0)}</span>
+                  <div key={b.id} className="flex-shrink-0 bg-white/5 p-3 px-5 rounded-2xl border border-white/5 flex flex-col items-start gap-1">
+                     <span className="text-[8px] font-black uppercase tracking-widest text-white/20" style={{ color: `${b.color}80` }}>{b.name}</span>
+                     <span className="text-sm font-black text-white">${b.limit.toFixed(0)}</span>
                   </div>
                 ))}
              </div>
           </div>
         )}
 
-        <div className="mt-6 surface p-1 rounded-xl">
-          <button
+        <div className="mt-8 bg-black/40 p-1 rounded-2xl border border-white/5 backdrop-blur-md">
+          <button 
             onClick={() => setViewMode('plan')}
             className={cn(
-              "px-6 py-2 text-[13px] font-medium rounded-lg transition-all",
-              viewMode === 'plan' ? "bg-white text-black" : "text-white/50"
+              "px-8 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+              viewMode === 'plan' ? "bg-white text-black shadow-xl" : "text-white/40"
             )}
           >
             План
           </button>
-          <button
+          <button 
             onClick={() => setViewMode('execute')}
             className={cn(
-              "px-6 py-2 text-[13px] font-medium rounded-lg transition-all",
-              viewMode === 'execute' ? "bg-white text-black" : "text-white/50"
+              "px-8 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+              viewMode === 'execute' ? "bg-white text-black shadow-xl" : "text-white/40"
             )}
           >
             Выполнение
@@ -274,87 +274,95 @@ export function BudgetView() {
         </div>
       </header>
 
-      <div className="p-5 flex flex-col gap-9 mt-4">
+      <div className="p-6 flex flex-col gap-10 mt-4">
         {/* Budget Blocks */}
-        <div className="flex flex-col gap-9">
+        <div className="flex flex-col gap-12">
           {headCategories.map(head => {
             const subCats = categoriesByBlock[head.id] || [];
             const isExpanded = expandedBlocks.includes(head.id);
-
+            
             return (
-              <div key={head.id} className="flex flex-col gap-4">
-                <div
-                   className="px-3 py-2.5 flex justify-between items-center group cursor-pointer rounded-xl transition-all hover:bg-white/[0.03]"
+              <div key={head.id} className="flex flex-col gap-6">
+                <div 
+                   className="px-4 py-3 flex justify-between items-center group cursor-pointer rounded-2xl transition-all" 
+                   style={{ background: `${head.color}05` }}
                    onClick={() => toggleBlock(head.id)}
                 >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: head.color }} />
-                    <span className="text-[13px] font-medium" style={{ color: head.color }}>{head.name}</span>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: head.color }} />
+                    <span className="text-[12px] font-black uppercase tracking-[0.4em]" style={{ color: head.color }}>{head.name}</span>
+                    <div className="h-px flex-1 bg-white/5 group-hover:bg-white/10 transition-colors" />
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     {/* Reordering controls for block */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                       <button
+                       <button 
                          onClick={(e) => { e.stopPropagation(); updateCategoryOrder(head.id, 'up'); }}
-                         className="p-1.5 text-white/30 hover:text-white"
+                         className="p-1.5 text-white/20 hover:text-white"
                        >
                          <ArrowUp size={14} />
                        </button>
-                       <button
+                       <button 
                          onClick={(e) => { e.stopPropagation(); updateCategoryOrder(head.id, 'down'); }}
-                         className="p-1.5 text-white/30 hover:text-white"
+                         className="p-1.5 text-white/20 hover:text-white"
                        >
                          <ArrowDown size={14} />
                        </button>
                     </div>
-                    <button
+                    <button 
                       onClick={(e) => { e.stopPropagation(); openEditCategory(head); }}
-                      className="text-white/30 hover:text-white transition-colors"
+                      className="text-white/20 hover:text-white transition-colors"
                     >
                       <Edit2 size={14} />
                     </button>
-                    <ChevronDown size={16} className={cn("text-white/30 transition-transform", !isExpanded && "-rotate-90")} />
+                    <ChevronDown size={16} className={cn("text-white/20 transition-transform", !isExpanded && "-rotate-90")} />
                   </div>
                 </div>
 
                 <AnimatePresence>
                   {isExpanded && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }} 
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="flex flex-col gap-2.5"
+                      className="flex flex-col gap-3"
                     >
-                      {subCats.map((sub) => {
+                      {subCats.map((sub, catIndex) => {
                         const spent = spendingByCategory[sub.id] || 0;
                         const limit = sub.budgetLimit || 0;
                         const percent = limit > 0 ? (spent / limit) * 100 : 0;
-                        const isOverBudget = viewMode === 'execute' && spent > limit && limit > 0;
 
                         return (
-                          <div
-                            key={sub.id}
-                            className="surface surface-hover p-4 rounded-2xl flex items-center justify-between group active:scale-[0.99] transition-all"
+                          <div 
+                            key={sub.id} 
+                            style={{ 
+                              borderLeft: `4px solid ${viewMode === 'execute' && spent > limit && limit > 0 ? '#ef4444' : sub.color}`,
+                              boxShadow: viewMode === 'execute' && spent > limit && limit > 0 ? '0 0 20px rgba(239,68,68,0.1)' : `0 0 15px ${sub.color}10`
+                            }}
+                            className={cn(
+                              "glass-card p-4 flex items-center justify-between group active:scale-[0.99] transition-all relative overflow-hidden",
+                              viewMode === 'execute' && spent > limit && limit > 0 && "border-l-red-500"
+                            )}
                           >
-                            <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                               <div className="w-11 h-11 flex-shrink-0 rounded-xl flex items-center justify-center text-xl" style={{ background: `${sub.color}18` }}>
+                            <div className="flex items-center gap-4 flex-1">
+                               <div className="w-12 h-12 bg-white/[0.03] rounded-2xl flex items-center justify-center text-2xl border border-white/5 shadow-inner">
                                   {sub.icon}
                                </div>
-                               <div className="flex flex-col gap-1 flex-1 min-w-0">
+                               <div className="flex flex-col gap-1 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium text-white/90 leading-tight text-[14px] truncate">{sub.name}</span>
-                                    {isOverBudget && <AlertCircle size={13} className="text-danger flex-shrink-0" />}
+                                    <span className={cn("font-black text-white leading-tight", viewMode === 'plan' ? "text-lg" : "text-base")}>{sub.name}</span>
+                                    {viewMode === 'execute' && spent > limit && limit > 0 && <AlertCircle size={14} className="text-red-500 animate-pulse" />}
                                   </div>
-
+                                  
                                   {viewMode === 'execute' && (
                                     <div className="flex items-center gap-2">
-                                       <div className="h-1 flex-1 bg-white/[0.06] rounded-full overflow-hidden max-w-[120px]">
-                                          <motion.div
-                                            className={cn("h-full rounded-full", isOverBudget ? "bg-danger" : "bg-white/40")}
+                                       <div className="h-1.5 flex-1 bg-white/5 rounded-full overflow-hidden max-w-[120px]">
+                                          <motion.div 
+                                            className="h-full bg-white opacity-40" 
                                             initial={{ width: 0 }} animate={{ width: `${Math.min(percent, 100)}%` }}
                                           />
                                        </div>
-                                       <span className="text-[11px] text-textSubtle tabular-nums">
+                                       <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
                                           {Math.round(percent)}%
                                        </span>
                                     </div>
@@ -362,39 +370,39 @@ export function BudgetView() {
                                 </div>
                             </div>
 
-                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <div className="flex flex-col items-end gap-1">
                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all mr-1">
-                                     <button
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all mr-2">
+                                     <button 
                                        onClick={() => updateCategoryOrder(sub.id, 'up')}
-                                       className="p-1 px-1.5 text-white/30 hover:text-white"
+                                       className="p-1 px-2 text-white/20 hover:text-white"
                                      >
                                        <ArrowUp size={12} />
                                      </button>
-                                     <button
+                                     <button 
                                        onClick={() => updateCategoryOrder(sub.id, 'down')}
-                                       className="p-1 px-1.5 text-white/30 hover:text-white"
+                                       className="p-1 px-2 text-white/20 hover:text-white"
                                      >
                                        <ArrowDown size={12} />
                                      </button>
                                   </div>
-
+                                  
                                   {viewMode === 'execute' ? (
-                                    <span className="text-[15px] font-semibold text-white tabular-nums">${spent.toFixed(1)}</span>
+                                    <span className="text-lg font-black text-white">${spent.toFixed(1)}</span>
                                   ) : (
-                                    <span className="text-lg font-semibold text-white tabular-nums">${limit.toFixed(0)}</span>
+                                    <span className="text-2xl font-black text-white">${limit.toFixed(0)}</span>
                                   )}
 
-                                  <button
+                                  <button 
                                     onClick={() => openEditCategory(sub)}
-                                    className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all opacity-0 group-hover:opacity-100"
+                                    className="p-2 bg-white/5 rounded-xl text-white/20 hover:text-white transition-all opacity-0 group-hover:opacity-100"
                                   >
-                                    <Edit2 size={13} />
+                                    <Edit2 size={14} />
                                   </button>
                                </div>
-
+                               
                                {viewMode === 'execute' && (
-                                 <span className="text-[11px] text-textSubtle tabular-nums">
+                                 <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
                                    из ${limit.toFixed(1)}
                                  </span>
                                )}
@@ -402,38 +410,38 @@ export function BudgetView() {
                           </div>
                         );
                       })}
-
-                      <div className="flex gap-2.5">
-                        <button
+                      
+                      <div className="flex gap-3">
+                        <button 
                            onClick={() => openAddCategory(head.id)}
-                           className="flex-1 h-14 border border-dashed border-white/10 rounded-2xl flex items-center justify-center gap-2 text-[12px] font-medium text-white/25 hover:text-white/60 hover:bg-white/[0.03] transition-all"
+                           className="flex-1 h-16 border-2 border-dashed border-white/5 rounded-[32px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/10 hover:text-white/40 hover:bg-white/5 transition-all"
                         >
-                          <Plus size={14} /> Добавить новую
+                          <Plus size={14} strokeWidth={4} /> Добавить новую
                         </button>
-                        <button
+                        <button 
                            onClick={() => setIsSelectingExisting(isSelectingExisting === head.id ? null : head.id)}
-                           className="flex-1 h-14 border border-dashed border-white/10 rounded-2xl flex items-center justify-center gap-2 text-[12px] font-medium text-white/25 hover:text-white/60 hover:bg-white/[0.03] transition-all"
+                           className="flex-1 h-16 border-2 border-dashed border-white/5 rounded-[32px] flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/10 hover:text-white/40 hover:bg-white/5 transition-all"
                         >
                           <ChevronDown size={14} className={cn("transition-transform", isSelectingExisting === head.id && "rotate-180")} /> Выбрать существующую
                         </button>
                       </div>
 
                       {isSelectingExisting === head.id && (
-                        <motion.div
+                        <motion.div 
                           initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                          className="surface-sunken rounded-2xl p-3 flex flex-col gap-2"
+                          className="bg-black/20 rounded-[32px] p-4 flex flex-col gap-2 border border-white/5"
                         >
                           {availableCategories.filter(c => c.id !== head.id && c.parentId !== head.id).length === 0 ? (
-                            <span className="text-[12px] text-textSubtle text-center py-4">Нет доступных категорий</span>
+                            <span className="text-[10px] font-black uppercase text-white/10 text-center py-4">Нет доступных категорий</span>
                           ) : (
                             availableCategories.filter(c => c.id !== head.id && c.parentId !== head.id).map(c => (
-                              <button
-                                key={c.id}
+                              <button 
+                                key={c.id} 
                                 onClick={() => addExistingToBlock(c.id, head.id)}
-                                className="flex items-center gap-3 p-3 bg-white/[0.03] hover:bg-white/[0.06] rounded-xl transition-all group"
+                                className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all group"
                               >
                                 <span>{c.icon}</span>
-                                <span className="text-sm font-medium text-white/60 group-hover:text-white">{c.name}</span>
+                                <span className="text-sm font-bold text-white/60 group-hover:text-white">{c.name}</span>
                               </button>
                             ))
                           )}
@@ -445,42 +453,42 @@ export function BudgetView() {
               </div>
             );
           })}
-
-          <button
+          
+          <button 
             onClick={openAddBlock}
-            className="h-20 rounded-2xl border border-dashed border-white/10 flex flex-col items-center justify-center gap-2 group hover:border-accent/40 hover:bg-white/[0.02] transition-all"
+            className="h-24 glass-card rounded-[40px] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 group hover:border-accent/40 transition-all"
           >
-            <div className="w-9 h-9 bg-accent-dim rounded-xl flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
-              <Plus size={18} />
+            <div className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <Plus size={24} strokeWidth={4} />
             </div>
-            <span className="text-[12px] font-medium text-white/30 group-hover:text-accent transition-colors">Создать новый блок</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 group-hover:text-accent transition-colors">Создать новый блок</span>
           </button>
         </div>
 
         {/* Unused / Hidden Categories section */}
         {unusedCategories.length > 0 && (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between px-1">
-               <span className="text-[12px] font-medium text-textMuted">Неиспользуемые категории</span>
-               <span className="text-[12px] text-textSubtle">{unusedCategories.length}</span>
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between px-2">
+               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Неиспользуемые категории</span>
+               <span className="text-[10px] font-black text-white/10">{unusedCategories.length}</span>
             </div>
-            <div
+            <div 
               ref={dragScrollRef}
               {...dragScrollProps}
-              className="flex overflow-x-auto gap-3 pb-4 no-scrollbar active:cursor-grabbing"
+              className="flex overflow-x-auto gap-4 pb-4 no-scrollbar active:cursor-grabbing"
             >
                {unusedCategories.map(cat => (
-                 <button
-                  key={cat.id}
+                 <button 
+                  key={cat.id} 
                   onClick={() => openEditCategory(cat)}
-                  className="flex-shrink-0 w-28 surface surface-hover rounded-2xl p-4 flex flex-col items-center gap-2.5 active:scale-95 transition-all"
+                  className="flex-shrink-0 w-32 glass-card rounded-3xl p-5 border border-white/5 flex flex-col items-center gap-3 active:scale-95 transition-all"
                  >
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-xl">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                        {cat.icon}
                     </div>
-                    <div className="flex flex-col items-center gap-0.5">
-                       <span className="text-[12px] font-medium text-white/60 text-center line-clamp-1">{cat.name}</span>
-                       <span className="text-[11px] text-textSubtle tabular-nums">${(cat.budgetLimit || 0).toFixed(0)}</span>
+                    <div className="flex flex-col items-center gap-1">
+                       <span className="text-[10px] font-black uppercase tracking-wider text-white/40 text-center line-clamp-1">{cat.name}</span>
+                       <span className="text-[9px] font-black text-white/20 tracking-widest">${(cat.budgetLimit || 0).toFixed(0)}</span>
                     </div>
                  </button>
                ))}
@@ -490,24 +498,27 @@ export function BudgetView() {
 
         {/* Unplanned Section - Only in Execution/Execute mode */}
         {viewMode === 'execute' && totalUnplannedSpent > 0 && (
-          <div className="flex flex-col gap-4">
-            <span className="text-[12px] font-medium text-textMuted px-1">Внеплановые / вне бюджета</span>
-            <div className="surface rounded-2xl border-l-2 border-l-danger/60 p-6 flex flex-col gap-5">
-               <div className="flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-base font-semibold text-danger tracking-tight">Всего вне плана</span>
-                    <span className="text-[12px] text-textMuted">Not budgeted / excluded</span>
-                  </div>
-                  <span className="text-xl font-semibold text-danger tabular-nums">${totalUnplannedSpent.toFixed(1)}</span>
+          <div className="flex flex-col gap-6">
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 px-2">Внеплановые / Вне бюджета</span>
+            <div className="glass-card rounded-[40px] border-l-4 border-red-500/50 p-8 shadow-xl relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <Activity size={80} className="text-red-500" />
                </div>
-               <div className="flex flex-col gap-2.5">
+               <div className="flex justify-between items-center mb-6">
+                  <div className="flex flex-col">
+                    <span className="text-lg font-black text-red-500/80 tracking-tight">Всего вне плана</span>
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Not budgeted / Excluded</span>
+                  </div>
+                  <span className="text-2xl font-black text-red-500">${totalUnplannedSpent.toFixed(1)}</span>
+               </div>
+               <div className="flex flex-col gap-4">
                   {unplannedExpenses.map(sub => (
-                    <div key={sub.id} className="flex justify-between items-center bg-white/[0.03] p-3.5 rounded-xl">
+                    <div key={sub.id} className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5">
                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center text-base">{sub.icon}</div>
-                           <span className="text-sm font-medium text-white/80">{sub.name}</span>
+                          <div className="w-8 h-8 rounded-lg bg-black/20 flex items-center justify-center text-base border border-red-500/20">{sub.icon}</div>
+                           <span className="text-sm font-bold text-white/80">{sub.name}</span>
                        </div>
-                       <span className="text-sm font-semibold text-white/70 tabular-nums">${(spendingByCategory[sub.id] || 0).toFixed(1)}</span>
+                       <span className="text-sm font-black text-white/60">${(spendingByCategory[sub.id] || 0).toFixed(1)}</span>
                     </div>
                   ))}
                </div>
@@ -517,18 +528,18 @@ export function BudgetView() {
       </div>
 
       {/* FAB */}
-      <motion.button
-        whileTap={{ scale: 0.92 }}
+      <motion.button 
+        whileTap={{ scale: 0.9 }}
         onClick={() => setIsAddExpenseOpen(true)}
-        className="fixed bottom-32 right-5 w-14 h-14 gradient-accent glow-accent text-white rounded-2xl shadow-card-lg flex items-center justify-center active:scale-95 transition-all z-40"
+        className="fixed bottom-32 right-8 w-16 h-16 bg-white text-black rounded-3xl shadow-2xl flex items-center justify-center active:scale-95 transition-all z-[100]"
       >
-        <Plus size={24} strokeWidth={2.5} />
+        <Plus size={32} strokeWidth={4} />
       </motion.button>
 
       <AddExpenseModal isOpen={isAddExpenseOpen} onClose={() => setIsAddExpenseOpen(false)} />
-      <AddCategoryModal
-        isOpen={isAddCategoryOpen}
-        onClose={() => { setIsAddCategoryOpen(false); setEditingCategory(null); }}
+      <AddCategoryModal 
+        isOpen={isAddCategoryOpen} 
+        onClose={() => { setIsAddCategoryOpen(false); setEditingCategory(null); }} 
         initialParentId={initialParentId}
         editingCategory={editingCategory}
       />

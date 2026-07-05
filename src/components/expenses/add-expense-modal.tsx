@@ -11,20 +11,20 @@ import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { CurrencyPicker } from '@/components/ui/currency-picker';
 
-export function AddExpenseModal({
-  isOpen,
-  onClose,
+export function AddExpenseModal({ 
+  isOpen, 
+  onClose, 
   editingExpense,
   initialViewMode = 'personal'
-}: {
-  isOpen: boolean;
+}: { 
+  isOpen: boolean; 
   onClose: () => void;
   editingExpense?: Expense | null;
   initialViewMode?: 'personal' | 'work' | 'large';
 }) {
   const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories, expenses } = useStore();
   const { baseCurrency } = preferences;
-
+  
   const [amountInput, setAmountInput] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [categoryId, setCategoryId] = useState('');
@@ -76,7 +76,7 @@ export function AddExpenseModal({
       numericAmount = parseFloat(amountInput);
     }
     if (!numericAmount || isNaN(numericAmount) || !categoryId || !walletId) return;
-
+    
     const wallet = wallets.find(w => w.id === walletId);
     if (!wallet) return;
 
@@ -112,15 +112,15 @@ export function AddExpenseModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-end bg-black/70 backdrop-blur-sm px-4 pb-4"
+        <motion.div 
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-end bg-black/80 backdrop-blur-md px-4 pb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={(e) => e.target === e.currentTarget && onClose()}
         >
-          <motion.div
-            className="surface w-full max-w-2xl max-h-[90vh] rounded-4xl flex flex-col p-6 shadow-card-lg relative"
+          <motion.div 
+            className="glass-card w-full max-w-2xl max-h-[90vh] rounded-[48px] flex flex-col p-8 shadow-2xl relative border-t-4 border-t-accent"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -128,41 +128,41 @@ export function AddExpenseModal({
             onClick={(e) => e.stopPropagation()}
           >
             {/* CENTERED HEADER */}
-            <div className="flex flex-col items-center mb-8 relative">
-              <button
-                onClick={onClose}
-                className="absolute right-0 top-0 p-2.5 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all"
+            <div className="flex flex-col items-center mb-10 relative">
+              <button 
+                onClick={onClose} 
+                className="absolute right-0 top-0 p-3 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
-
-              <div className="w-12 h-12 bg-accent-dim rounded-2xl flex items-center justify-center text-accent mb-3">
-                <Calculator size={22} />
+              
+              <div className="w-16 h-16 bg-accent/20 rounded-[28px] flex items-center justify-center text-accent mb-4 shadow-xl shadow-accent/10">
+                <Calculator size={32} strokeWidth={3} />
               </div>
-              <h2 className="text-lg font-semibold text-white">
-                {editingExpense ? 'Правка' : 'Новый расход'}
+              <h2 className="text-3xl font-black uppercase tracking-[0.3em] text-white">
+                {editingExpense ? 'Правка' : 'Расход'}
               </h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-8 hide-scrollbar pb-24">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-10 hide-scrollbar pb-24">
               {/* Amount Input with Enhanced Preview */}
-              <div className="flex flex-col items-center justify-center p-8 surface-sunken rounded-4xl relative overflow-hidden min-h-[280px]">
-                <div className="text-[12px] text-textMuted mb-8">Введите сумму</div>
-
-                <div className="flex flex-col items-center gap-6 w-full">
+              <div className="flex flex-col items-center justify-center p-12 bg-black/20 rounded-[48px] border border-white/5 relative overflow-hidden min-h-[320px]">
+                <div className="text-[11px] text-white/20 font-black uppercase tracking-[0.4em] mb-10">Введите сумму</div>
+                
+                <div className="flex flex-col items-center gap-8 w-full">
                   <div className="flex items-center justify-center gap-4 w-full">
-                    <button
+                    <button 
                       type="button"
                       onClick={() => setIsCurrencyPickerOpen(true)}
-                      className="bg-white/5 px-4 h-12 rounded-2xl text-base font-semibold outline-none text-accent flex items-center gap-2 hover:bg-white/10 transition-all"
+                      className="bg-white/5 px-5 h-16 rounded-[24px] text-xl font-black outline-none text-accent border border-accent/10 flex items-center gap-3 hover:bg-accent/10 transition-all"
                     >
                       {currency}
                       <ChevronDown size={14} className="text-accent/60" />
                     </button>
-                    <input
-                      type="text"
+                    <input 
+                      type="text" 
                       inputMode="decimal"
-                      className="bg-transparent text-6xl font-semibold text-left outline-none min-w-[140px] max-w-[240px] text-white placeholder-white/10 tabular-nums"
+                      className="bg-transparent text-7xl font-black text-left outline-none min-w-[140px] max-w-[240px] text-white placeholder-white/5"
                       placeholder="0"
                       value={amountInput}
                       onChange={(e) => setAmountInput(e.target.value)}
@@ -170,14 +170,14 @@ export function AddExpenseModal({
                     />
                   </div>
 
-                  <CurrencyPicker
-                    isOpen={isCurrencyPickerOpen}
-                    onClose={() => setIsCurrencyPickerOpen(false)}
+                  <CurrencyPicker 
+                    isOpen={isCurrencyPickerOpen} 
+                    onClose={() => setIsCurrencyPickerOpen(false)} 
                     selectedCurrency={currency}
                     onSelect={setCurrency}
                   />
 
-                  <div className="h-32 flex items-center justify-center w-full">
+                  <div className="h-40 flex items-center justify-center w-full">
                     {(() => {
                       const wallet = wallets.find(w => w.id === walletId);
                       const numericAmount = parseFloat(amountInput) || 0;
@@ -185,21 +185,23 @@ export function AddExpenseModal({
                         const convertedUSD = convertAmount(numericAmount, currency, 'USD');
                         const convertedRUB = convertAmount(numericAmount, currency, 'RUB');
                         const convertedWallet = wallet ? convertAmount(numericAmount, currency, wallet.currency) : null;
-
+                        
                         return (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                            className="flex flex-col items-center gap-2 bg-accent-dim p-5 rounded-3xl w-full"
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center gap-2 bg-accent/5 p-6 rounded-[32px] border border-accent/10 w-full"
                           >
-                             <span className="text-3xl font-semibold text-accent tracking-tight tabular-nums">
-                                ≈ {convertedUSD.toFixed(1)} USD
-                             </span>
-                             <div className="flex flex-col items-center gap-1 opacity-40">
-                                <span className="text-[13px] font-medium text-white tabular-nums">
+                             <div className="flex items-center gap-3 text-accent">
+                                <span className="text-4xl font-black tracking-tight">
+                                  ≈ {convertedUSD.toFixed(1)} USD
+                                </span>
+                             </div>
+                             <div className="flex flex-col items-center gap-1 opacity-30">
+                                <span className="text-[13px] font-black uppercase tracking-widest text-white">
                                   ≈ {convertedRUB.toFixed(1)} RUB
                                 </span>
                                 {wallet && wallet.currency !== 'USD' && wallet.currency !== 'RUB' && (
-                                  <span className="text-[11px] tabular-nums">
+                                  <span className="text-[10px] font-black uppercase tracking-widest">
                                     {convertedWallet?.toFixed(1)} {wallet.currency} • {wallet.name}
                                   </span>
                                 )}
@@ -208,7 +210,7 @@ export function AddExpenseModal({
                         );
                       }
                       return (
-                        <div className="text-[12px] text-white/15">
+                        <div className="text-[10px] font-black uppercase text-white/5 tracking-[0.5em] animate-pulse">
                           Ожидание ввода
                         </div>
                       );
@@ -218,41 +220,44 @@ export function AddExpenseModal({
               </div>
 
               {/* Category Selection */}
-              <div className="flex flex-col gap-5">
-                <span className="text-[12px] font-medium text-textMuted px-1">Категория</span>
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-3 px-2">
+                  <span className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30">Категория</span>
+                  <div className="h-px bg-white/5 flex-1" />
+                </div>
                 {categories.length === 0 ? (
-                  <div className="text-center py-16 rounded-3xl border border-dashed border-white/[0.08] text-[12px] text-textSubtle">
+                  <div className="text-center py-20 bg-white/[0.02] rounded-[40px] border-2 border-dashed border-white/5 text-[10px] font-black uppercase tracking-[0.4em] text-white/10">
                     Сначала создайте категории
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-10">
                     {categories.filter(c => !c.parentId).map(head => {
                       const subs = categories.filter(c => c.parentId === head.id);
                       return (
-                        <div key={head.id} className="flex flex-col gap-3">
-                          <span className="text-[12px] font-medium text-white/50 px-1">{head.name}</span>
-                          <div className="grid grid-cols-4 gap-3">
-                            <button
+                        <div key={head.id} className="flex flex-col gap-4">
+                          <span className="text-[11px] font-black uppercase text-white/40 tracking-[0.2em] px-2">{head.name}</span>
+                          <div className="grid grid-cols-4 gap-4">
+                            <button 
                               onClick={() => setCategoryId(head.id)}
                               className={cn(
-                                "flex flex-col items-center justify-center gap-2 h-20 rounded-2xl transition-all",
-                                categoryId === head.id ? "bg-accent-dim ring-1 ring-accent" : "bg-white/[0.04] opacity-50 hover:opacity-100"
+                                "flex flex-col items-center justify-center gap-3 h-24 rounded-[28px] transition-all border-l-4",
+                                categoryId === head.id ? "bg-accent/20 border-accent shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-105" : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
                               )}
                             >
-                              <div className="text-2xl" style={categoryId === head.id ? { color: head.color } : {}}>{head.icon}</div>
-                              <span className="text-[10px] font-medium text-white/60">Все</span>
+                              <div className="text-3xl" style={categoryId === head.id ? { color: head.color } : {}}>{head.icon}</div>
+                              <span className="text-[9px] font-black uppercase tracking-widest text-white/60">Все</span>
                             </button>
                             {subs.map(sub => (
-                              <button
-                                key={sub.id}
+                              <button 
+                                key={sub.id} 
                                 onClick={() => setCategoryId(sub.id)}
                                 className={cn(
-                                  "flex flex-col items-center justify-center gap-2 h-20 rounded-2xl transition-all",
-                                  categoryId === sub.id ? "bg-accent-dim ring-1 ring-accent" : "bg-white/[0.04] opacity-50 hover:opacity-100"
+                                  "flex flex-col items-center justify-center gap-3 h-24 rounded-[28px] transition-all border-l-4",
+                                  categoryId === sub.id ? "bg-accent/20 border-accent shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-105" : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
                                 )}
                               >
-                                <div className="text-2xl" style={categoryId === sub.id ? { color: sub.color } : {}}>{sub.icon}</div>
-                                <span className="text-[10px] font-medium text-white/60 truncate w-full px-1 text-center">{sub.name}</span>
+                                <div className="text-3xl" style={categoryId === sub.id ? { color: sub.color } : {}}>{sub.icon}</div>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/60 truncate w-full px-2 text-center">{sub.name}</span>
                               </button>
                             ))}
                           </div>
@@ -262,27 +267,30 @@ export function AddExpenseModal({
                   </div>
                 )}
               </div>
-
+              
                {/* Wallet Selection */}
               {wallets.length > 0 && (
-                <div className="flex flex-col gap-5">
-                  <span className="text-[12px] font-medium text-textMuted px-1">Списать с</span>
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-6">
+                   <div className="flex items-center gap-3 px-2">
+                    <span className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30">Списать с</span>
+                    <div className="h-px bg-white/5 flex-1" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     {wallets.map(w => (
                       <button
                         key={w.id}
                         onClick={() => setWalletId(w.id)}
                         className={cn(
-                          "p-4 rounded-2xl flex items-center gap-3.5 transition-all active:scale-95",
-                          walletId === w.id ? "bg-accent-dim ring-1 ring-accent text-accent" : "bg-white/[0.04] text-white/30"
+                          "p-5 rounded-[32px] flex items-center gap-4 transition-all active:scale-95 border-l-4",
+                          walletId === w.id ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(59,130,246,0.1)]" : "bg-white/5 border-transparent text-white/20"
                         )}
                       >
-                        <div className="w-10 h-10 rounded-xl bg-black/20 flex items-center justify-center text-xl" style={walletId === w.id ? { color: w.color } : {}}>
+                        <div className="w-12 h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl" style={walletId === w.id ? { color: w.color } : {}}>
                           {w.icon}
                         </div>
                         <div className="flex flex-col items-start min-w-0">
-                          <span className={cn("text-sm font-medium truncate w-full", walletId === w.id ? "text-white" : "text-white/40")}>{w.name}</span>
-                          <span className="text-[11px] opacity-50 tabular-nums leading-none mt-1">{Number(w.balance || 0).toFixed(1)} {w.currency}</span>
+                          <span className={cn("text-sm font-black uppercase tracking-tighter truncate w-full", walletId === w.id ? "text-white" : "text-white/40")}>{w.name}</span>
+                          <span className="text-[10px] font-black opacity-20 tracking-widest leading-none mt-1">{Number(w.balance || 0).toFixed(1)} {w.currency}</span>
                         </div>
                       </button>
                     ))}
@@ -291,79 +299,79 @@ export function AddExpenseModal({
               )}
 
               {/* Work Expense Toggle */}
-              <div
+              <div 
                 onClick={() => { setIsWork(!isWork); if (!isWork) setIsLarge(false); }}
                 className={cn(
-                  "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between",
-                  isWork
-                    ? "bg-warning/10 border-warning/40"
-                    : "bg-white/[0.04] border-transparent hover:bg-white/[0.07]"
+                  "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
+                  isWork 
+                    ? "bg-amber-500/10 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.1)]" 
+                    : "bg-white/5 border-transparent hover:bg-white/10"
                 )}
               >
-                <div className="flex items-center gap-3.5">
+                <div className="flex items-center gap-4">
                   <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all",
-                    isWork ? "bg-warning text-white" : "bg-white/5 text-white/20"
+                    "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
+                    isWork ? "bg-amber-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
                   )}>
                     💼
                   </div>
                   <div className="flex flex-col">
-                    <span className={cn("text-sm font-medium transition-colors", isWork ? "text-warning" : "text-white/60")}>Рабочая трата</span>
-                    <span className="text-[11px] text-textSubtle leading-none mt-1">Отдельный учет и лимит</span>
+                    <span className={cn("text-base font-black transition-colors", isWork ? "text-amber-500" : "text-white/60")}>Рабочая трата</span>
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Отдельный учет и лимит</span>
                   </div>
                 </div>
                 <div className={cn(
-                  "w-12 h-7 rounded-full p-1 transition-all",
-                  isWork ? "bg-warning" : "bg-white/10"
+                  "w-14 h-8 rounded-full p-1 transition-all",
+                  isWork ? "bg-amber-500" : "bg-white/10"
                 )}>
-                  <motion.div
-                    animate={{ x: isWork ? 20 : 0 }}
-                    className="w-5 h-5 bg-white rounded-full"
+                  <motion.div 
+                    animate={{ x: isWork ? 24 : 0 }}
+                    className="w-6 h-6 bg-white rounded-full shadow-lg"
                   />
                 </div>
               </div>
 
               {/* Large Purchase Toggle */}
-              <div
+              <div 
                 onClick={() => { setIsLarge(!isLarge); if (!isLarge) setIsWork(false); }}
                 className={cn(
-                  "p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between",
-                  isLarge
-                    ? "bg-violet/10 border-violet/40"
-                    : "bg-white/[0.04] border-transparent hover:bg-white/[0.07]"
+                  "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
+                  isLarge 
+                    ? "bg-purple-500/10 border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.1)]" 
+                    : "bg-white/5 border-transparent hover:bg-white/10"
                 )}
               >
-                <div className="flex items-center gap-3.5">
+                <div className="flex items-center gap-4">
                   <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all",
-                    isLarge ? "bg-violet text-white" : "bg-white/5 text-white/20"
+                    "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
+                    isLarge ? "bg-purple-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
                   )}>
                     🛍️
                   </div>
                   <div className="flex flex-col">
-                    <span className={cn("text-sm font-medium transition-colors", isLarge ? "text-violet" : "text-white/60")}>Крупная покупка</span>
-                    <span className="text-[11px] text-textSubtle leading-none mt-1">Вне основного бюджета</span>
+                    <span className={cn("text-base font-black transition-colors", isLarge ? "text-purple-500" : "text-white/60")}>Крупная покупка</span>
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Вне основного бюджета</span>
                   </div>
                 </div>
                 <div className={cn(
-                  "w-12 h-7 rounded-full p-1 transition-all",
-                  isLarge ? "bg-violet" : "bg-white/10"
+                  "w-14 h-8 rounded-full p-1 transition-all",
+                  isLarge ? "bg-purple-500" : "bg-white/10"
                 )}>
-                  <motion.div
-                    animate={{ x: isLarge ? 20 : 0 }}
-                    className="w-5 h-5 bg-white rounded-full"
+                  <motion.div 
+                    animate={{ x: isLarge ? 24 : 0 }}
+                    className="w-6 h-6 bg-white rounded-full shadow-lg"
                   />
                 </div>
               </div>
             </div>
 
-            <button
+            <button 
               onClick={handleSave}
               disabled={!amountInput || !categoryId || !walletId}
-              className="mt-4 min-h-[64px] gradient-accent glow-accent text-white text-base font-semibold rounded-3xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30"
+              className="mt-6 min-h-[80px] bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-2xl shadow-accent/20 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group"
             >
-              <Check size={20} />
-              Сохранить
+              <Check size={32} strokeWidth={4} className="group-hover:scale-125 transition-transform" />
+              СОХРАНИТЬ
             </button>
           </motion.div>
         </motion.div>

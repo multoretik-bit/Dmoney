@@ -71,104 +71,110 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean, onClose: () =>
 
   return (
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-[500] flex items-center justify-center bg-black/70 backdrop-blur-md px-6"
+      <motion.div 
+        className="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-3xl px-6"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <motion.div
-          className="surface w-full max-w-lg rounded-4xl p-8 flex flex-col gap-8 shadow-card-lg relative overflow-hidden"
-          initial={{ scale: 0.95, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 30 }}
+        <motion.div 
+          className="glass-card w-full max-w-lg rounded-[48px] p-10 flex flex-col gap-10 shadow-2xl relative border-t-4 border-t-accent overflow-hidden"
+          initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex flex-col items-center gap-3 relative z-10">
-            <button onClick={onClose} className="absolute right-0 top-0 p-2.5 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all">
-              <X size={18} />
+          <div className="flex flex-col items-center gap-4 relative z-10">
+            <button onClick={onClose} className="absolute right-0 top-0 p-3 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all">
+              <X size={20} />
             </button>
-            <div className="w-14 h-14 bg-accent-dim rounded-2xl flex items-center justify-center text-accent mb-1">
-              <ShieldCheck size={26} />
+            <div className="w-16 h-16 bg-accent/20 rounded-[28px] flex items-center justify-center text-accent mb-2 shadow-xl shadow-accent/10">
+              <ShieldCheck size={32} strokeWidth={3} />
             </div>
             <div className="flex flex-col items-center text-center">
-               <h2 className="text-xl font-semibold text-white">
-                 Вход
+               <h2 className="text-3xl font-black text-white tracking-tight uppercase tracking-[0.2em]">
+                 ВХОД
                </h2>
-               <p className="text-[12px] text-textMuted mt-1">
-                 Для доступа к вашим счетам
+               <p className="text-[11px] font-black uppercase tracking-[0.4em] text-white/20 mt-2">
+                 ДЛЯ ДОСТУПА К ВАШИМ СЧЕТАМ
                </p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-5 relative z-10">
+          <div className="flex flex-col gap-6 relative z-10">
             {error && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-danger/10 rounded-2xl flex items-center gap-3 text-danger text-sm font-medium">
-                <AlertCircle size={18} className="shrink-0" />
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-5 bg-red-500/10 border border-red-500/20 rounded-[24px] flex items-center gap-4 text-red-500 text-xs font-black uppercase tracking-widest">
+                <AlertCircle size={20} className="shrink-0" />
                 {error}
               </motion.div>
             )}
 
             {step === 'otp' ? (
               <>
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-success/10 rounded-2xl flex items-center gap-3 text-success text-sm font-medium text-center">
-                  <Check size={18} className="shrink-0" />
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-5 bg-green-500/10 border border-green-500/20 rounded-[24px] flex items-center gap-4 text-green-500 text-xs font-black uppercase tracking-widest text-center">
+                  <Check size={20} className="shrink-0" />
                   Код отправлен на {email}. Проверьте почту!
                 </motion.div>
 
-                <div className="relative group">
-                  <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 text-white/25 group-focus-within:text-accent transition-colors" size={18} />
-                  <input
-                    type="text" placeholder="Введите 6-значный код"
-                    className="w-full bg-black/20 rounded-2xl py-5 pl-14 pr-5 text-white text-base font-medium outline-none focus:bg-black/30 transition-all placeholder:text-white/20 tracking-widest"
-                    value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  />
+                <div className="flex flex-col gap-4">
+                  <div className="relative group">
+                    <KeyRound className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-accent transition-colors" size={20} />
+                    <input 
+                      type="text" placeholder="Введите 6-значный код"
+                      className="w-full bg-black/20 border border-white/5 rounded-[32px] py-7 pl-16 pr-6 text-white text-xl font-bold outline-none focus:border-accent/40 transition-all placeholder:text-white/10 placeholder:font-black placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-xs tracking-widest"
+                      value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    />
+                  </div>
                 </div>
 
-                <button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} className="mt-2 h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
-                  {loading ? <Loader2 className="animate-spin" size={20} /> : (
-                    <><span>Подтвердить</span><ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+                <button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} className="mt-6 h-20 bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-accent/20 shadow-2xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group">
+                  {loading ? <Loader2 className="animate-spin" size={28} /> : (
+                    <><span className="tracking-widest">ПОДТВЕРДИТЬ</span><ArrowRight size={28} strokeWidth={3} className="group-hover:translate-x-2 transition-transform" /></>
                   )}
                 </button>
-                <button onClick={() => { setStep('email'); setOtp(''); setError(null); }} className="text-sm text-white/40 hover:text-white transition-colors text-center w-full">
+                <button onClick={() => { setStep('email'); setOtp(''); setError(null); }} className="text-xs text-white/40 uppercase tracking-widest hover:text-white transition-colors mt-2 text-center w-full">
                   Вернуться назад
                 </button>
               </>
             ) : step === 'password' ? (
               <>
-                <div className="relative group">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-white/25 group-focus-within:text-accent transition-colors" size={18} />
-                  <input
-                    type="password" placeholder="Ваш пароль"
-                    className="w-full bg-black/20 rounded-2xl py-5 pl-14 pr-5 text-white text-base font-medium outline-none focus:bg-black/30 transition-all placeholder:text-white/20"
-                    value={password} onChange={(e) => setPassword(e.target.value)}
-                  />
+                <div className="flex flex-col gap-4">
+                  <div className="relative group">
+                    <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-accent transition-colors" size={20} />
+                    <input 
+                      type="password" placeholder="Ваш пароль"
+                      className="w-full bg-black/20 border border-white/5 rounded-[32px] py-7 pl-16 pr-6 text-white text-xl font-bold outline-none focus:border-accent/40 transition-all placeholder:text-white/10 placeholder:font-black placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-xs tracking-widest"
+                      value={password} onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
                 </div>
 
-                <button onClick={handlePasswordLogin} disabled={loading || !password} className="mt-2 h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
-                  {loading ? <Loader2 className="animate-spin" size={20} /> : (
-                    <><span>Войти</span><ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+                <button onClick={handlePasswordLogin} disabled={loading || !password} className="mt-6 h-20 bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-accent/20 shadow-2xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group">
+                  {loading ? <Loader2 className="animate-spin" size={28} /> : (
+                    <><span className="tracking-widest">ВОЙТИ</span><ArrowRight size={28} strokeWidth={3} className="group-hover:translate-x-2 transition-transform" /></>
                   )}
                 </button>
-                <button onClick={() => { setStep('email'); setPassword(''); setError(null); }} className="text-sm text-white/40 hover:text-white transition-colors text-center w-full">
+                <button onClick={() => { setStep('email'); setPassword(''); setError(null); }} className="text-xs text-white/40 uppercase tracking-widest hover:text-white transition-colors mt-2 text-center w-full">
                   Вернуться назад
                 </button>
               </>
             ) : (
               <>
-                <div className="relative group">
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-white/25 group-focus-within:text-accent transition-colors" size={18} />
-                  <input
-                    type="email" placeholder="Ваш email адрес"
-                    className="w-full bg-black/20 rounded-2xl py-5 pl-14 pr-5 text-white text-base font-medium outline-none focus:bg-black/30 transition-all placeholder:text-white/20"
-                    value={email} onChange={(e) => setEmail(e.target.value)}
-                  />
+                <div className="flex flex-col gap-4">
+                  <div className="relative group">
+                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-accent transition-colors" size={20} />
+                    <input 
+                      type="email" placeholder="Ваш Email адрес"
+                      className="w-full bg-black/20 border border-white/5 rounded-[32px] py-7 pl-16 pr-6 text-white text-xl font-bold outline-none focus:border-accent/40 transition-all placeholder:text-white/10 placeholder:font-black placeholder:uppercase placeholder:tracking-[0.2em] placeholder:text-xs"
+                      value={email} onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
                 </div>
 
-                <button onClick={handleSendCode} disabled={loading || !email} className="mt-2 h-14 gradient-accent glow-accent text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-30 group">
-                  {loading ? <Loader2 className="animate-spin" size={20} /> : (
-                    <><span>Отправить код</span><ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+                <button onClick={handleSendCode} disabled={loading || !email} className="mt-6 h-20 bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-accent/20 shadow-2xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group">
+                  {loading ? <Loader2 className="animate-spin" size={28} /> : (
+                    <><span className="tracking-widest">ОТПРАВИТЬ КОД</span><ArrowRight size={28} strokeWidth={3} className="group-hover:translate-x-2 transition-transform" /></>
                   )}
                 </button>
-                <button onClick={() => { setStep('password'); setError(null); }} className="text-sm text-white/40 hover:text-white transition-colors mt-1 text-center w-full">
+                <button onClick={() => { setStep('password'); setError(null); }} className="text-xs text-white/40 uppercase tracking-widest hover:text-white transition-colors mt-4 text-center w-full">
                   Или войти по паролю
                 </button>
               </>
