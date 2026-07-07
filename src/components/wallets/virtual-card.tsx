@@ -6,14 +6,6 @@ import { Wallet } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
 import { cn } from '@/lib/utils';
 
-// Purely decorative — derives a stable 2-digit "card tail" from the wallet id
-// so each account visually reads like a distinct bank card, no real numbers implied.
-function cardTail(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return String(hash % 100).padStart(2, '0');
-}
-
 export function VirtualCard({
   wallet,
   baseCurrency,
@@ -81,11 +73,8 @@ export function VirtualCard({
         )}
       </div>
 
-      {/* Bottom row: pseudo card number + icon */}
-      <div className="relative z-10 flex items-end justify-between">
-        <span className="text-[13px] font-bold tracking-[0.2em] text-white/40 tabular-nums">
-          •••• •••• •••• {cardTail(wallet.id)}
-        </span>
+      {/* Bottom row: icon badge */}
+      <div className="relative z-10 flex items-end justify-end">
         <span className="w-8 h-8 rounded-full bg-black/30 border border-white/10 flex items-center justify-center text-base flex-shrink-0 backdrop-blur-sm">
           {wallet.icon || <CreditCard size={14} className="text-white/40" />}
         </span>

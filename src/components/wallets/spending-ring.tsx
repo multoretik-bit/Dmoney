@@ -1,53 +1,43 @@
 'use client';
 
 import { useMemo } from 'react';
-import { format } from 'date-fns';
-import { useStore } from '@/store/useStore';
+import { useStore, Expense } from '@/store/useStore';
 
 const SIZE = 176;
 const STROKE = 18;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * RADIUS;
 
-export function SpendingRing() {
-  const { categories, expenses, preferences } = useStore();
+export function SpendingRing({
+  expenses,
+  limit,
+  emptyLabel = 'Нет трат за этот период',
+}: {
+  expenses: Expense[];
+  limit: number;
+  emptyLabel?: string;
+}) {
+  const { categories, preferences } = useStore();
   const { baseCurrency } = preferences;
 
-  const { spent, limit, segments } = useMemo(() => {
-    const monthStr = format(new Date(), 'yyyy-MM');
-    const excludeIds = new Set(
-      categories
-        .filter(c => {
-          const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
-          return c.excludeFromBudget || (parent && parent.excludeFromBudget);
-        })
-        .map(c => c.id)
-    );
-
-    const monthExpenses = expenses.filter(e => e.date.startsWith(monthStr) && !e.isWork && !excludeIds.has(e.categoryId));
-
+  const { spent, segments } = useMemo(() => {
     const byCategory: Record<string, number> = {};
-    monthExpenses.forEach(e => {
+    expenses.forEach(e => {
       byCategory[e.categoryId] = (byCategory[e.categoryId] || 0) + e.convertedAmount;
     });
-
-    const totalLimit = categories.reduce((sum, c) => {
-      const isExcluded = excludeIds.has(c.id);
-      return sum + (!isExcluded && c.budgetLimit ? c.budgetLimit : 0);
-    }, 0);
 
     const totalSpent = Object.values(byCategory).reduce((a, b) => a + b, 0);
 
     const topCategories = Object.entries(byCategory)
       .map(([catId, amount]) => {
         const cat = categories.find(c => c.id === catId);
-        const count = monthExpenses.filter(e => e.categoryId === catId).length;
+        const count = expenses.filter(e => e.categoryId === catId).length;
         return { id: catId, name: cat?.name || 'Other', color: cat?.color || '#3b82f6', amount, count };
       })
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 4);
 
-    return { spent: totalSpent, limit: totalLimit, segments: topCategories };
+    return { spent: totalSpent, segments: topCategories };
   }, [categories, expenses]);
 
   const remaining = Math.max(0, limit - spent);
@@ -110,7 +100,7 @@ export function SpendingRing() {
       <div className="flex flex-col gap-2.5">
         {segments.length === 0 ? (
           <span className="text-center text-[10px] font-black uppercase tracking-widest text-white/15 py-2">
-            Нет трат в этом месяце
+            {emptyLabel}
           </span>
         ) : segments.map(seg => (
           <div

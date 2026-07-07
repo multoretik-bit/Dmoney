@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useStore, Category, Expense } from '@/store/useStore';
+import { useStore, Category } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { 
@@ -20,14 +20,12 @@ import {
 import { cn } from '@/lib/utils';
 import { format, subMonths, addMonths } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { AddExpenseModal } from '../expenses/add-expense-modal';
 import { AddCategoryModal } from '../categories/add-category-modal';
 
 export function BudgetView() {
   const { categories, expenses, setCategoryLimit, updateCategory, preferences, updateCategoryOrder } = useStore();
   const [viewMode, setViewMode] = useState<'plan' | 'execute'>('execute');
   const [expandedBlocks, setExpandedBlocks] = useState<string[]>([]);
-  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
@@ -527,17 +525,7 @@ export function BudgetView() {
         )}
       </div>
 
-      {/* FAB */}
-      <motion.button 
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsAddExpenseOpen(true)}
-        className="fixed bottom-32 right-8 w-16 h-16 bg-white text-black rounded-3xl shadow-2xl flex items-center justify-center active:scale-95 transition-all z-[100]"
-      >
-        <Plus size={32} strokeWidth={4} />
-      </motion.button>
-
-      <AddExpenseModal isOpen={isAddExpenseOpen} onClose={() => setIsAddExpenseOpen(false)} />
-      <AddCategoryModal 
+      <AddCategoryModal
         isOpen={isAddCategoryOpen} 
         onClose={() => { setIsAddCategoryOpen(false); setEditingCategory(null); }} 
         initialParentId={initialParentId}

@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 const NAV_ITEMS = [
-  { href: '/wallets', label: 'Капиталы', icon: Wallet },
   { href: '/expenses', label: 'История', icon: LayoutGrid },
+  { href: '/wallets', label: 'Капиталы', icon: Wallet },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
   { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];

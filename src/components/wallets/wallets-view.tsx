@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Edit2, FolderIcon, ChevronRight, ChevronDown, ChevronLeft, FolderPlus, Check, AlertCircle, ArrowRight } from 'lucide-react';
+import { format } from 'date-fns';
 import { useStore, Portfolio, Folder, Wallet } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 import { AddWalletModal } from './add-wallet-modal';
@@ -16,10 +17,25 @@ import { RecentOperations } from './recent-operations';
 export function WalletsView() {
   const {
     portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet,
-    updatePortfolioOrder, preferences, transferFunds,
+    updatePortfolioOrder, preferences, transferFunds, categories, expenses,
     selectedPortfolioId, setSelectedPortfolioId,
   } = useStore();
   const { baseCurrency } = preferences;
+
+  const { ringExpenses, ringLimit } = useMemo(() => {
+    const monthStr = format(new Date(), 'yyyy-MM');
+    const excludeIds = new Set(
+      categories
+        .filter(c => {
+          const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
+          return c.excludeFromBudget || (parent && parent.excludeFromBudget);
+        })
+        .map(c => c.id)
+    );
+    const filtered = expenses.filter(e => e.date.startsWith(monthStr) && !e.isWork && !e.isLarge && !excludeIds.has(e.categoryId));
+    const totalLimit = categories.reduce((sum, c) => sum + (!excludeIds.has(c.id) && c.budgetLimit ? c.budgetLimit : 0), 0);
+    return { ringExpenses: filtered, ringLimit: totalLimit };
+  }, [categories, expenses]);
 
   useEffect(() => {
     if ((!selectedPortfolioId || !portfolios.some(p => p.id === selectedPortfolioId)) && portfolios.length > 0) {
@@ -437,7 +453,7 @@ export function WalletsView() {
 
         {/* Right column: spending ring */}
         <div className="w-full lg:w-[320px] flex-shrink-0">
-          <SpendingRing />
+          <SpendingRing expenses={ringExpenses} limit={ringLimit} />
         </div>
       </div>
 

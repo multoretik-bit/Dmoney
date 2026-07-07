@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LogOut, PieChart, Settings2, CircleDollarSign, Plus } from 'lucide-react';
+import { LogOut, PieChart, Settings2, CircleDollarSign, Plus, LayoutGrid } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { convertAmount } from '@/lib/exchange';
 import { cn } from '@/lib/utils';
 
 const STATIC_ITEMS = [
+  { href: '/expenses', label: 'История', icon: LayoutGrid },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
   { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];

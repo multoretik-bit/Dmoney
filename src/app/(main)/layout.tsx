@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { Sidebar } from '@/components/layout/sidebar';
 import { AuthModal } from '@/components/auth/auth-modal';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
-import { CircleDollarSign } from 'lucide-react';
+import { CircleDollarSign, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { convertAmount } from '@/lib/exchange';
 import { CapitalsModal } from '@/components/ui/capitals-modal';
+import { AddExpenseModal } from '@/components/expenses/add-expense-modal';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, setUser, pullData, pushData, wallets,
@@ -20,6 +22,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [isHydrated, setIsHydrated] = useState(false);
   const [isCapitalsModalOpen, setIsCapitalsModalOpen] = useState(false);
+  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -186,10 +189,24 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </main>
 
         <BottomNav />
+
+        {/* Global add-expense FAB — reachable from every page */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsAddExpenseOpen(true)}
+          className="fixed bottom-32 lg:bottom-10 right-5 lg:right-10 w-16 h-16 rounded-[22px] flex items-center justify-center text-white z-40 group"
+          style={{
+            background: 'linear-gradient(135deg, #3b82f6 0%, #818cf8 100%)',
+            boxShadow: '0 8px 30px rgba(59,130,246,0.4)',
+          }}
+        >
+          <Plus size={30} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
+        </motion.button>
       </div>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setAuthModalOpen(false)} />
       <CapitalsModal isOpen={isCapitalsModalOpen} onClose={() => setIsCapitalsModalOpen(false)} />
+      <AddExpenseModal isOpen={isAddExpenseOpen} onClose={() => setIsAddExpenseOpen(false)} />
     </div>
   );
 }

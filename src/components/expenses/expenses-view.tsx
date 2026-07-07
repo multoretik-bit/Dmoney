@@ -16,8 +16,9 @@ import {
 import { ru } from 'date-fns/locale';
 import { AddExpenseModal } from './add-expense-modal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SpendingRing } from '@/components/wallets/spending-ring';
 
 export function ExpensesView() {
   const { expenses, preferences, categories } = useStore();
@@ -47,6 +48,15 @@ export function ExpensesView() {
     .filter(e => e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (viewMode !== 'personal' || !excludeIds.has(e.categoryId)))
     .reduce((sum, e) => sum + e.convertedAmount, 0);
 
+  const ringExpenses = filteredExpenses.filter(e =>
+    e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (viewMode !== 'personal' || !excludeIds.has(e.categoryId))
+  );
+  const ringLimit = viewMode === 'work'
+    ? (preferences.workBudgetLimit || 0)
+    : viewMode === 'large'
+      ? (preferences.largeBudgetLimit || 0)
+      : categories.reduce((sum, c) => sum + (!excludeIds.has(c.id) && c.budgetLimit ? c.budgetLimit : 0), 0);
+
   // Calendar logic
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -68,12 +78,6 @@ export function ExpensesView() {
     : viewMode === 'large'
       ? { bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)', text: '#8b5cf6', glow: 'rgba(139,92,246,0.3)' }
       : { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa', glow: 'rgba(59,130,246,0.4)' };
-
-  const fabColor = viewMode === 'work'
-    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-    : viewMode === 'large'
-      ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
-      : 'linear-gradient(135deg, #3b82f6 0%, #818cf8 100%)';
 
   return (
     <div className="flex flex-col gap-7 pb-32">
@@ -120,7 +124,8 @@ export function ExpensesView() {
         </div>
       </header>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="flex-1 min-w-0 w-full flex flex-col gap-6">
         {/* Month Selector */}
         <div
           className="flex justify-between items-center p-1.5 rounded-2xl self-center"
@@ -423,17 +428,10 @@ export function ExpensesView() {
         </div>
       </div>
 
-      {/* FAB */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-32 right-5 w-16 h-16 rounded-[22px] flex items-center justify-center text-white active:scale-95 hover:scale-105 transition-all z-40 group"
-        style={{
-          background: fabColor,
-          boxShadow: `0 8px 30px ${accentColor.glow}`,
-        }}
-      >
-        <Plus size={30} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
-      </button>
+      <div className="w-full lg:w-[320px] flex-shrink-0">
+        <SpendingRing expenses={ringExpenses} limit={ringLimit} emptyLabel="Нет трат за этот месяц" />
+      </div>
+      </div>
 
       <AddExpenseModal
         isOpen={isModalOpen}
