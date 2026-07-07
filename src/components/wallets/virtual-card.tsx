@@ -35,48 +35,65 @@ export function VirtualCard({
   return (
     <motion.div
       layout
+      whileHover={{ y: -3 }}
       className={cn(
-        'relative flex-shrink-0 w-[240px] h-[150px] rounded-[28px] p-5 flex flex-col justify-between overflow-hidden group snap-center shadow-2xl',
+        'relative flex-shrink-0 w-[268px] h-[166px] rounded-[22px] p-5 flex flex-col justify-between overflow-hidden group snap-center transition-shadow',
         className
       )}
       style={{
-        background: `linear-gradient(150deg, ${color}55 0%, #0a0f1e 70%)`,
-        border: `1px solid ${color}40`,
+        background: `linear-gradient(135deg, ${color}70 0%, ${color}25 32%, #060a14 78%)`,
+        boxShadow: `0 24px 48px -18px ${color}66, 0 2px 0 rgba(255,255,255,0.06) inset, 0 0 0 1px rgba(255,255,255,0.08) inset`,
       }}
     >
-      {/* Sheen */}
-      <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full pointer-events-none" style={{ background: `radial-gradient(circle, ${color}35 0%, transparent 70%)` }} />
+      {/* Diagonal sheen texture */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.35] mix-blend-overlay"
+        style={{ background: 'repeating-linear-gradient(115deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 10px)' }}
+      />
+      {/* Glow blob */}
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full pointer-events-none" style={{ background: `radial-gradient(circle, ${color}55 0%, transparent 70%)` }} />
+      {/* Top glossy highlight edge */}
+      <div className="absolute inset-x-0 top-0 h-14 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, transparent 100%)' }} />
 
-      {/* Top row: name + accent dot */}
+      {/* Top row: chip + status dot */}
       <div className="relative z-10 flex items-start justify-between">
-        <div className="flex flex-col gap-0.5 min-w-0 pr-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white/50 truncate">{wallet.name}</span>
-          <span className="text-xl font-black text-white leading-tight truncate">
-            {balanceConverted.toFixed(1)} {baseCurrency}
-          </span>
-          {wallet.currency !== baseCurrency && (
-            <span className="text-[9px] font-bold text-white/30">{wallet.balance.toFixed(1)} {wallet.currency}</span>
-          )}
-        </div>
-        <span
-          className="w-3 h-3 rounded-full flex-shrink-0 mt-0.5"
-          style={{ background: color, boxShadow: `0 0 8px ${color}` }}
+        <div
+          className="w-8 h-6 rounded-[6px] flex-shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, #f4e4b8 0%, #d8bd7c 45%, #b89654 100%)',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.4) inset',
+          }}
         />
+        <span
+          className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5"
+          style={{ background: color, boxShadow: `0 0 10px ${color}, 0 0 0 3px ${color}22` }}
+        />
+      </div>
+
+      {/* Balance block */}
+      <div className="relative z-10 flex flex-col gap-0.5 min-w-0">
+        <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white/50 truncate">{wallet.name}</span>
+        <span className="text-2xl font-black text-white leading-tight truncate tabular-nums">
+          {balanceConverted.toFixed(1)} <span className="text-sm text-white/50 font-bold">{baseCurrency}</span>
+        </span>
+        {wallet.currency !== baseCurrency && (
+          <span className="text-[9px] font-bold text-white/30">{wallet.balance.toFixed(1)} {wallet.currency}</span>
+        )}
       </div>
 
       {/* Bottom row: pseudo card number + icon */}
       <div className="relative z-10 flex items-end justify-between">
-        <span className="text-xs font-bold tracking-[0.2em] text-white/35">
+        <span className="text-[13px] font-bold tracking-[0.2em] text-white/40 tabular-nums">
           •••• •••• •••• {cardTail(wallet.id)}
         </span>
-        <span className="w-8 h-8 rounded-lg bg-black/25 border border-white/10 flex items-center justify-center text-base flex-shrink-0">
+        <span className="w-8 h-8 rounded-full bg-black/30 border border-white/10 flex items-center justify-center text-base flex-shrink-0 backdrop-blur-sm">
           {wallet.icon || <CreditCard size={14} className="text-white/40" />}
         </span>
       </div>
 
       {hasGoal && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
-          <div className="h-full" style={{ width: `${goalPct}%`, background: color }} />
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40 rounded-b-[22px] overflow-hidden">
+          <div className="h-full" style={{ width: `${goalPct}%`, background: `linear-gradient(90deg, ${color}, #fff8)` }} />
         </div>
       )}
 
@@ -84,13 +101,13 @@ export function VirtualCard({
       <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          className="p-1.5 bg-black/40 hover:bg-black/60 rounded-lg transition-all"
+          className="p-1.5 bg-black/50 hover:bg-black/70 rounded-lg transition-all backdrop-blur-sm"
         >
           <Edit2 size={12} className="text-white" />
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="p-1.5 bg-black/40 hover:bg-red-500/60 rounded-lg transition-all"
+          className="p-1.5 bg-black/50 hover:bg-red-500/70 rounded-lg transition-all backdrop-blur-sm"
         >
           <Trash2 size={12} className="text-white" />
         </button>
@@ -98,8 +115,8 @@ export function VirtualCard({
 
       {hasGoal && (
         <div className="hidden group-hover:flex absolute inset-x-5 bottom-6 items-center gap-1.5 z-20">
-          <Target size={10} className="text-white/50" />
-          <span className="text-[9px] font-black text-white/50 uppercase tracking-wider">
+          <Target size={10} className="text-white/60" />
+          <span className="text-[9px] font-black text-white/60 uppercase tracking-wider">
             Цель {Number(wallet.targetAmount).toFixed(0)} {wallet.currency} · {Math.round(goalPct)}%
           </span>
         </div>

@@ -48,9 +48,9 @@ export function Sidebar() {
   const initial = (user?.email?.[0] || '?').toUpperCase();
 
   return (
-    <aside className="hidden lg:flex flex-col w-[280px] flex-shrink-0 h-screen sticky top-0 py-6 px-4 gap-6 border-r border-white/[0.06]">
+    <aside className="hidden lg:flex flex-col w-[288px] flex-shrink-0 h-screen sticky top-0 py-7 px-5 gap-8 border-r border-white/[0.06]">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-2">
+      <div className="flex items-center gap-2.5 px-1">
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center"
           style={{
@@ -74,9 +74,14 @@ export function Sidebar() {
       </div>
 
       {/* User */}
-      <div className="flex items-center gap-3 px-2">
-        <div className="w-10 h-10 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-sm font-black text-white/70 flex-shrink-0">
-          {initial}
+      <div className="flex items-center gap-3 px-1">
+        <div
+          className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 p-[2px]"
+          style={{ background: 'linear-gradient(135deg, #60a5fa, #a78bfa)' }}
+        >
+          <div className="w-full h-full rounded-full bg-[#0a0f1e] flex items-center justify-center text-sm font-black text-white/80">
+            {initial}
+          </div>
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-sm font-bold text-white/90 truncate">
@@ -90,7 +95,7 @@ export function Sidebar() {
 
       {/* Capitals list */}
       <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto hide-scrollbar">
-        <div className="flex items-center justify-between px-2 mb-1">
+        <div className="flex items-center justify-between px-1 mb-1">
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/25">Мои капиталы</span>
           <Link
             href="/wallets"
@@ -107,7 +112,7 @@ export function Sidebar() {
             <button
               key={p.id}
               onClick={() => handleSelectPortfolio(p.id)}
-              className="relative flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left transition-colors"
+              className="relative flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition-colors"
             >
               {isActive && (
                 <motion.div
@@ -127,7 +132,7 @@ export function Sidebar() {
                   {p.name}
                 </span>
               </div>
-              <span className={cn('relative z-10 text-[11px] font-black flex-shrink-0', isActive ? 'text-blue-300' : 'text-white/25')}>
+              <span className={cn('relative z-10 text-[11px] font-black flex-shrink-0 tabular-nums', isActive ? 'text-blue-300' : 'text-white/25')}>
                 ${getPortfolioBalance(p.id).toFixed(0)}
               </span>
             </button>

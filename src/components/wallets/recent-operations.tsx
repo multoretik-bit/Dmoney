@@ -36,24 +36,24 @@ export function RecentOperations({ portfolioId, limit = 6 }: { portfolioId: stri
             return (
               <div
                 key={exp.id}
-                className="flex items-center justify-between p-3.5 rounded-2xl glass-card"
-                style={{ borderLeft: `3px solid ${catColor}` }}
+                className="flex items-center justify-between p-3.5 rounded-2xl transition-colors hover:bg-white/[0.03]"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3.5 min-w-0">
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-                    style={{ background: `${catColor}18`, border: `1px solid ${catColor}25` }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-base flex-shrink-0"
+                    style={{ background: `${catColor}1c` }}
                   >
                     {cat.icon}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-sm font-bold text-white/90 truncate">{cat.name}</span>
-                    <span className="text-[10px] font-bold text-white/25 uppercase tracking-widest">
+                    <span className="text-[10px] font-bold text-white/25 tracking-wide">
                       {format(new Date(exp.date), 'd MMM, HH:mm', { locale: ru })}
                     </span>
                   </div>
                 </div>
-                <span className="text-sm font-black text-white flex-shrink-0 pl-2">
+                <span className="text-sm font-black text-white flex-shrink-0 pl-2 tabular-nums">
                   −{exp.convertedAmount.toFixed(1)}
                 </span>
               </div>

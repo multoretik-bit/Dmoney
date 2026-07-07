@@ -134,9 +134,20 @@ export function WalletsView() {
 
   return (
     <div className="flex flex-col gap-8 pb-32">
-      <header className="pt-6 lg:pt-0 flex flex-col items-center lg:items-start justify-center text-center lg:text-left gap-1">
+      <header className="pt-6 lg:pt-0 flex flex-col items-center lg:items-start justify-center text-center lg:text-left gap-2">
         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Мои капиталы</span>
-        <h1 className="text-3xl font-black text-white">{selectedPortfolio?.name}</h1>
+        <div className="flex items-center gap-3">
+          <span
+            className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
+            style={{ background: `${selectedPortfolio?.color}20` }}
+          >
+            {selectedPortfolio?.icon}
+          </span>
+          <h1 className="text-3xl font-black text-white">{selectedPortfolio?.name}</h1>
+        </div>
+        <span className="text-2xl font-black tabular-nums" style={{ color: selectedPortfolio?.color }}>
+          {selectedPortfolio ? getPortfolioBalance(selectedPortfolio.id).toFixed(1) : '0'} {baseCurrency}
+        </span>
       </header>
 
       {/* Mobile-only capital switcher (desktop uses the sidebar) */}
@@ -406,7 +417,7 @@ export function WalletsView() {
 
                 <button
                   onClick={() => { setEditingWallet(null); setIsWalletModalOpen(true); }}
-                  className="flex-shrink-0 w-[240px] h-[150px] rounded-[28px] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-3 text-white/15 hover:text-white/40 hover:border-white/20 transition-all"
+                  className="flex-shrink-0 w-[268px] h-[166px] rounded-[22px] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-3 text-white/15 hover:text-white/40 hover:border-white/20 transition-all"
                 >
                   <Plus size={22} strokeWidth={3} />
                   <span className="text-[10px] font-black uppercase tracking-widest">Новый счёт</span>

@@ -4,8 +4,8 @@ import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { useStore } from '@/store/useStore';
 
-const SIZE = 160;
-const STROKE = 16;
+const SIZE = 176;
+const STROKE = 18;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * RADIUS;
 
@@ -52,81 +52,79 @@ export function SpendingRing() {
 
   const remaining = Math.max(0, limit - spent);
   const progress = limit > 0 ? Math.min(1, spent / limit) : (spent > 0 ? 1 : 0);
-
-  let offsetAccum = 0;
-  const total = segments.reduce((s, seg) => s + seg.amount, 0) || 1;
+  const dash = progress * CIRC;
 
   return (
-    <div className="glass-card rounded-[36px] p-7 flex flex-col gap-6">
+    <div
+      className="rounded-[32px] p-7 flex flex-col gap-7"
+      style={{
+        background: 'linear-gradient(160deg, #101a30 0%, #080d18 100%)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 20px 50px -20px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.05) inset',
+      }}
+    >
       <div className="flex flex-col items-center gap-1">
-        <div className="relative" style={{ width: SIZE, height: SIZE }}>
-          <svg width={SIZE} height={SIZE} className="-rotate-90">
+        <div className="relative flex items-center justify-center" style={{ width: SIZE, height: SIZE }}>
+          <svg width={SIZE} height={SIZE} className="-rotate-90 absolute inset-0 drop-shadow-[0_0_18px_rgba(139,92,246,0.35)]">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#60a5fa" />
+                <stop offset="100%" stopColor="#a78bfa" />
+              </linearGradient>
+            </defs>
             <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} stroke="rgba(255,255,255,0.06)" strokeWidth={STROKE} fill="none" />
-            {segments.length > 0 ? segments.map((seg, idx) => {
-              const fraction = seg.amount / total;
-              const dash = fraction * CIRC;
-              const gap = CIRC - dash;
-              const strokeDashoffset = -offsetAccum;
-              offsetAccum += dash;
-              return (
-                <circle
-                  key={seg.id}
-                  cx={SIZE / 2}
-                  cy={SIZE / 2}
-                  r={RADIUS}
-                  stroke={seg.color}
-                  strokeWidth={STROKE}
-                  strokeDasharray={`${dash} ${gap}`}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  fill="none"
-                  style={{ transition: 'stroke-dashoffset 0.4s ease' }}
-                />
-              );
-            }) : (
-              <circle
-                cx={SIZE / 2} cy={SIZE / 2} r={RADIUS}
-                stroke="#3b82f6" strokeWidth={STROKE}
-                strokeDasharray={`${progress * CIRC} ${CIRC}`}
-                strokeLinecap="round" fill="none"
-              />
-            )}
+            <circle
+              cx={SIZE / 2}
+              cy={SIZE / 2}
+              r={RADIUS}
+              stroke="url(#ringGrad)"
+              strokeWidth={STROKE}
+              strokeDasharray={`${dash} ${CIRC}`}
+              strokeLinecap="round"
+              fill="none"
+              style={{ transition: 'stroke-dasharray 0.5s ease' }}
+            />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Потрачено</span>
-            <span className="text-xl font-black text-white">{spent.toFixed(0)}</span>
-            <span className="text-[9px] font-bold text-white/20">{baseCurrency}</span>
+          <div className="flex flex-col items-center justify-center gap-0.5">
+            <span className="text-[9px] font-black uppercase tracking-widest text-white/35">Потрачено</span>
+            <span className="text-2xl font-black text-white tabular-nums">{spent.toFixed(0)}</span>
+            <span className="text-[9px] font-bold text-white/25">{baseCurrency}</span>
           </div>
         </div>
       </div>
 
       {limit > 0 && (
-        <div className="flex justify-between px-2">
+        <div className="flex justify-between px-1">
           <div className="flex flex-col items-start gap-0.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Лимит</span>
-            <span className="text-sm font-black text-white">{limit.toFixed(0)}</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Лимит</span>
+            <span className="text-base font-black text-white tabular-nums">{limit.toFixed(0)}</span>
           </div>
+          <div className="w-px bg-white/[0.06]" />
           <div className="flex flex-col items-end gap-0.5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Остаток</span>
-            <span className="text-sm font-black text-accent">{remaining.toFixed(0)}</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Остаток</span>
+            <span className="text-base font-black text-violet-300 tabular-nums">{remaining.toFixed(0)}</span>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {segments.length === 0 ? (
           <span className="text-center text-[10px] font-black uppercase tracking-widest text-white/15 py-2">
             Нет трат в этом месяце
           </span>
         ) : segments.map(seg => (
-          <div key={seg.id} className="flex items-center justify-between">
+          <div
+            key={seg.id}
+            className="flex items-center justify-between px-4 py-3 rounded-2xl"
+            style={{ background: `${seg.color}14`, border: `1px solid ${seg.color}22` }}
+          >
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: seg.color }} />
-              <span className="text-xs font-bold text-white/70 truncate">{seg.name}</span>
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: seg.color, boxShadow: `0 0 6px ${seg.color}` }} />
+              <span className="text-xs font-bold text-white/80 truncate">{seg.name}</span>
             </div>
             <div className="flex flex-col items-end flex-shrink-0 pl-2">
-              <span className="text-xs font-black text-white">{seg.amount.toFixed(0)} {baseCurrency}</span>
-              <span className="text-[9px] font-bold text-white/25">{seg.count} операций</span>
+              <span className="text-xs font-black text-white tabular-nums">{seg.amount.toFixed(0)} {baseCurrency}</span>
+              <span className="text-[9px] font-bold text-white/30">{seg.count} операций</span>
             </div>
           </div>
         ))}
