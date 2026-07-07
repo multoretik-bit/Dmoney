@@ -64,7 +64,7 @@ export function CategoriesView() {
   return (
     <div className="p-6 flex flex-col gap-10 bg-[#0d1117] min-h-screen text-white pb-40">
       <header className="pt-12 px-2">
-        <h1 className="text-4xl font-black uppercase tracking-tight text-white/90">Опции</h1>
+        <h1 className="text-4xl font-black uppercase tracking-tight text-white/90">Настройки</h1>
       </header>
 
       {/* Account Info */}

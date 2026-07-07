@@ -7,17 +7,17 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 const NAV_ITEMS = [
-  { href: '/expenses', label: 'Обзор', icon: LayoutGrid },
+  { href: '/wallets', label: 'Капиталы', icon: Wallet },
+  { href: '/expenses', label: 'История', icon: LayoutGrid },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
-  { href: '/wallets', label: 'Счета', icon: Wallet },
-  { href: '/categories', label: 'Опции', icon: Settings2 },
+  { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pb-safe">
       <div className="mx-4 mb-4 max-w-xl xl:max-w-5xl xl:mx-auto">
         <div
           className="flex justify-around items-center h-[68px] px-2 rounded-[26px]"

@@ -93,10 +93,12 @@ interface UserState {
   user: User | null;
   isAuthModalOpen: boolean;
   isReordering: boolean;
+  selectedPortfolioId: string;
 
   // Actions
   setUser: (user: User | null) => void;
   setAuthModalOpen: (open: boolean) => void;
+  setSelectedPortfolioId: (id: string) => void;
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => Promise<void>;
@@ -155,9 +157,11 @@ export const useStore = create<UserState>()(
       user: null,
       isAuthModalOpen: false,
       isReordering: false,
+      selectedPortfolioId: '',
 
       setUser: (user) => set({ user }),
       setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
+      setSelectedPortfolioId: (id) => set({ selectedPortfolioId: id }),
       
       recordDailyCapital: () => {
         const state = useStore.getState();
