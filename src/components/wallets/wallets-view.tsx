@@ -12,7 +12,6 @@ import { convertAmount } from '@/lib/exchange';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { VirtualCard } from './virtual-card';
 import { SpendingRing } from './spending-ring';
-import { RecentOperations } from './recent-operations';
 
 export function WalletsView() {
   const {
@@ -447,8 +446,6 @@ export function WalletsView() {
               )}
             </div>
           </div>
-
-          <RecentOperations portfolioId={selectedPortfolio?.id || ''} />
         </div>
 
         {/* Right column: spending ring */}

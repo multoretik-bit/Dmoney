@@ -102,6 +102,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     acc + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency), 0
   );
 
+  const sortedPortfolios = [...portfolios].sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return a.id.localeCompare(b.id);
+  });
+  const getPortfolioBalance = (pId: string) =>
+    wallets
+      .filter(w => w.portfolioId === pId)
+      .reduce((sum, w) => sum + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency), 0);
+
   return (
     <div className="min-h-screen bg-background text-slate-100 flex lg:flex-row flex-col pt-safe relative">
       <Sidebar />
@@ -183,6 +192,31 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </button>
           </div>
         </header>
+
+        {/* Capitals totals strip — desktop only */}
+        {sortedPortfolios.length > 0 && (
+          <div className="hidden lg:flex items-center gap-3 flex-wrap px-8 pt-6">
+            {sortedPortfolios.map(p => (
+              <div
+                key={p.id}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl"
+                style={{ background: `${p.color}12`, border: `1px solid ${p.color}25` }}
+              >
+                <span className="text-base">{p.icon}</span>
+                <span className="text-xs font-bold text-white/70">{p.name}</span>
+                <span className="text-xs font-black tabular-nums" style={{ color: p.color }}>
+                  {getPortfolioBalance(p.id).toFixed(1)} {preferences.baseCurrency}
+                </span>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] ml-auto">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Всего</span>
+              <span className="text-sm font-black text-white tabular-nums">
+                {totalBalance.toFixed(1)} {preferences.baseCurrency}
+              </span>
+            </div>
+          </div>
+        )}
 
         <main className="flex-1 w-full max-w-6xl mx-auto relative pb-36 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 px-5 lg:px-8">
           {children}

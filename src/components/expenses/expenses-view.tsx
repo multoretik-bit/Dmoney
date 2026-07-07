@@ -40,13 +40,6 @@ export function ExpensesView() {
     const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
     return c.excludeFromBudget || (parent && parent.excludeFromBudget);
   }).map(c => c.id));
-  const totalSpentToday = dayExpenses
-    .filter(e => viewMode !== 'personal' || !excludeIds.has(e.categoryId))
-    .reduce((sum, e) => sum + e.convertedAmount, 0);
-
-  const totalSpentMonth = filteredExpenses
-    .filter(e => e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (viewMode !== 'personal' || !excludeIds.has(e.categoryId)))
-    .reduce((sum, e) => sum + e.convertedAmount, 0);
 
   const ringExpenses = filteredExpenses.filter(e =>
     e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (viewMode !== 'personal' || !excludeIds.has(e.categoryId))
@@ -124,8 +117,7 @@ export function ExpensesView() {
         </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-      <div className="flex-1 min-w-0 w-full flex flex-col gap-6">
+      <div className="flex flex-col gap-6">
         {/* Month Selector */}
         <div
           className="flex justify-between items-center p-1.5 rounded-2xl self-center"
@@ -153,210 +145,77 @@ export function ExpensesView() {
           </button>
         </div>
 
-        {/* Summary Card — gradient hero */}
-        <div
-          className="rounded-[40px] p-8 flex flex-col gap-6 relative overflow-hidden"
-          style={{
-            background: `linear-gradient(145deg, ${accentColor.bg} 0%, rgba(9,14,26,1) 60%)`,
-            border: `1px solid ${accentColor.border}`,
-            boxShadow: `0 8px 40px rgba(0,0,0,0.5), 0 0 60px -20px ${accentColor.glow}`,
-          }}
-        >
-          {/* Subtle radial glow top-left */}
+        {/* Spending ring, attached to the calendar below */}
+        <div className="flex flex-col gap-3">
+          <SpendingRing expenses={ringExpenses} limit={ringLimit} emptyLabel="Нет трат за этот месяц" />
+
+          {(viewMode === 'work' || viewMode === 'large') && (
+            <button
+              onClick={() => {
+                const isWork = viewMode === 'work';
+                const current = isWork ? preferences.workBudgetLimit : preferences.largeBudgetLimit;
+                const val = prompt(
+                  `${current ? 'Введите новый' : 'Установите'} лимит для ${isWork ? 'рабочих трат' : 'крупных покупок'}:`,
+                  (current ?? 0).toString()
+                );
+                if (val === null) return;
+                if (isWork) useStore.getState().updatePreferences({ workBudgetLimit: parseFloat(val) || 0 });
+                else useStore.getState().updatePreferences({ largeBudgetLimit: parseFloat(val) || 0 });
+              }}
+              className="self-center px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+              style={{ background: accentColor.bg, border: `1px solid ${accentColor.border}`, color: accentColor.text }}
+            >
+              {ringLimit > 0 ? 'Изменить лимит' : 'Установить лимит'}
+            </button>
+          )}
+
+          {/* Calendar Grid */}
           <div
-            className="absolute -top-8 -left-8 w-40 h-40 rounded-full pointer-events-none"
-            style={{ background: `radial-gradient(circle, ${accentColor.glow} 0%, transparent 70%)`, opacity: 0.5 }}
-          />
+            className="rounded-[40px] p-6 shadow-card"
+            style={{
+              background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}
+          >
+            <div className="grid grid-cols-7 gap-y-3 text-center">
+              {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map(d => (
+                <span key={d} className="text-[9px] font-black text-white/15 tracking-widest uppercase mb-1">{d}</span>
+              ))}
+              {calendarDays.map((date, i) => {
+                const isSelected = isSameDay(date, selectedDate);
+                const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+                const hasSpending = getDaySpendingStatus(date);
+                const isToday = isSameDay(date, new Date());
 
-          <div className="flex flex-col items-center text-center relative z-10">
-            <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">
-              {isSameDay(selectedDate, new Date()) ? 'Траты за сегодня' : format(selectedDate, 'd MMMM', { locale: ru })}
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-2">
-              <span className="text-5xl font-black text-white leading-none tracking-tight">
-                ${totalSpentToday.toFixed(1)}
-              </span>
-            </div>
-
-            <div className="mt-4 flex flex-col items-center gap-0.5">
-              <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
-                За {format(currentMonth, 'MMMM', { locale: ru })}
-              </span>
-              <span className="text-xl font-black" style={{ color: accentColor.text }}>
-                ${totalSpentMonth.toFixed(1)}
-              </span>
-            </div>
-
-            {/* Work budget limit */}
-            {viewMode === 'work' && (preferences.workBudgetLimit || 0) > 0 && (
-              <div className="mt-6 flex flex-col gap-2 w-full max-w-[200px]">
-                <div className="flex justify-between items-end">
-                  <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Месячный лимит</span>
-                  <span className="text-sm font-black" style={{ color: accentColor.text }}>
-                    {Math.round((totalSpentMonth / (preferences.workBudgetLimit || 1)) * 100)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-white/[0.07] rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ background: accentColor.text }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, (expenses.filter(e => e.isWork && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.workBudgetLimit || 1)) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">
-                    Лимит: {preferences.workBudgetLimit} {baseCurrency}
-                  </span>
+                return (
                   <button
-                    onClick={() => {
-                      const val = prompt('Введите новый лимит для рабочих трат:', preferences.workBudgetLimit?.toString());
-                      if (val !== null) useStore.getState().updatePreferences({ workBudgetLimit: parseFloat(val) || 0 });
-                    }}
-                    className="text-[8px] font-black uppercase tracking-widest transition-colors"
-                    style={{ color: `${accentColor.text}60` }}
+                    key={i}
+                    onClick={() => setSelectedDate(date)}
+                    className="relative flex flex-col items-center justify-center h-11 rounded-2xl transition-all active:scale-90"
+                    style={isSelected ? {
+                      background: accentColor.text,
+                      boxShadow: `0 0 20px ${accentColor.glow}`,
+                      transform: 'scale(1.08)',
+                      zIndex: 10,
+                    } : {}}
                   >
-                    Изменить лимит
+                    <span className={cn(
+                      "text-[11px] font-black transition-colors",
+                      isSelected ? "text-white" : isCurrentMonth ? "text-white/60" : "text-white/12",
+                      isToday && !isSelected && "text-blue-400"
+                    )}>
+                      {format(date, 'd')}
+                    </span>
+                    {hasSpending && !isSelected && (
+                      <div
+                        className="absolute bottom-1.5 w-1 h-1 rounded-full"
+                        style={{ background: accentColor.text, boxShadow: `0 0 6px ${accentColor.glow}` }}
+                      />
+                    )}
                   </button>
-                </div>
-              </div>
-            )}
-
-            {viewMode === 'work' && (!preferences.workBudgetLimit || preferences.workBudgetLimit === 0) && (
-              <button
-                onClick={() => {
-                  const val = prompt('Установите лимит для рабочих трат:', '0');
-                  if (val !== null) useStore.getState().updatePreferences({ workBudgetLimit: parseFloat(val) || 0 });
-                }}
-                className="mt-6 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                style={{ background: `${accentColor.bg}`, border: `1px solid ${accentColor.border}`, color: accentColor.text }}
-              >
-                Установить лимит
-              </button>
-            )}
-
-            {/* Large budget limit */}
-            {viewMode === 'large' && (preferences.largeBudgetLimit || 0) > 0 && (
-              <div className="mt-6 flex flex-col gap-2 w-full max-w-[200px]">
-                <div className="flex justify-between items-end">
-                  <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Месячный лимит</span>
-                  <span className="text-sm font-black" style={{ color: accentColor.text }}>
-                    {Math.round((totalSpentMonth / (preferences.largeBudgetLimit || 1)) * 100)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full bg-white/[0.07] rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ background: accentColor.text }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(100, (expenses.filter(e => e.isLarge && e.date.startsWith(format(currentMonth, 'yyyy-MM'))).reduce((s, e) => s + e.convertedAmount, 0) / (preferences.largeBudgetLimit || 1)) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">
-                    Лимит: {preferences.largeBudgetLimit} {baseCurrency}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const val = prompt('Введите новый лимит для крупных покупок:', preferences.largeBudgetLimit?.toString());
-                      if (val !== null) useStore.getState().updatePreferences({ largeBudgetLimit: parseFloat(val) || 0 });
-                    }}
-                    className="text-[8px] font-black uppercase tracking-widest transition-colors"
-                    style={{ color: `${accentColor.text}60` }}
-                  >
-                    Изменить лимит
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {viewMode === 'large' && (!preferences.largeBudgetLimit || preferences.largeBudgetLimit === 0) && (
-              <button
-                onClick={() => {
-                  const val = prompt('Установите лимит для крупных покупок:', '0');
-                  if (val !== null) useStore.getState().updatePreferences({ largeBudgetLimit: parseFloat(val) || 0 });
-                }}
-                className="mt-6 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                style={{ background: `${accentColor.bg}`, border: `1px solid ${accentColor.border}`, color: accentColor.text }}
-              >
-                Установить лимит
-              </button>
-            )}
-          </div>
-
-          {/* Mini bar chart */}
-          <div className="h-14 flex items-end justify-between gap-1 px-1 relative z-10">
-            {eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) }).map((date, i) => {
-              const dayTotal = filteredExpenses.filter(e => isSameDay(new Date(e.date), date)).reduce((sum, e) => sum + e.convertedAmount, 0);
-              const monthMax = Math.max(...eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) }).map(d =>
-                filteredExpenses.filter(e => isSameDay(new Date(e.date), d)).reduce((sum, e) => sum + e.convertedAmount, 0)
-              ), 10);
-              const height = (dayTotal / monthMax) * 100;
-              const isSelected = isSameDay(date, selectedDate);
-              const isToday = isSameDay(date, new Date());
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => setSelectedDate(date)}
-                  className="flex-1 rounded-full transition-all duration-300"
-                  style={{
-                    height: `${Math.max(height, 8)}%`,
-                    background: isSelected ? '#ffffff' : isToday ? accentColor.text : 'rgba(255,255,255,0.08)',
-                    boxShadow: isSelected ? `0 0 8px rgba(255,255,255,0.3)` : undefined,
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Calendar Grid */}
-        <div
-          className="rounded-[40px] p-6 shadow-card"
-          style={{
-            background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          <div className="grid grid-cols-7 gap-y-3 text-center">
-            {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map(d => (
-              <span key={d} className="text-[9px] font-black text-white/15 tracking-widest uppercase mb-1">{d}</span>
-            ))}
-            {calendarDays.map((date, i) => {
-              const isSelected = isSameDay(date, selectedDate);
-              const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-              const hasSpending = getDaySpendingStatus(date);
-              const isToday = isSameDay(date, new Date());
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => setSelectedDate(date)}
-                  className="relative flex flex-col items-center justify-center h-11 rounded-2xl transition-all active:scale-90"
-                  style={isSelected ? {
-                    background: accentColor.text,
-                    boxShadow: `0 0 20px ${accentColor.glow}`,
-                    transform: 'scale(1.08)',
-                    zIndex: 10,
-                  } : {}}
-                >
-                  <span className={cn(
-                    "text-[11px] font-black transition-colors",
-                    isSelected ? "text-white" : isCurrentMonth ? "text-white/60" : "text-white/12",
-                    isToday && !isSelected && "text-blue-400"
-                  )}>
-                    {format(date, 'd')}
-                  </span>
-                  {hasSpending && !isSelected && (
-                    <div
-                      className="absolute bottom-1.5 w-1 h-1 rounded-full"
-                      style={{ background: accentColor.text, boxShadow: `0 0 6px ${accentColor.glow}` }}
-                    />
-                  )}
-                </button>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -426,11 +285,6 @@ export function ExpensesView() {
             )}
           </div>
         </div>
-      </div>
-
-      <div className="w-full lg:w-[320px] flex-shrink-0">
-        <SpendingRing expenses={ringExpenses} limit={ringLimit} emptyLabel="Нет трат за этот месяц" />
-      </div>
       </div>
 
       <AddExpenseModal
