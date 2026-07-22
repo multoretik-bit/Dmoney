@@ -96,3 +96,10 @@ CREATE POLICY "Users can manage their own preferences" ON user_preferences FOR A
 
 -- 5. Enable Realtime explicitly (if needed via SQL instead of UI)
 -- ALTER PUBLICATION supabase_realtime ADD TABLE categories, portfolios, folders, wallets, transactions, user_preferences;
+
+-- 6. Incremental columns used by the app that aren't in the original CREATE TABLE above.
+-- Safe to re-run: only adds a column if it's missing.
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS work_budget_limit NUMERIC DEFAULT 0;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS large_budget_limit NUMERIC DEFAULT 0;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS capital_history JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goal JSONB;
