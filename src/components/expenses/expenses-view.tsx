@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SpendingRing } from '@/components/wallets/spending-ring';
+import { SavingsGoalWidget } from './savings-goal-widget';
 
 export function ExpensesView() {
   const { expenses, preferences, categories } = useStore();
@@ -116,6 +117,8 @@ export function ExpensesView() {
           </button>
         </div>
       </header>
+
+      <SavingsGoalWidget />
 
       <div className="flex flex-col gap-6">
         {/* Month Selector */}

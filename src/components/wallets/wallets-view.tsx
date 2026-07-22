@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, FolderIcon, ChevronRight, ChevronDown, ChevronLeft, FolderPlus, Check, AlertCircle, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, Edit2, FolderIcon, ChevronRight, ChevronDown, ChevronLeft, FolderPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useStore, Portfolio, Folder, Wallet } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ import { SpendingRing } from './spending-ring';
 export function WalletsView() {
   const {
     portfolios, folders, wallets, deletePortfolio, deleteFolder, deleteWallet,
-    updatePortfolioOrder, preferences, transferFunds, categories, expenses,
+    updatePortfolioOrder, preferences, categories, expenses,
     selectedPortfolioId, setSelectedPortfolioId,
   } = useStore();
   const { baseCurrency } = preferences;
@@ -52,55 +52,6 @@ export function WalletsView() {
 
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
   const { ref: scrollRef, props: dragScrollProps } = useDragScroll();
-
-  const [isDistributed, setIsDistributed] = useState(false);
-  const [isDistributing, setIsDistributing] = useState(false);
-
-  const personalPortfolioId = preferences.personalPortfolioId;
-  const personalPortfolioLimit = preferences.personalPortfolioLimit || 0;
-
-  const personalBalance = personalPortfolioId
-    ? wallets
-        .filter(w => w.portfolioId === personalPortfolioId)
-        .reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0)
-    : 0;
-
-  const freeMoney = personalPortfolioId && personalBalance > personalPortfolioLimit
-    ? personalBalance - personalPortfolioLimit
-    : 0;
-
-  const handleDistribute = async () => {
-    if (!preferences.sourceWalletId || freeMoney <= 0) return;
-    setIsDistributing(true);
-
-    const workAmtBase = freeMoney * (preferences.workPercentage ?? 50) / 100;
-    const investAmtBase = freeMoney * (preferences.investPercentage ?? 30) / 100;
-    const savingsAmtBase = freeMoney * (preferences.savingsPercentage ?? 20) / 100;
-
-    const sourceWallet = wallets.find(w => w.id === preferences.sourceWalletId);
-    if (!sourceWallet) {
-      setIsDistributing(false);
-      return;
-    }
-
-    const workAmtSrc = convertAmount(workAmtBase, baseCurrency, sourceWallet.currency);
-    const investAmtSrc = convertAmount(investAmtBase, baseCurrency, sourceWallet.currency);
-    const savingsAmtSrc = convertAmount(savingsAmtBase, baseCurrency, sourceWallet.currency);
-
-    if (preferences.workWalletId && workAmtSrc > 0) {
-      await transferFunds(preferences.sourceWalletId, preferences.workWalletId, workAmtSrc);
-    }
-    if (preferences.investWalletId && investAmtSrc > 0) {
-      await transferFunds(preferences.sourceWalletId, preferences.investWalletId, investAmtSrc);
-    }
-    if (preferences.savingsWalletId && savingsAmtSrc > 0) {
-      await transferFunds(preferences.sourceWalletId, preferences.savingsWalletId, savingsAmtSrc);
-    }
-
-    setIsDistributed(true);
-    setIsDistributing(false);
-    setTimeout(() => setIsDistributed(false), 4000);
-  };
 
   const sortedPortfolios = [...portfolios].sort((a, b) => {
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -238,101 +189,6 @@ export function WalletsView() {
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Center column */}
         <div className="flex-1 min-w-0 w-full flex flex-col gap-10">
-          {/* Free Money Gamification Widget */}
-          <AnimatePresence>
-            {freeMoney > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                className="p-6 bg-gradient-to-r from-accent/20 to-emerald-500/20 border border-white/10 rounded-[32px] backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col gap-4"
-              >
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-accent/20 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Геймификация: Распределите Свободные Деньги 🎯</span>
-                    <h3 className="text-2xl font-black text-white">
-                      У вас есть <span className="text-accent">${freeMoney.toFixed(1)}</span> свободных денег!
-                    </h3>
-                    <p className="text-[10px] font-bold text-white/40">
-                      Лимит личного капитала в ${personalPortfolioLimit} превышен. Распределите остаток:
-                    </p>
-                  </div>
-
-                  {isDistributed ? (
-                    <motion.div
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-wider"
-                    >
-                      <Check size={18} strokeWidth={3} />
-                      Успешно распределено!
-                    </motion.div>
-                  ) : (
-                    <button
-                      onClick={handleDistribute}
-                      disabled={isDistributing || !preferences.sourceWalletId || (!preferences.workWalletId && !preferences.investWalletId && !preferences.savingsWalletId)}
-                      className="bg-white hover:bg-white/90 text-black px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 self-start md:self-auto disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                      {isDistributing ? (
-                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <span>Выполнено</span>
-                          <ArrowRight size={14} strokeWidth={3} />
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-                  <div className="bg-black/20 p-4 rounded-2xl border border-white/5 flex flex-col gap-1">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40 font-bold">Рабочий Капитал ({preferences.workPercentage ?? 50}%)</span>
-                    <span className="text-lg font-black text-white">
-                      ${(freeMoney * (preferences.workPercentage ?? 50) / 100).toFixed(1)}
-                    </span>
-                    <span className="text-[8px] font-bold text-white/30 truncate">
-                      {preferences.workWalletId
-                        ? `В счет: ${wallets.find(w => w.id === preferences.workWalletId)?.name || 'Неизвестно'}`
-                        : '⚠️ Настройте счет в настройках'}
-                    </span>
-                  </div>
-                  <div className="bg-black/20 p-4 rounded-2xl border border-white/5 flex flex-col gap-1">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40 font-bold">Инвестиционный ({preferences.investPercentage ?? 30}%)</span>
-                    <span className="text-lg font-black text-white">
-                      ${(freeMoney * (preferences.investPercentage ?? 30) / 100).toFixed(1)}
-                    </span>
-                    <span className="text-[8px] font-bold text-white/30 truncate">
-                      {preferences.investWalletId
-                        ? `В счет: ${wallets.find(w => w.id === preferences.investWalletId)?.name || 'Неизвестно'}`
-                        : '⚠️ Настройте счет в настройках'}
-                    </span>
-                  </div>
-                  <div className="bg-black/20 p-4 rounded-2xl border border-white/5 flex flex-col gap-1">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40 font-bold">Сберегательный ({preferences.savingsPercentage ?? 20}%)</span>
-                    <span className="text-lg font-black text-white">
-                      ${(freeMoney * (preferences.savingsPercentage ?? 20) / 100).toFixed(1)}
-                    </span>
-                    <span className="text-[8px] font-bold text-white/30 truncate">
-                      {preferences.savingsWalletId
-                        ? `В счет: ${wallets.find(w => w.id === preferences.savingsWalletId)?.name || 'Неизвестно'}`
-                        : '⚠️ Настройте счет в настройках'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 mt-1">
-                  <AlertCircle size={12} className="text-accent text-emerald-500" />
-                  <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
-                    Списание из: {preferences.sourceWalletId ? wallets.find(w => w.id === preferences.sourceWalletId)?.name : '⚠️ Настройте счет списания в настройках'}
-                  </span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Accounts as virtual cards */}
           <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center px-1">

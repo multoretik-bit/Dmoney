@@ -64,23 +64,18 @@ export interface DailyCapitalEntry {
   portfolioTotals: { [id: string]: number };
 }
 
+export interface SavingsGoal {
+  month: string;
+  target: number;
+  saved: number;
+}
+
 export interface UserPreferences {
   baseCurrency: string;
   savedColors: string[];
   workBudgetLimit?: number;
   largeBudgetLimit?: number;
-  personalPortfolioId?: string;
-  personalPortfolioLimit?: number;
-  workPortfolioId?: string;
-  investPortfolioId?: string;
-  savingsPortfolioId?: string;
-  workPercentage?: number;
-  investPercentage?: number;
-  savingsPercentage?: number;
-  sourceWalletId?: string;
-  workWalletId?: string;
-  investWalletId?: string;
-  savingsWalletId?: string;
+  savingsGoal?: SavingsGoal;
 }
 
 interface UserState {
@@ -100,6 +95,8 @@ interface UserState {
   setAuthModalOpen: (open: boolean) => void;
   setSelectedPortfolioId: (id: string) => void;
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
+  setSavingsGoalTarget: (target: number) => void;
+  addSavingsProgress: (amount: number) => void;
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => Promise<void>;
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
@@ -138,9 +135,6 @@ export const useStore = create<UserState>()(
       preferences: {
         baseCurrency: 'USD',
         savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
-        workPercentage: 50,
-        investPercentage: 30,
-        savingsPercentage: 20,
       },
       categories: [
         { id: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Дом', icon: '🏠', color: '#8b5cf6', sortOrder: 0 },
@@ -199,6 +193,33 @@ export const useStore = create<UserState>()(
       },
 
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
+
+      setSavingsGoalTarget: (target) => set((state) => {
+        const month = new Date().toISOString().slice(0, 7);
+        const current = state.preferences.savingsGoal;
+        return {
+          preferences: {
+            ...state.preferences,
+            savingsGoal: {
+              month,
+              target,
+              saved: current && current.month === month ? current.saved : 0,
+            },
+          },
+        };
+      }),
+
+      addSavingsProgress: (amount) => set((state) => {
+        const month = new Date().toISOString().slice(0, 7);
+        const current = state.preferences.savingsGoal;
+        if (!current || current.month !== month) return {};
+        return {
+          preferences: {
+            ...state.preferences,
+            savingsGoal: { ...current, saved: Math.max(0, current.saved + amount) },
+          },
+        };
+      }),
       addSavedColor: (color) => set((state) => {
         if (state.preferences.savedColors.includes(color)) return state;
         return { preferences: { ...state.preferences, savedColors: [...state.preferences.savedColors, color] } };
@@ -695,18 +716,7 @@ export const useStore = create<UserState>()(
               savedColors: prefs.data.saved_colors || currentPrefs.savedColors || [],
               workBudgetLimit: prefs.data.work_budget_limit !== undefined ? (prefs.data.work_budget_limit || 0) : currentPrefs.workBudgetLimit,
               largeBudgetLimit: prefs.data.large_budget_limit !== undefined ? (prefs.data.large_budget_limit || 0) : currentPrefs.largeBudgetLimit,
-              personalPortfolioId: prefs.data.personal_portfolio_id !== undefined ? prefs.data.personal_portfolio_id : currentPrefs.personalPortfolioId,
-              personalPortfolioLimit: prefs.data.personal_portfolio_limit !== undefined ? prefs.data.personal_portfolio_limit : currentPrefs.personalPortfolioLimit,
-              workPortfolioId: prefs.data.work_portfolio_id !== undefined ? prefs.data.work_portfolio_id : currentPrefs.workPortfolioId,
-              investPortfolioId: prefs.data.invest_portfolio_id !== undefined ? prefs.data.invest_portfolio_id : currentPrefs.investPortfolioId,
-              savingsPortfolioId: prefs.data.savings_portfolio_id !== undefined ? prefs.data.savings_portfolio_id : currentPrefs.savingsPortfolioId,
-              workPercentage: prefs.data.work_percentage !== undefined ? prefs.data.work_percentage : currentPrefs.workPercentage,
-              investPercentage: prefs.data.invest_percentage !== undefined ? prefs.data.invest_percentage : currentPrefs.investPercentage,
-              savingsPercentage: prefs.data.savings_percentage !== undefined ? prefs.data.savings_percentage : currentPrefs.savingsPercentage,
-              sourceWalletId: prefs.data.source_wallet_id !== undefined ? prefs.data.source_wallet_id : currentPrefs.sourceWalletId,
-              workWalletId: prefs.data.work_wallet_id !== undefined ? prefs.data.work_wallet_id : currentPrefs.workWalletId,
-              investWalletId: prefs.data.invest_wallet_id !== undefined ? prefs.data.invest_wallet_id : currentPrefs.investWalletId,
-              savingsWalletId: prefs.data.savings_wallet_id !== undefined ? prefs.data.savings_wallet_id : currentPrefs.savingsWalletId,
+              savingsGoal: prefs.data.savings_goal !== undefined ? prefs.data.savings_goal : currentPrefs.savingsGoal,
             }});
             
             if (prefs.data.capital_history) {
@@ -733,18 +743,7 @@ export const useStore = create<UserState>()(
            saved_colors: state.preferences.savedColors,
            work_budget_limit: state.preferences.workBudgetLimit || 0,
            large_budget_limit: state.preferences.largeBudgetLimit || 0,
-           personal_portfolio_id: state.preferences.personalPortfolioId || null,
-           personal_portfolio_limit: state.preferences.personalPortfolioLimit || null,
-           work_portfolio_id: state.preferences.workPortfolioId || null,
-           invest_portfolio_id: state.preferences.investPortfolioId || null,
-           savings_portfolio_id: state.preferences.savingsPortfolioId || null,
-           work_percentage: state.preferences.workPercentage || null,
-           invest_percentage: state.preferences.investPercentage || null,
-           savings_percentage: state.preferences.savingsPercentage || null,
-           source_wallet_id: state.preferences.sourceWalletId || null,
-           work_wallet_id: state.preferences.workWalletId || null,
-           invest_wallet_id: state.preferences.investWalletId || null,
-           savings_wallet_id: state.preferences.savingsWalletId || null,
+           savings_goal: state.preferences.savingsGoal || null,
            capital_history: state.capitalHistory || [],
            updated_at: new Date().toISOString()
          };
