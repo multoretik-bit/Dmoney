@@ -1,12 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore, currentMonthKey } from '@/store/useStore';
 import { Plus, PiggyBank, Check } from 'lucide-react';
-
-function currentMonthKey() {
-  return new Date().toISOString().slice(0, 7);
-}
 
 export function SavingsGoalWidget() {
   const { preferences, setSavingsGoalTarget, addSavingsProgress } = useStore();

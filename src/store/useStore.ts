@@ -4,6 +4,11 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { convertAmount } from '@/lib/exchange';
 
+export function currentMonthKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 export interface Category {
   id: string;
   parentId?: string;
@@ -195,7 +200,7 @@ export const useStore = create<UserState>()(
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
 
       setSavingsGoalTarget: (target) => set((state) => {
-        const month = new Date().toISOString().slice(0, 7);
+        const month = currentMonthKey();
         const current = state.preferences.savingsGoal;
         return {
           preferences: {
@@ -210,13 +215,17 @@ export const useStore = create<UserState>()(
       }),
 
       addSavingsProgress: (amount) => set((state) => {
-        const month = new Date().toISOString().slice(0, 7);
+        const month = currentMonthKey();
         const current = state.preferences.savingsGoal;
-        if (!current || current.month !== month) return {};
+        const sameMonth = current && current.month === month;
         return {
           preferences: {
             ...state.preferences,
-            savingsGoal: { ...current, saved: Math.max(0, current.saved + amount) },
+            savingsGoal: {
+              month,
+              target: sameMonth ? current!.target : 0,
+              saved: Math.max(0, (sameMonth ? current!.saved : 0) + amount),
+            },
           },
         };
       }),
@@ -758,12 +767,23 @@ export const useStore = create<UserState>()(
          };
 
          const prefUpsert = (async () => {
-            const res = await supabase.from('user_preferences').upsert(prefDataWithAll, { onConflict: 'user_id' });
-            if (res.error) {
-               console.warn('⚠️ Failed to upsert all preferences, falling back to standard columns...', res.error);
-               return supabase.from('user_preferences').upsert(prefDataFallback, { onConflict: 'user_id' });
+            let payload: Record<string, any> = { ...prefDataWithAll };
+            for (let attempt = 0; attempt < 8; attempt++) {
+               const res = await supabase.from('user_preferences').upsert(payload, { onConflict: 'user_id' });
+               if (!res.error) return res;
+
+               const match = /['"]([a-zA-Z0-9_]+)['"]\s*column|column\s*['"]([a-zA-Z0-9_]+)['"]/i.exec(res.error.message || '');
+               const missingCol = match?.[1] || match?.[2];
+               if (!missingCol || !(missingCol in payload) || missingCol === 'user_id') {
+                  console.warn('⚠️ Failed to upsert preferences, falling back to standard columns...', res.error);
+                  return supabase.from('user_preferences').upsert(prefDataFallback, { onConflict: 'user_id' });
+               }
+
+               console.warn(`⚠️ Column "${missingCol}" missing on user_preferences, retrying without it (run supabase/schema.sql to add it permanently)`);
+               const { [missingCol]: _dropped, ...rest } = payload;
+               payload = rest;
             }
-            return res;
+            return supabase.from('user_preferences').upsert(prefDataFallback, { onConflict: 'user_id' });
          })();
          
          try {

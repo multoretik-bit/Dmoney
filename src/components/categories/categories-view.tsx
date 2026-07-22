@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useStore, Category } from '@/store/useStore';
+import { useStore, Category, currentMonthKey } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw, Edit2, ArrowUp, ArrowDown, CircleDollarSign } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -18,8 +18,7 @@ import { useEffect } from 'react';
 export function CategoriesView() {
   const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences, setSavingsGoalTarget, updateCategoryOrder } = useStore();
   const { baseCurrency = 'USD' } = preferences || {};
-  const currentMonthKey = format(new Date(), 'yyyy-MM');
-  const currentSavingsGoal = preferences.savingsGoal?.month === currentMonthKey ? preferences.savingsGoal : null;
+  const currentSavingsGoal = preferences.savingsGoal?.month === currentMonthKey() ? preferences.savingsGoal : null;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
