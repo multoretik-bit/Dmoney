@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useStore, Category, currentMonthKey } from '@/store/useStore';
+import { useStore, Category, currentMonthKey, SavingsGoalCategory } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, ChevronRight, FolderPlus, Plus, Tag, LogOut, User as UserIcon, Mail, Fingerprint, Globe, RefreshCw, Edit2, ArrowUp, ArrowDown, CircleDollarSign } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -15,10 +15,16 @@ import { AddCategoryModal } from './add-category-modal';
 import { fetchCBRRates, CBRResponse } from '@/lib/cbr';
 import { useEffect } from 'react';
 
+const SAVINGS_GOAL_CATEGORIES: { key: SavingsGoalCategory; label: string; icon: string; color: string }[] = [
+  { key: 'work', label: 'В работу', icon: '💼', color: '#f59e0b' },
+  { key: 'savings', label: 'Откладывать', icon: '💰', color: '#60a5fa' },
+  { key: 'invest', label: 'Инвестировать', icon: '📈', color: '#8b5cf6' },
+];
+
 export function CategoriesView() {
   const { user, setUser, pullData, pushData, setAuthModalOpen, categories, preferences, updatePreferences, setSavingsGoalTarget, updateCategoryOrder } = useStore();
   const { baseCurrency = 'USD' } = preferences || {};
-  const currentSavingsGoal = preferences.savingsGoal?.month === currentMonthKey() ? preferences.savingsGoal : null;
+  const month = currentMonthKey();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [initialParentId, setInitialParentId] = useState<string | undefined>(undefined);
@@ -241,27 +247,39 @@ export function CategoriesView() {
           <div className="h-px bg-white/5 flex-1" />
         </div>
 
-        <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-4 shadow-xl">
+        <div className="bg-[#1c2128] rounded-[48px] p-8 border border-white/5 flex flex-col gap-6 shadow-xl">
           <p className="text-xs font-bold text-white/40">
-            Укажите сумму, которую хотите отложить в этом месяце. Прогресс отображается на главной странице и сбрасывается в начале каждого нового месяца.
+            Укажите суммы, которые хотите отложить в этом месяце по каждому направлению. Прогресс отображается на главной странице и сбрасывается в начале каждого нового месяца.
           </p>
-          <div className="flex flex-col gap-2 max-w-xs">
-            <label className="text-[10px] font-bold text-white/30 uppercase">
-              Сумма на {format(new Date(), 'LLLL', { locale: ru })} ({baseCurrency})
-            </label>
-            <input
-              type="number"
-              className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
-              value={currentSavingsGoal?.target || ''}
-              onChange={(e) => setSavingsGoalTarget(parseFloat(e.target.value) || 0)}
-              placeholder="Например, 300"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {SAVINGS_GOAL_CATEGORIES.map(({ key, label, icon, color }) => {
+              const goal = preferences.savingsGoals?.[key]?.month === month ? preferences.savingsGoals?.[key] : null;
+              return (
+                <div key={key} className="flex flex-col gap-3 p-5 bg-white/5 rounded-3xl border border-white/5">
+                  <span className="text-xs font-black uppercase tracking-wider flex items-center gap-2" style={{ color }}>
+                    <span className="text-base">{icon}</span> {label}
+                  </span>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-bold text-white/30 uppercase">
+                      Сумма на {format(new Date(), 'LLLL', { locale: ru })} ({baseCurrency})
+                    </label>
+                    <input
+                      type="number"
+                      className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/5 outline-none"
+                      value={goal?.target || ''}
+                      onChange={(e) => setSavingsGoalTarget(key, parseFloat(e.target.value) || 0)}
+                      placeholder="Например, 300"
+                    />
+                  </div>
+                  {goal && goal.target > 0 && (
+                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-wider">
+                      Отложено: {goal.saved.toFixed(0)} / {goal.target.toFixed(0)} {baseCurrency}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          {currentSavingsGoal && currentSavingsGoal.target > 0 && (
-            <p className="text-[10px] font-bold text-white/20 uppercase tracking-wider">
-              Отложено: {currentSavingsGoal.saved.toFixed(0)} / {currentSavingsGoal.target.toFixed(0)} {baseCurrency}
-            </p>
-          )}
         </div>
       </section>
 

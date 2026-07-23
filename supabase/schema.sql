@@ -102,4 +102,7 @@ CREATE POLICY "Users can manage their own preferences" ON user_preferences FOR A
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS work_budget_limit NUMERIC DEFAULT 0;
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS large_budget_limit NUMERIC DEFAULT 0;
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS capital_history JSONB DEFAULT '[]'::jsonb;
-ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goal JSONB;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goal JSONB; -- deprecated, superseded by savings_goals below
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goals JSONB; -- { work: {month,target,saved}, savings: {...}, invest: {...} }
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_subscription BOOLEAN DEFAULT false;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS subscription_next_charge_date DATE;

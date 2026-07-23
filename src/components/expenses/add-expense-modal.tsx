@@ -31,6 +31,8 @@ export function AddExpenseModal({
   const [walletId, setWalletId] = useState('');
   const [isWork, setIsWork] = useState(false);
   const [isLarge, setIsLarge] = useState(false);
+  const [isSubscription, setIsSubscription] = useState(false);
+  const [subscriptionNextChargeDate, setSubscriptionNextChargeDate] = useState('');
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
 
   // Auto-select logic
@@ -43,6 +45,8 @@ export function AddExpenseModal({
         setWalletId(editingExpense.walletId);
         setIsWork(!!editingExpense.isWork);
         setIsLarge(!!editingExpense.isLarge);
+        setIsSubscription(!!editingExpense.isSubscription);
+        setSubscriptionNextChargeDate(editingExpense.subscriptionNextChargeDate || '');
       } else if (expenses.length > 0) {
         const last = expenses[expenses.length - 1];
         setCategoryId(last.categoryId);
@@ -51,12 +55,16 @@ export function AddExpenseModal({
         setAmountInput('');
         setIsWork(initialViewMode === 'work');
         setIsLarge(initialViewMode === 'large');
+        setIsSubscription(false);
+        setSubscriptionNextChargeDate('');
       } else {
         if (wallets.length > 0) setWalletId(wallets[0].id);
         setCurrency(baseCurrency);
         setAmountInput('');
         setIsWork(initialViewMode === 'work');
         setIsLarge(initialViewMode === 'large');
+        setIsSubscription(false);
+        setSubscriptionNextChargeDate('');
       }
     }
   }, [isOpen, editingExpense, expenses, wallets, baseCurrency]);
@@ -95,7 +103,9 @@ export function AddExpenseModal({
       walletId,
       date: editingExpense ? editingExpense.date : new Date().toISOString(),
       isWork,
-      isLarge
+      isLarge,
+      isSubscription,
+      subscriptionNextChargeDate: isSubscription ? (subscriptionNextChargeDate || undefined) : undefined
     };
 
     if (editingExpense) {
@@ -357,15 +367,62 @@ export function AddExpenseModal({
                   "w-14 h-8 rounded-full p-1 transition-all",
                   isLarge ? "bg-purple-500" : "bg-white/10"
                 )}>
-                  <motion.div 
+                  <motion.div
                     animate={{ x: isLarge ? 24 : 0 }}
                     className="w-6 h-6 bg-white rounded-full shadow-lg"
                   />
                 </div>
               </div>
+
+              {/* Subscription Toggle */}
+              <div className="flex flex-col gap-4">
+                <div
+                  onClick={() => setIsSubscription(!isSubscription)}
+                  className={cn(
+                    "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
+                    isSubscription
+                      ? "bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.1)]"
+                      : "bg-white/5 border-transparent hover:bg-white/10"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
+                      isSubscription ? "bg-emerald-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
+                    )}>
+                      🔁
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={cn("text-base font-black transition-colors", isSubscription ? "text-emerald-500" : "text-white/60")}>Подписка</span>
+                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Показать дату след. списания</span>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "w-14 h-8 rounded-full p-1 transition-all",
+                    isSubscription ? "bg-emerald-500" : "bg-white/10"
+                  )}>
+                    <motion.div
+                      animate={{ x: isSubscription ? 24 : 0 }}
+                      className="w-6 h-6 bg-white rounded-full shadow-lg"
+                    />
+                  </div>
+                </div>
+
+                {isSubscription && (
+                  <div className="p-6 bg-emerald-500/5 rounded-[32px] border border-emerald-500/20 flex flex-col gap-3">
+                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Дата следующего списания</label>
+                    <input
+                      type="date"
+                      value={subscriptionNextChargeDate}
+                      onChange={(e) => setSubscriptionNextChargeDate(e.target.value)}
+                      className="bg-black/30 p-4 rounded-2xl text-white font-bold border border-white/10 outline-none"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
-            <button 
+            <button
               onClick={handleSave}
               disabled={!amountInput || !categoryId || !walletId}
               className="mt-6 min-h-[80px] bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-2xl shadow-accent/20 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group"

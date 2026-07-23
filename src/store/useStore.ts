@@ -9,6 +9,25 @@ export function currentMonthKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+async function resilientUpsert(table: string, rows: Record<string, any>[], conflictKey: string) {
+  let payload = rows;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await supabase.from(table).upsert(payload, { onConflict: conflictKey });
+    if (!res.error) return res;
+
+    const match = /['"]([a-zA-Z0-9_]+)['"]\s*column|column\s*['"]([a-zA-Z0-9_]+)['"]/i.exec(res.error.message || '');
+    const missingCol = match?.[1] || match?.[2];
+    if (!missingCol || !payload.some(r => missingCol in r)) return res;
+
+    console.warn(`⚠️ Column "${missingCol}" missing on ${table}, retrying without it (run supabase/schema.sql to add it permanently)`);
+    payload = payload.map(row => {
+      const { [missingCol]: _dropped, ...rest } = row;
+      return rest;
+    });
+  }
+  return supabase.from(table).upsert(payload, { onConflict: conflictKey });
+}
+
 export interface Category {
   id: string;
   parentId?: string;
@@ -61,6 +80,8 @@ export interface Expense {
   date: string;
   isWork?: boolean;
   isLarge?: boolean;
+  isSubscription?: boolean;
+  subscriptionNextChargeDate?: string;
 }
 
 export interface DailyCapitalEntry {
@@ -69,18 +90,22 @@ export interface DailyCapitalEntry {
   portfolioTotals: { [id: string]: number };
 }
 
+export type SavingsGoalCategory = 'work' | 'savings' | 'invest';
+
 export interface SavingsGoal {
   month: string;
   target: number;
   saved: number;
 }
 
+export type SavingsGoals = Partial<Record<SavingsGoalCategory, SavingsGoal>>;
+
 export interface UserPreferences {
   baseCurrency: string;
   savedColors: string[];
   workBudgetLimit?: number;
   largeBudgetLimit?: number;
-  savingsGoal?: SavingsGoal;
+  savingsGoals?: SavingsGoals;
 }
 
 interface UserState {
@@ -100,8 +125,8 @@ interface UserState {
   setAuthModalOpen: (open: boolean) => void;
   setSelectedPortfolioId: (id: string) => void;
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
-  setSavingsGoalTarget: (target: number) => void;
-  addSavingsProgress: (amount: number) => void;
+  setSavingsGoalTarget: (category: SavingsGoalCategory, target: number) => void;
+  addSavingsProgress: (category: SavingsGoalCategory, amount: number) => void;
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => Promise<void>;
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
@@ -199,32 +224,38 @@ export const useStore = create<UserState>()(
 
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
 
-      setSavingsGoalTarget: (target) => set((state) => {
+      setSavingsGoalTarget: (category, target) => set((state) => {
         const month = currentMonthKey();
-        const current = state.preferences.savingsGoal;
+        const current = state.preferences.savingsGoals?.[category];
         return {
           preferences: {
             ...state.preferences,
-            savingsGoal: {
-              month,
-              target,
-              saved: current && current.month === month ? current.saved : 0,
+            savingsGoals: {
+              ...state.preferences.savingsGoals,
+              [category]: {
+                month,
+                target,
+                saved: current && current.month === month ? current.saved : 0,
+              },
             },
           },
         };
       }),
 
-      addSavingsProgress: (amount) => set((state) => {
+      addSavingsProgress: (category, amount) => set((state) => {
         const month = currentMonthKey();
-        const current = state.preferences.savingsGoal;
+        const current = state.preferences.savingsGoals?.[category];
         const sameMonth = current && current.month === month;
         return {
           preferences: {
             ...state.preferences,
-            savingsGoal: {
-              month,
-              target: sameMonth ? current!.target : 0,
-              saved: Math.max(0, (sameMonth ? current!.saved : 0) + amount),
+            savingsGoals: {
+              ...state.preferences.savingsGoals,
+              [category]: {
+                month,
+                target: sameMonth ? current!.target : 0,
+                saved: Math.max(0, (sameMonth ? current!.saved : 0) + amount),
+              },
             },
           },
         };
@@ -714,7 +745,9 @@ export const useStore = create<UserState>()(
                  walletId: e.wallet_id,
                  date: e.date,
                  isWork: e.is_work,
-                 isLarge: e.is_large
+                 isLarge: e.is_large,
+                 isSubscription: e.is_subscription,
+                 subscriptionNextChargeDate: e.subscription_next_charge_date
             })) });
           }
 
@@ -725,7 +758,9 @@ export const useStore = create<UserState>()(
               savedColors: prefs.data.saved_colors || currentPrefs.savedColors || [],
               workBudgetLimit: prefs.data.work_budget_limit !== undefined ? (prefs.data.work_budget_limit || 0) : currentPrefs.workBudgetLimit,
               largeBudgetLimit: prefs.data.large_budget_limit !== undefined ? (prefs.data.large_budget_limit || 0) : currentPrefs.largeBudgetLimit,
-              savingsGoal: prefs.data.savings_goal !== undefined ? prefs.data.savings_goal : currentPrefs.savingsGoal,
+              savingsGoals: prefs.data.savings_goals !== undefined
+                ? prefs.data.savings_goals
+                : (prefs.data.savings_goal ? { savings: prefs.data.savings_goal } : currentPrefs.savingsGoals),
             }});
             
             if (prefs.data.capital_history) {
@@ -752,7 +787,7 @@ export const useStore = create<UserState>()(
            saved_colors: state.preferences.savedColors,
            work_budget_limit: state.preferences.workBudgetLimit || 0,
            large_budget_limit: state.preferences.largeBudgetLimit || 0,
-           savings_goal: state.preferences.savingsGoal || null,
+           savings_goals: state.preferences.savingsGoals || null,
            capital_history: state.capitalHistory || [],
            updated_at: new Date().toISOString()
          };
@@ -828,7 +863,7 @@ export const useStore = create<UserState>()(
                   target_amount: w.targetAmount,
                   sort_order: w.sortOrder || 0
                })), { onConflict: 'id' }),
-               supabase.from('transactions').upsert(state.expenses.map(e => ({
+               resilientUpsert('transactions', state.expenses.map(e => ({
                   id: e.id,
                   user_id: user.id,
                   category_id: e.categoryId,
@@ -840,8 +875,10 @@ export const useStore = create<UserState>()(
                   exchange_rate: e.exchangeRate,
                   date: e.date,
                   is_work: e.isWork || false,
-                  is_large: e.isLarge || false
-               })), { onConflict: 'id' }),
+                  is_large: e.isLarge || false,
+                  is_subscription: e.isSubscription || false,
+                  subscription_next_charge_date: e.subscriptionNextChargeDate || null
+               })), 'id'),
                prefUpsert
              ]);
 

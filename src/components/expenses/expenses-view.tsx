@@ -271,6 +271,11 @@ export function ExpensesView() {
                         <span className="text-[10px] font-bold text-white/25 uppercase tracking-widest">
                           {format(new Date(exp.date), 'HH:mm')}
                         </span>
+                        {exp.isSubscription && exp.subscriptionNextChargeDate && (
+                          <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1 mt-0.5">
+                            🔁 Спишется {format(new Date(exp.subscriptionNextChargeDate), 'd MMM', { locale: ru })}
+                          </span>
+                        )}
                       </div>
                     </div>
                     {/* Amount */}
