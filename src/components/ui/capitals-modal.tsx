@@ -399,6 +399,48 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                                 />
                               </g>
                             ))}
+
+                            {/* Floating tooltip above the selected point */}
+                            {(() => {
+                              const activePoint = points.find(p => p.originalIdx === selectedPointIdx);
+                              if (!activePoint) return null;
+
+                              const isLatest = selectedPointIdx === chartEntries.length - 1;
+                              const diff = overallTotal - activePoint.value;
+                              const tooltipW = 210;
+                              const tooltipH = isLatest ? 30 : 58;
+                              const tx = Math.min(Math.max(activePoint.x - tooltipW / 2, 2), width - tooltipW - 2);
+                              const ty = Math.max(activePoint.y - tooltipH - 16, 2);
+                              const arrowX = Math.min(Math.max(activePoint.x, tx + 10), tx + tooltipW - 10);
+
+                              return (
+                                <g className="pointer-events-none">
+                                  <polygon
+                                    points={`${arrowX - 6},${ty + tooltipH} ${arrowX + 6},${ty + tooltipH} ${arrowX},${ty + tooltipH + 7}`}
+                                    fill="#0f172a"
+                                    stroke="rgba(255,255,255,0.15)"
+                                    strokeWidth="1"
+                                  />
+                                  <foreignObject x={tx} y={ty} width={tooltipW} height={tooltipH} className="overflow-visible">
+                                    <div className="bg-[#0f172a] border border-white/15 rounded-xl px-3 py-2 shadow-xl flex flex-col items-center gap-1 text-center leading-tight">
+                                      <span className="text-[11px] font-black text-white tabular-nums">
+                                        {activePoint.value.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {selectedCurrency}
+                                      </span>
+                                      {!isLatest && (
+                                        <span
+                                          className={cn(
+                                            "text-[9px] font-bold",
+                                            diff >= 0 ? "text-emerald-400" : "text-rose-400"
+                                          )}
+                                        >
+                                          {diff >= 0 ? '▲ Выросли на' : '▼ Снизились на'} {Math.abs(diff).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {selectedCurrency}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </foreignObject>
+                                </g>
+                              );
+                            })()}
                           </svg>
                         </div>
 
