@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LogOut, PieChart, Settings2, CircleDollarSign, Plus, LayoutGrid } from 'lucide-react';
+import { LogOut, PieChart, Settings2, CircleDollarSign, Plus, LayoutGrid, Gem } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { convertAmount } from '@/lib/exchange';
@@ -19,7 +19,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const {
-    portfolios, wallets, preferences, user, setUser,
+    portfolios, wallets, assets, preferences, user, setUser,
     selectedPortfolioId, setSelectedPortfolioId,
   } = useStore();
   const { baseCurrency } = preferences;
@@ -35,6 +35,8 @@ export function Sidebar() {
       .reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
 
   const isCapitalsPage = pathname.startsWith('/wallets');
+  const isAssetsPage = pathname.startsWith('/assets');
+  const assetsTotal = assets.reduce((sum, a) => sum + convertAmount(a.estimatedValue, a.currency, baseCurrency), 0);
 
   const handleSelectPortfolio = (id: string) => {
     setSelectedPortfolioId(id);
@@ -148,6 +150,35 @@ export function Sidebar() {
             Создать первый капитал
           </Link>
         )}
+
+        <div className="h-px bg-white/[0.06] mx-1 my-1" />
+
+        <Link
+          href="/assets"
+          className="relative flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition-colors"
+        >
+          {isAssetsPage && (
+            <motion.div
+              layoutId="sidebar-pill"
+              className="absolute inset-0 rounded-2xl"
+              style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)' }}
+              transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+            />
+          )}
+          <span
+            className="relative z-10 w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 bg-amber-500/15 text-amber-400"
+          >
+            <Gem size={15} />
+          </span>
+          <div className="relative z-10 flex flex-col min-w-0 flex-1">
+            <span className={cn('text-xs font-bold truncate', isAssetsPage ? 'text-white' : 'text-white/60')}>
+              Активы
+            </span>
+          </div>
+          <span className={cn('relative z-10 text-[11px] font-black flex-shrink-0 tabular-nums', isAssetsPage ? 'text-amber-300' : 'text-white/25')}>
+            ${assetsTotal.toFixed(0)}
+          </span>
+        </Link>
       </div>
 
       {/* Static nav + logout */}

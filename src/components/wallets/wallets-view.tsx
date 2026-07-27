@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, FolderIcon, ChevronRight, ChevronDown, ChevronLeft, FolderPlus } from 'lucide-react';
+import { Plus, Trash2, Edit2, FolderIcon, ChevronRight, ChevronDown, ChevronLeft, FolderPlus, Gem } from 'lucide-react';
 import { format } from 'date-fns';
 import { useStore, Portfolio, Folder, Wallet } from '@/store/useStore';
 import { cn } from '@/lib/utils';
@@ -12,7 +13,6 @@ import { convertAmount } from '@/lib/exchange';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { VirtualCard } from './virtual-card';
 import { SpendingRing } from './spending-ring';
-import { AssetsSection } from './assets-section';
 
 export function WalletsView() {
   const {
@@ -143,6 +143,13 @@ export function WalletsView() {
         >
           <Plus size={16} strokeWidth={3} />
         </button>
+        <Link
+          href="/assets"
+          className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 snap-center transition-all"
+        >
+          <Gem size={14} className="text-amber-400" />
+          <span className="text-xs font-black text-amber-400 whitespace-nowrap">Активы</span>
+        </Link>
       </div>
 
       {/* Capital controls (reorder / edit / delete / new) */}
@@ -310,8 +317,6 @@ export function WalletsView() {
           <SpendingRing expenses={ringExpenses} limit={ringLimit} />
         </div>
       </div>
-
-      <AssetsSection baseCurrency={baseCurrency} />
 
       <AddPortfolioModal isOpen={isPortfolioModalOpen} onClose={() => setIsPortfolioModalOpen(false)} editingPortfolio={editingPortfolio} />
       <AddFolderModal isOpen={isFolderModalOpen} onClose={() => setIsFolderModalOpen(false)} portfolioId={selectedPortfolioId} editingFolder={editingFolder} />

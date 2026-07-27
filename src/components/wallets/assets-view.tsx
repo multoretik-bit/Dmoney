@@ -7,7 +7,7 @@ import { convertAmount } from '@/lib/exchange';
 import { generateUUID } from '@/lib/uuid';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
-import { Plus, Trash2, Edit2, Check, X, ImagePlus } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, ImagePlus, Gem } from 'lucide-react';
 
 const MAX_IMAGE_DIMENSION = 480;
 
@@ -34,8 +34,9 @@ function resizeImageFile(file: File): Promise<string> {
   });
 }
 
-export function AssetsSection({ baseCurrency }: { baseCurrency: string }) {
-  const { assets, deleteAsset } = useStore();
+export function AssetsView() {
+  const { assets, preferences, deleteAsset } = useStore();
+  const { baseCurrency } = preferences;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
 
@@ -46,10 +47,23 @@ export function AssetsSection({ baseCurrency }: { baseCurrency: string }) {
   const openEdit = (a: Asset) => { setEditingAsset(a); setIsModalOpen(true); };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8 pb-32">
+      <header className="pt-6 lg:pt-0 flex flex-col items-center lg:items-start justify-center text-center lg:text-left gap-2">
+        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">Недвижимость и вещи</span>
+        <div className="flex items-center gap-3">
+          <span className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 bg-amber-500/15 text-amber-400">
+            <Gem size={22} />
+          </span>
+          <h1 className="text-3xl font-black text-white">Активы</h1>
+        </div>
+        <span className="text-2xl font-black tabular-nums text-amber-400">
+          ~{total.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} {baseCurrency}
+        </span>
+      </header>
+
       <div className="flex justify-between items-center px-1">
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Активы</span>
+          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Список активов</span>
           <div className="h-px bg-white/5 w-16 sm:w-32" />
         </div>
         <button
@@ -60,17 +74,14 @@ export function AssetsSection({ baseCurrency }: { baseCurrency: string }) {
         </button>
       </div>
 
-      <div className="p-6 rounded-[32px] bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 flex flex-col items-center text-center gap-1">
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-400/70">Ваши активы стоят</span>
-        <span className="text-3xl font-black text-amber-400 tabular-nums">
-          ~{total.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} {baseCurrency}
-        </span>
-      </div>
-
       {sortedAssets.length === 0 ? (
-        <div className="text-center py-16 rounded-[36px] border-2 border-dashed border-white/5 text-[10px] font-black uppercase tracking-[0.4em] text-white/10">
-          Нет активов
-        </div>
+        <button
+          onClick={openAdd}
+          className="h-40 rounded-[40px] border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-3 text-white/20 hover:text-white/50 hover:border-white/20 transition-all"
+        >
+          <Plus size={32} strokeWidth={3} />
+          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Добавить первый актив</span>
+        </button>
       ) : (
         <div className="flex flex-wrap gap-4">
           {sortedAssets.map(asset => (
