@@ -163,7 +163,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
             className="relative w-full sm:w-[460px] bg-[#0b1329]/95 border border-white/10 sm:rounded-3xl rounded-t-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[85vh] z-[151]"
           >
             {/* Header */}
-            <div className="relative px-6 pt-6 pb-7 border-b border-white/5 bg-[#0b1329]/90 backdrop-blur-md sticky top-0 z-10 overflow-hidden">
+            <div className="relative shrink-0 px-6 pt-6 pb-7 border-b border-white/5 bg-[#0b1329]/90 backdrop-blur-md sticky top-0 z-10 overflow-hidden">
               {/* Ambient glow behind the hero total */}
               <div className="absolute left-1/2 top-6 -translate-x-1/2 w-52 h-52 bg-accent/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -202,7 +202,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex border-b border-white/5 p-1 bg-white/5 m-4 rounded-xl gap-0.5">
+            <div className="flex shrink-0 border-b border-white/5 p-1 bg-white/5 m-4 rounded-xl gap-0.5">
               <button
                 onClick={() => setActiveTab('list')}
                 className={cn(
@@ -235,7 +235,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
             </div>
 
             {/* Body */}
-            <div className="p-6 pt-0 overflow-y-auto custom-scrollbar flex flex-col gap-4 flex-grow">
+            <div className="p-6 pt-0 overflow-y-auto custom-scrollbar flex flex-col gap-4 flex-grow min-h-0">
               
               {activeTab === 'list' ? (
                 <>
