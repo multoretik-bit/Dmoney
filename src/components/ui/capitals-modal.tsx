@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore, DailyCapitalEntry } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
-import { X, ChevronDown, TrendingUp, TrendingDown, Calendar, Info } from 'lucide-react';
+import { X, ChevronDown, TrendingUp, TrendingDown, Calendar, Info, Sprout } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { PassiveIncomeTab } from './passive-income-tab';
 
 interface CapitalsModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   const { portfolios, wallets, preferences, capitalHistory } = useStore();
   const [selectedCurrency, setSelectedCurrency] = useState(preferences.baseCurrency);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'list' | 'chart'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'chart' | 'income'>('list');
   const [selectedPointIdx, setSelectedPointIdx] = useState<number | null>(null);
 
   // Calculate totals for each portfolio in selected currency
@@ -201,11 +202,11 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex border-b border-white/5 p-1 bg-white/5 m-4 rounded-xl">
+            <div className="flex border-b border-white/5 p-1 bg-white/5 m-4 rounded-xl gap-0.5">
               <button
                 onClick={() => setActiveTab('list')}
                 className={cn(
-                  "flex-1 py-2 text-center text-sm font-bold rounded-lg transition-colors",
+                  "flex-1 py-2 px-1 text-center text-[11px] sm:text-xs font-bold rounded-lg transition-colors leading-tight",
                   activeTab === 'list' ? "bg-accent text-white" : "text-white/60 hover:text-white"
                 )}
               >
@@ -214,12 +215,22 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
               <button
                 onClick={() => setActiveTab('chart')}
                 className={cn(
-                  "flex-1 py-2 text-center text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5",
+                  "flex-1 py-2 px-1 text-center text-[11px] sm:text-xs font-bold rounded-lg transition-colors flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 leading-tight",
                   activeTab === 'chart' ? "bg-accent text-white" : "text-white/60 hover:text-white"
                 )}
               >
-                <TrendingUp size={16} />
-                Динамика развития
+                <TrendingUp size={14} />
+                Динамика
+              </button>
+              <button
+                onClick={() => setActiveTab('income')}
+                className={cn(
+                  "flex-1 py-2 px-1 text-center text-[11px] sm:text-xs font-bold rounded-lg transition-colors flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 leading-tight",
+                  activeTab === 'income' ? "bg-emerald-500 text-white" : "text-white/60 hover:text-white"
+                )}
+              >
+                <Sprout size={14} />
+                Пассивный доход
               </button>
             </div>
 
@@ -310,6 +321,8 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                     )}
                   </div>
                 </>
+              ) : activeTab === 'income' ? (
+                <PassiveIncomeTab selectedCurrency={selectedCurrency} />
               ) : (
                 /* Chart View */
                 <div className="flex flex-col gap-5">

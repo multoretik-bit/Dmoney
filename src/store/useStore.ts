@@ -47,6 +47,14 @@ export interface Portfolio {
   sortOrder: number;
 }
 
+export interface PassiveIncomeSource {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  sortOrder?: number;
+}
+
 export interface Folder {
   id: string;
   portfolioId: string;
@@ -115,6 +123,7 @@ interface UserState {
   folders: Folder[];
   wallets: Wallet[];
   expenses: Expense[];
+  passiveIncomeSources: PassiveIncomeSource[];
   user: User | null;
   isAuthModalOpen: boolean;
   isReordering: boolean;
@@ -148,6 +157,10 @@ interface UserState {
   deleteWallet: (id: string) => Promise<void>;
   updateWalletOrder: (id: string, direction: 'up' | 'down') => Promise<void>;
 
+  addPassiveIncomeSource: (source: PassiveIncomeSource) => void;
+  updatePassiveIncomeSource: (id: string, updates: Partial<PassiveIncomeSource>) => void;
+  deletePassiveIncomeSource: (id: string) => Promise<void>;
+
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, expense: Expense) => void;
   deleteExpense: (id: string) => void;
@@ -177,6 +190,7 @@ export const useStore = create<UserState>()(
       folders: [],
       wallets: [],
       expenses: [],
+      passiveIncomeSources: [],
       capitalHistory: [],
       user: null,
       isAuthModalOpen: false,
@@ -560,6 +574,25 @@ export const useStore = create<UserState>()(
           expenses: state.expenses.filter(e => e.walletId !== id)
         }));
       },
+
+      addPassiveIncomeSource: (source) => set((state) => {
+        const sortOrder = source.sortOrder !== undefined
+          ? source.sortOrder
+          : (state.passiveIncomeSources.length > 0 ? Math.max(...state.passiveIncomeSources.map(s => s.sortOrder || 0)) + 1 : 0);
+        return { passiveIncomeSources: [...state.passiveIncomeSources, { ...source, sortOrder }] };
+      }),
+      updatePassiveIncomeSource: (id, updates) => set((state) => ({
+        passiveIncomeSources: state.passiveIncomeSources.map(s => s.id === id ? { ...s, ...updates } : s)
+      })),
+      deletePassiveIncomeSource: async (id) => {
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('passive_income_sources').delete().eq('id', id);
+        }
+        set((state) => ({
+          passiveIncomeSources: state.passiveIncomeSources.filter(s => s.id !== id)
+        }));
+      },
       addExpense: (expense) => set((state) => {
         const updatedWallets = state.wallets.map(w => {
           if (w.id === expense.walletId) {
@@ -674,13 +707,14 @@ export const useStore = create<UserState>()(
         try {
           console.log('🔄 Pulling data from Supabase...');
           // Fetch all in parallel
-          const [cats, ports, folds, walls, exps, prefs] = await Promise.all([
+          const [cats, ports, folds, walls, exps, prefs, pis] = await Promise.all([
             supabase.from('categories').select('*'),
             supabase.from('portfolios').select('*'),
             supabase.from('folders').select('*'),
             supabase.from('wallets').select('*'),
             supabase.from('transactions').select('*'),
             supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
+            supabase.from('passive_income_sources').select('*'),
           ]);
 
           if (cats.data && cats.data.length > 0) {
@@ -748,6 +782,16 @@ export const useStore = create<UserState>()(
                  isLarge: e.is_large,
                  isSubscription: e.is_subscription,
                  subscriptionNextChargeDate: e.subscription_next_charge_date
+            })) });
+          }
+
+          if (pis.data) {
+            set({ passiveIncomeSources: pis.data.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              amount: s.amount,
+              currency: s.currency,
+              sortOrder: s.sort_order || 0
             })) });
           }
 
@@ -878,6 +922,14 @@ export const useStore = create<UserState>()(
                   is_large: e.isLarge || false,
                   is_subscription: e.isSubscription || false,
                   subscription_next_charge_date: e.subscriptionNextChargeDate || null
+               })), 'id'),
+               resilientUpsert('passive_income_sources', state.passiveIncomeSources.map(s => ({
+                  id: s.id,
+                  user_id: user.id,
+                  name: s.name,
+                  amount: s.amount,
+                  currency: s.currency,
+                  sort_order: s.sortOrder || 0
                })), 'id'),
                prefUpsert
              ]);

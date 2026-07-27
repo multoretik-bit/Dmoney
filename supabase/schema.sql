@@ -106,3 +106,19 @@ ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goal JSONB; -- dep
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goals JSONB; -- { work: {month,target,saved}, savings: {...}, invest: {...} }
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_subscription BOOLEAN DEFAULT false;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS subscription_next_charge_date DATE;
+
+-- 7. Passive Income (Мои Капиталы -> Пассивный доход tab)
+CREATE TABLE IF NOT EXISTS passive_income_sources (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  amount NUMERIC NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  sort_order NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE passive_income_sources ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own passive income sources" ON passive_income_sources;
+CREATE POLICY "Users can manage their own passive income sources" ON passive_income_sources FOR ALL USING (auth.uid() = user_id);
