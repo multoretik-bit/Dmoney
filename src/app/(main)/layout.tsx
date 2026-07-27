@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { Sidebar } from '@/components/layout/sidebar';
@@ -23,6 +23,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isHydrated, setIsHydrated] = useState(false);
   const [isCapitalsModalOpen, setIsCapitalsModalOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const pushPendingRef = useRef(false);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -48,9 +49,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return () => subscription.unsubscribe();
   }, [setUser, pullData]);
 
-  // Auto-push changes to Supabase
+  // Auto-push changes to Supabase.
+  // pushPendingRef is set the instant any tracked state changes (synchronously,
+  // before the debounce timer even starts) so the realtime pull below knows
+  // not to fetch-and-overwrite while a local edit hasn't reached the server yet.
   useEffect(() => {
     if (!user) return;
+    pushPendingRef.current = true;
 
     const timeoutId = setTimeout(async () => {
       setSyncStatus('syncing');
@@ -59,6 +64,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         setSyncStatus('synced');
       } catch {
         setSyncStatus('error');
+      } finally {
+        pushPendingRef.current = false;
       }
     }, 2000);
 
@@ -79,6 +86,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         () => {
           clearTimeout(pullTimeout);
           pullTimeout = setTimeout(async () => {
+            // Skip: a local edit is queued to push (or pushing right now) and
+            // hasn't been confirmed saved — pulling now would overwrite it
+            // with stale server data. The push's own writes will trigger
+            // another realtime event once it lands, so we'll pull then instead.
+            if (pushPendingRef.current) return;
             setSyncStatus('syncing');
             await pullData();
             setSyncStatus('synced');
