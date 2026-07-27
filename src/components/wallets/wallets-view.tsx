@@ -12,6 +12,7 @@ import { convertAmount } from '@/lib/exchange';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { VirtualCard } from './virtual-card';
 import { SpendingRing } from './spending-ring';
+import { AssetsSection } from './assets-section';
 
 export function WalletsView() {
   const {
@@ -309,6 +310,8 @@ export function WalletsView() {
           <SpendingRing expenses={ringExpenses} limit={ringLimit} />
         </div>
       </div>
+
+      <AssetsSection baseCurrency={baseCurrency} />
 
       <AddPortfolioModal isOpen={isPortfolioModalOpen} onClose={() => setIsPortfolioModalOpen(false)} editingPortfolio={editingPortfolio} />
       <AddFolderModal isOpen={isFolderModalOpen} onClose={() => setIsFolderModalOpen(false)} portfolioId={selectedPortfolioId} editingFolder={editingFolder} />

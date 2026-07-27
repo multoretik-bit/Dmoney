@@ -55,6 +55,16 @@ export interface PassiveIncomeSource {
   sortOrder?: number;
 }
 
+export interface Asset {
+  id: string;
+  name: string;
+  estimatedValue: number;
+  currency: string;
+  color?: string;
+  imageUrl?: string;
+  sortOrder?: number;
+}
+
 export interface Folder {
   id: string;
   portfolioId: string;
@@ -124,6 +134,7 @@ interface UserState {
   wallets: Wallet[];
   expenses: Expense[];
   passiveIncomeSources: PassiveIncomeSource[];
+  assets: Asset[];
   user: User | null;
   isAuthModalOpen: boolean;
   isReordering: boolean;
@@ -161,6 +172,10 @@ interface UserState {
   updatePassiveIncomeSource: (id: string, updates: Partial<PassiveIncomeSource>) => void;
   deletePassiveIncomeSource: (id: string) => Promise<void>;
 
+  addAsset: (asset: Asset) => void;
+  updateAsset: (id: string, updates: Partial<Asset>) => void;
+  deleteAsset: (id: string) => Promise<void>;
+
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, expense: Expense) => void;
   deleteExpense: (id: string) => void;
@@ -191,6 +206,7 @@ export const useStore = create<UserState>()(
       wallets: [],
       expenses: [],
       passiveIncomeSources: [],
+      assets: [],
       capitalHistory: [],
       user: null,
       isAuthModalOpen: false,
@@ -593,6 +609,26 @@ export const useStore = create<UserState>()(
           passiveIncomeSources: state.passiveIncomeSources.filter(s => s.id !== id)
         }));
       },
+
+      addAsset: (asset) => set((state) => {
+        const sortOrder = asset.sortOrder !== undefined
+          ? asset.sortOrder
+          : (state.assets.length > 0 ? Math.max(...state.assets.map(a => a.sortOrder || 0)) + 1 : 0);
+        return { assets: [...state.assets, { ...asset, sortOrder }] };
+      }),
+      updateAsset: (id, updates) => set((state) => ({
+        assets: state.assets.map(a => a.id === id ? { ...a, ...updates } : a)
+      })),
+      deleteAsset: async (id) => {
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('assets').delete().eq('id', id);
+        }
+        set((state) => ({
+          assets: state.assets.filter(a => a.id !== id)
+        }));
+      },
+
       addExpense: (expense) => set((state) => {
         const updatedWallets = state.wallets.map(w => {
           if (w.id === expense.walletId) {
@@ -707,7 +743,7 @@ export const useStore = create<UserState>()(
         try {
           console.log('🔄 Pulling data from Supabase...');
           // Fetch all in parallel
-          const [cats, ports, folds, walls, exps, prefs, pis] = await Promise.all([
+          const [cats, ports, folds, walls, exps, prefs, pis, asts] = await Promise.all([
             supabase.from('categories').select('*'),
             supabase.from('portfolios').select('*'),
             supabase.from('folders').select('*'),
@@ -715,6 +751,7 @@ export const useStore = create<UserState>()(
             supabase.from('transactions').select('*'),
             supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
             supabase.from('passive_income_sources').select('*'),
+            supabase.from('assets').select('*'),
           ]);
 
           if (cats.data && cats.data.length > 0) {
@@ -792,6 +829,18 @@ export const useStore = create<UserState>()(
               amount: s.amount,
               currency: s.currency,
               sortOrder: s.sort_order || 0
+            })) });
+          }
+
+          if (asts.data) {
+            set({ assets: asts.data.map((a: any) => ({
+              id: a.id,
+              name: a.name,
+              estimatedValue: a.estimated_value,
+              currency: a.currency,
+              color: a.color,
+              imageUrl: a.image_url,
+              sortOrder: a.sort_order || 0
             })) });
           }
 
@@ -930,6 +979,16 @@ export const useStore = create<UserState>()(
                   amount: s.amount,
                   currency: s.currency,
                   sort_order: s.sortOrder || 0
+               })), 'id'),
+               resilientUpsert('assets', state.assets.map(a => ({
+                  id: a.id,
+                  user_id: user.id,
+                  name: a.name,
+                  estimated_value: a.estimatedValue,
+                  currency: a.currency,
+                  color: a.color || null,
+                  image_url: a.imageUrl || null,
+                  sort_order: a.sortOrder || 0
                })), 'id'),
                prefUpsert
              ]);

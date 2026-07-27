@@ -122,3 +122,22 @@ ALTER TABLE passive_income_sources ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can manage their own passive income sources" ON passive_income_sources;
 CREATE POLICY "Users can manage their own passive income sources" ON passive_income_sources FOR ALL USING (auth.uid() = user_id);
+
+-- 8. Assets (Капиталы -> Активы section: real estate, valuables, etc.)
+-- Purely informational — never counted into portfolio/capital totals.
+CREATE TABLE IF NOT EXISTS assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  estimated_value NUMERIC NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  color TEXT,
+  image_url TEXT, -- base64 data URL, resized client-side before upload
+  sort_order NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own assets" ON assets;
+CREATE POLICY "Users can manage their own assets" ON assets FOR ALL USING (auth.uid() = user_id);

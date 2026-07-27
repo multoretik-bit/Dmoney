@@ -16,6 +16,7 @@ import { AddExpenseModal } from '@/components/expenses/add-expense-modal';
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, setUser, pullData, pushData, wallets,
     categories, portfolios, folders, expenses, preferences,
+    passiveIncomeSources, assets,
     isAuthModalOpen, setAuthModalOpen
   } = useStore();
   const [scrolled, setScrolled] = useState(false);
@@ -70,7 +71,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }, 2000);
 
     return () => clearTimeout(timeoutId);
-  }, [user, categories, portfolios, folders, wallets, expenses, preferences, pushData]);
+  }, [user, categories, portfolios, folders, wallets, expenses, preferences, passiveIncomeSources, assets, pushData]);
 
   // Real-time pull from Supabase with debounce
   useEffect(() => {
