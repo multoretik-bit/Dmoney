@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStore } from '@/store/useStore';
+import { useStore, DailyCapitalEntry } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
-import { X, ChevronDown, TrendingUp, Calendar, Info } from 'lucide-react';
+import { X, ChevronDown, TrendingUp, TrendingDown, Calendar, Info } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +11,25 @@ interface CapitalsModalProps {
 }
 
 const AVAILABLE_CURRENCIES = ['USD', 'RUB', 'THB', 'EUR', 'KZT'];
+
+// Picks the first entry, the last entry, and the biggest day-over-day
+// jumps in between, so the chart reads as key milestones instead of
+// a dense, noisy line through every single day.
+function selectSignificantEntries(entries: DailyCapitalEntry[], maxPoints: number): DailyCapitalEntry[] {
+  if (entries.length <= maxPoints) return entries;
+
+  const lastIdx = entries.length - 1;
+  const middleBudget = Math.max(0, maxPoints - 2);
+
+  const deltas = [];
+  for (let i = 1; i < lastIdx; i++) {
+    deltas.push({ idx: i, delta: Math.abs(entries[i].overallTotal - entries[i - 1].overallTotal) });
+  }
+  deltas.sort((a, b) => b.delta - a.delta);
+
+  const chosenIdx = new Set([0, lastIdx, ...deltas.slice(0, middleBudget).map(d => d.idx)]);
+  return Array.from(chosenIdx).sort((a, b) => a - b).map(i => entries[i]);
+}
 
 export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   const { portfolios, wallets, preferences, capitalHistory } = useStore();
@@ -65,7 +84,11 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   // Sort entries chronologically
   chartEntries = chartEntries
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-30); // Show last 30 entries maximum
+    .slice(-90); // Keep a generous pool so "biggest jumps" has something to pick from
+
+  // Reduce to first day, last day, and the biggest day-over-day swings —
+  // a clean milestone chart instead of a dense line through every single day.
+  const chartPoints = selectSignificantEntries(chartEntries, 8);
 
   // Set default selected point to the last entry when modal opens or tab changes
   useEffect(() => {
@@ -79,32 +102,43 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
     return convertAmount(amountInBase, preferences.baseCurrency, selectedCurrency);
   };
 
-  // Find min and max for chart scaling
-  const historyValues = chartEntries.map(e => getConvertedHistoryAmount(e.overallTotal));
+  // Find min and max for chart scaling, based on what's actually plotted
+  const historyValues = chartPoints.map(e => getConvertedHistoryAmount(e.overallTotal));
   const maxVal = Math.max(...historyValues, 1) * 1.05;
   const minVal = Math.min(...historyValues, 0) * 0.95;
   const range = maxVal - minVal || 1;
 
-  // Generate SVG coordinates for overall path
+  // Generate SVG coordinates for the reduced set of milestone points
   const width = 360;
   const height = 140;
-  const points = chartEntries.map((e, idx) => {
-    const x = chartEntries.length > 1 
-      ? (idx / (chartEntries.length - 1)) * (width - 30) + 15 
+  const points = chartPoints.map((e, idx) => {
+    const x = chartPoints.length > 1
+      ? (idx / (chartPoints.length - 1)) * (width - 30) + 15
       : width / 2;
     const y = height - ((getConvertedHistoryAmount(e.overallTotal) - minVal) / range) * (height - 40) - 20;
-    return { x, y, value: getConvertedHistoryAmount(e.overallTotal), date: e.date };
+    const originalIdx = chartEntries.findIndex(ce => ce.date === e.date);
+    return { x, y, value: getConvertedHistoryAmount(e.overallTotal), date: e.date, originalIdx };
   });
 
-  const pathD = chartEntries.length > 1 
-    ? points.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '') 
+  const pathD = chartPoints.length > 1
+    ? points.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '')
     : '';
 
-  const areaD = chartEntries.length > 1 && points.length > 0 
-    ? `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z` 
+  const areaD = chartPoints.length > 1 && points.length > 0
+    ? `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`
     : '';
 
   const selectedEntry = selectedPointIdx !== null ? chartEntries[selectedPointIdx] : null;
+
+  // Overall trend across the visible history window, for the badge under the total.
+  let periodChangePct: number | null = null;
+  if (chartEntries.length > 1) {
+    const first = getConvertedHistoryAmount(chartEntries[0].overallTotal);
+    const last = getConvertedHistoryAmount(chartEntries[chartEntries.length - 1].overallTotal);
+    if (first > 0) periodChangePct = ((last - first) / first) * 100;
+  }
+
+  const formattedTotal = overallTotal.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   return (
     <AnimatePresence>
@@ -128,19 +162,42 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
             className="relative w-full sm:w-[460px] bg-[#0b1329]/95 border border-white/10 sm:rounded-3xl rounded-t-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[85vh] z-[151]"
           >
             {/* Header */}
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#0b1329]/90 backdrop-blur-md sticky top-0 z-10">
-              <div>
-                <h2 className="text-xl font-black text-white">Мои Капиталы</h2>
-                <p className="text-sm text-white/50 mt-1">
-                  Общая сумма: <span className="text-accent font-bold">{overallTotal.toFixed(1)} {selectedCurrency}</span>
-                </p>
+            <div className="relative px-6 pt-6 pb-7 border-b border-white/5 bg-[#0b1329]/90 backdrop-blur-md sticky top-0 z-10 overflow-hidden">
+              {/* Ambient glow behind the hero total */}
+              <div className="absolute left-1/2 top-6 -translate-x-1/2 w-52 h-52 bg-accent/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex items-center justify-between">
+                <h2 className="text-[11px] font-black uppercase tracking-[0.35em] text-white/40">Мои Капиталы</h2>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                >
+                  <X size={18} className="text-white/70" />
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-              >
-                <X size={18} className="text-white/70" />
-              </button>
+
+              <div className="relative z-10 flex flex-col items-center text-center gap-2 mt-5">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Общая сумма</span>
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="text-[42px] leading-none font-black tabular-nums bg-gradient-to-br from-white to-accent bg-clip-text text-transparent"
+                  >
+                    {formattedTotal}
+                  </span>
+                  <span className="text-base font-bold text-white/40">{selectedCurrency}</span>
+                </div>
+                {periodChangePct !== null && Math.abs(periodChangePct) >= 0.05 && (
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold",
+                      periodChangePct >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+                    )}
+                  >
+                    {periodChangePct >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+                    {periodChangePct >= 0 ? '+' : ''}{periodChangePct.toFixed(1)}% за период
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Navigation Tabs */}
@@ -280,6 +337,12 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                           </div>
                         </div>
 
+                        {chartPoints.length < chartEntries.length && (
+                          <p className="text-[10px] font-bold text-white/25 -mt-2">
+                            Показаны начало, конец и самые заметные изменения баланса
+                          </p>
+                        )}
+
                         {/* SVG Chart */}
                         <div className="relative w-full flex items-center justify-center bg-slate-900/50 rounded-xl p-3 border border-white/5">
                           <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
@@ -310,28 +373,28 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                               />
                             )}
 
-                            {/* Data point dots */}
-                            {points.map((p, idx) => (
-                              <g 
-                                key={idx} 
+                            {/* Milestone point dots */}
+                            {points.map((p) => (
+                              <g
+                                key={p.date}
                                 className="group/dot cursor-pointer"
-                                onClick={() => setSelectedPointIdx(idx)}
+                                onClick={() => setSelectedPointIdx(p.originalIdx)}
                               >
-                                <circle 
-                                  cx={p.x} 
-                                  cy={p.y} 
-                                  r={selectedPointIdx === idx ? "6" : "4"} 
-                                  fill={selectedPointIdx === idx ? "#3b82f6" : "#0f172a"} 
-                                  stroke="#3b82f6" 
-                                  strokeWidth="2.5" 
-                                  className="transition-all duration-150" 
+                                <circle
+                                  cx={p.x}
+                                  cy={p.y}
+                                  r={selectedPointIdx === p.originalIdx ? "6" : "4"}
+                                  fill={selectedPointIdx === p.originalIdx ? "#3b82f6" : "#0f172a"}
+                                  stroke="#3b82f6"
+                                  strokeWidth="2.5"
+                                  className="transition-all duration-150"
                                 />
-                                <circle 
-                                  cx={p.x} 
-                                  cy={p.y} 
-                                  r="12" 
-                                  fill="#3b82f6" 
-                                  fillOpacity="0" 
+                                <circle
+                                  cx={p.x}
+                                  cy={p.y}
+                                  r="12"
+                                  fill="#3b82f6"
+                                  fillOpacity="0"
                                   className="hover:fill-opacity-10 transition-all duration-150"
                                 />
                               </g>
