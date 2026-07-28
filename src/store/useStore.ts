@@ -148,6 +148,19 @@ export interface LongTermGoal {
   saved: number;
   currency: string;
   color: string;
+  rewardName?: string;
+  rewardImageUrl?: string;
+}
+
+export interface GoalReward {
+  id: string;
+  sourceType: 'monthly' | 'longTerm' | 'wallet';
+  sourceId: string;
+  title: string;
+  description: string;
+  color: string;
+  imageUrl?: string;
+  earnedAt: string;
 }
 
 export interface UserPreferences {
@@ -157,6 +170,7 @@ export interface UserPreferences {
   largeBudgetLimit?: number;
   savingsGoals?: SavingsGoals;
   longTermGoals?: LongTermGoal[];
+  goalRewards?: GoalReward[];
 }
 
 interface UserState {
@@ -184,6 +198,7 @@ interface UserState {
   addLongTermGoal: (goal: LongTermGoal) => void;
   updateLongTermGoal: (id: string, updates: Partial<LongTermGoal>) => void;
   deleteLongTermGoal: (id: string) => void;
+  addGoalReward: (reward: GoalReward) => void;
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => Promise<void>;
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
@@ -354,6 +369,16 @@ export const useStore = create<UserState>()(
           longTermGoals: (state.preferences.longTermGoals || []).filter(goal => goal.id !== id),
         },
       })),
+      addGoalReward: (reward) => set((state) => {
+        const current = state.preferences.goalRewards || [];
+        if (current.some(item => item.id === reward.id)) return state;
+        return {
+          preferences: {
+            ...state.preferences,
+            goalRewards: [reward, ...current],
+          },
+        };
+      }),
       addSavedColor: (color) => set((state) => {
         if (state.preferences.savedColors.includes(color)) return state;
         return { preferences: { ...state.preferences, savedColors: [...state.preferences.savedColors, color] } };
@@ -1044,6 +1069,9 @@ export const useStore = create<UserState>()(
               longTermGoals: prefs.data.long_term_goals !== undefined
                 ? (prefs.data.long_term_goals || [])
                 : (currentPrefs.longTermGoals || []),
+              goalRewards: prefs.data.goal_rewards !== undefined
+                ? (prefs.data.goal_rewards || [])
+                : (currentPrefs.goalRewards || []),
             }});
             
             if (prefs.data.capital_history) {
@@ -1073,6 +1101,7 @@ export const useStore = create<UserState>()(
            large_budget_limit: state.preferences.largeBudgetLimit || 0,
            savings_goals: state.preferences.savingsGoals || null,
            long_term_goals: state.preferences.longTermGoals || [],
+           goal_rewards: state.preferences.goalRewards || [],
            capital_history: state.capitalHistory || [],
            updated_at: new Date().toISOString()
          };

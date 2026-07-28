@@ -15,7 +15,7 @@ export function GoalsView() {
           <p className="text-xs text-white/40 mt-1">Планы на работу, накопления и инвестиции</p>
         </div>
       </header>
-      <SavingsGoalWidget />
+      <SavingsGoalWidget showRewards />
     </div>
   );
 }

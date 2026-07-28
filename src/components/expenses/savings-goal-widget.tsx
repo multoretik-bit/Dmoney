@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore, currentMonthKey, SavingsGoalCategory, LongTermGoal, Wallet } from '@/store/useStore';
-import { Plus, Check, Target, Trash2, WalletCards, X } from 'lucide-react';
+import { Award, ChevronDown, Check, ImagePlus, Medal, Plus, Target, Trash2, WalletCards, X } from 'lucide-react';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { generateUUID } from '@/lib/uuid';
 
@@ -11,6 +11,30 @@ const CATEGORIES: { key: SavingsGoalCategory; label: string; icon: string; color
   { key: 'savings', label: 'Откладывать', icon: '💰', color: '#60a5fa' },
   { key: 'invest', label: 'Инвестировать', icon: '📈', color: '#8b5cf6' },
 ];
+
+function resizeRewardImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Не удалось прочитать изображение'));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('Не удалось обработать изображение'));
+      image.onload = () => {
+        const maxSize = 360;
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) return reject(new Error('Не удалось обработать изображение'));
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.76));
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function SavingsGoalRow({ category, label, icon, color }: { category: SavingsGoalCategory; label: string; icon: string; color: string }) {
   const { preferences, setSavingsGoalTarget, addSavingsProgress } = useStore();
@@ -250,22 +274,157 @@ function LongTermGoalRow({ goal }: { goal: LongTermGoal }) {
   );
 }
 
-export function SavingsGoalWidget() {
-  const { wallets, preferences, addLongTermGoal } = useStore();
-  const walletGoals = wallets.filter(wallet => Number(wallet.targetAmount || 0) > 0);
-  const longTermGoals = preferences.longTermGoals || [];
+function RewardsCollection() {
+  const rewards = useStore(state => state.preferences.goalRewards || []);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="rounded-[24px] border border-amber-300/15 bg-[linear-gradient(145deg,rgba(245,158,11,0.08),rgba(255,255,255,0.02))] overflow-hidden">
+      <button
+        onClick={() => setIsExpanded(value => !value)}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/[0.025] transition-colors"
+        aria-expanded={isExpanded}
+      >
+        <div className="w-10 h-10 rounded-2xl bg-amber-400/12 text-amber-300 flex items-center justify-center">
+          <Award size={19} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black text-white">Мои награды</p>
+          <p className="text-[10px] font-bold text-white/35 mt-0.5">
+            {rewards.length > 0 ? `${rewards.length} ${rewards.length === 1 ? 'медаль' : 'медалей'} в коллекции` : 'Здесь появятся медали за выполненные цели'}
+          </p>
+        </div>
+        <ChevronDown size={17} className={`text-white/35 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-white/[0.06] p-4">
+          {rewards.length === 0 ? (
+            <div className="py-7 text-center">
+              <Medal size={26} className="mx-auto text-amber-300/30 mb-2" />
+              <p className="text-xs font-bold text-white/30">Закройте первую цель, чтобы получить медаль</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {rewards.map(reward => (
+                <div key={reward.id} className="flex items-center gap-3 p-3 rounded-2xl bg-black/20 border border-white/[0.06]">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 bg-cover bg-center border border-white/10"
+                    style={reward.imageUrl
+                      ? { backgroundImage: `url(${reward.imageUrl})` }
+                      : { background: `linear-gradient(145deg, ${reward.color}55, ${reward.color}16)`, color: reward.color }}
+                  >
+                    {!reward.imageUrl && <Medal size={25} />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-white/90 leading-snug">{reward.title}</p>
+                    <p className="text-[9px] text-white/35 mt-1 line-clamp-2">{reward.description}</p>
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-amber-300/55 mt-1.5">
+                      {new Date(reward.earnedAt).toLocaleDateString('ru-RU')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function SavingsGoalWidget({ showRewards = false }: { showRewards?: boolean }) {
+  const { wallets, preferences, addLongTermGoal, addGoalReward } = useStore();
+  const walletGoals = useMemo(
+    () => wallets.filter(wallet => Number(wallet.targetAmount || 0) > 0),
+    [wallets]
+  );
+  const longTermGoals = useMemo(
+    () => preferences.longTermGoals || [],
+    [preferences.longTermGoals]
+  );
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
   const [target, setTarget] = useState('');
   const [currency, setCurrency] = useState(preferences.baseCurrency);
   const [color, setColor] = useState('#8b5cf6');
+  const [rewardName, setRewardName] = useState('');
+  const [rewardImageUrl, setRewardImageUrl] = useState<string | undefined>();
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
+  useEffect(() => {
+    const earnedAt = new Date().toISOString();
+    const month = currentMonthKey();
+    const monthLabelRaw = new Intl.DateTimeFormat('ru-RU', { month: 'long' }).format(new Date());
+    const monthLabel = monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1);
+
+    CATEGORIES.forEach(meta => {
+      const goal = preferences.savingsGoals?.[meta.key];
+      if (!goal || goal.month !== month || goal.target <= 0 || goal.saved < goal.target) return;
+      const titles: Record<SavingsGoalCategory, string> = {
+        work: `Мастер планов — ${monthLabel}`,
+        savings: `Накопитель месяца ${monthLabel}`,
+        invest: `Инвестор месяца ${monthLabel}`,
+      };
+      addGoalReward({
+        id: `monthly:${meta.key}:${month}`,
+        sourceType: 'monthly',
+        sourceId: `${meta.key}:${month}`,
+        title: titles[meta.key],
+        description: `Выполнена ежемесячная цель «${meta.label}»: ${goal.target.toLocaleString('ru-RU')} ${preferences.baseCurrency}`,
+        color: meta.color,
+        earnedAt,
+      });
+    });
+
+    longTermGoals.forEach(goal => {
+      if (goal.target <= 0 || goal.saved < goal.target) return;
+      addGoalReward({
+        id: `long-term:${goal.id}`,
+        sourceType: 'longTerm',
+        sourceId: goal.id,
+        title: goal.rewardName || `Цель «${goal.name}» выполнена`,
+        description: `Накоплено ${goal.target.toLocaleString('ru-RU')} ${goal.currency}`,
+        color: goal.color,
+        imageUrl: goal.rewardImageUrl,
+        earnedAt,
+      });
+    });
+
+    walletGoals.forEach(wallet => {
+      const target = Number(wallet.targetAmount || 0);
+      if (target <= 0 || Number(wallet.balance || 0) < target) return;
+      addGoalReward({
+        id: `wallet:${wallet.id}:${target}`,
+        sourceType: 'wallet',
+        sourceId: wallet.id,
+        title: `Счёт «${wallet.name}» наполнен`,
+        description: `Достигнута цель накопления ${target.toLocaleString('ru-RU')} ${wallet.currency}`,
+        color: wallet.color || '#60a5fa',
+        earnedAt,
+      });
+    });
+  }, [addGoalReward, longTermGoals, preferences.baseCurrency, preferences.savingsGoals, walletGoals]);
 
   const resetForm = () => {
     setName('');
     setTarget('');
     setCurrency(preferences.baseCurrency);
     setColor('#8b5cf6');
+    setRewardName('');
+    setRewardImageUrl(undefined);
+    setIsProcessingImage(false);
     setIsAdding(false);
+  };
+
+  const handleRewardImage = async (file?: File) => {
+    if (!file) return;
+    setIsProcessingImage(true);
+    try {
+      setRewardImageUrl(await resizeRewardImage(file));
+    } finally {
+      setIsProcessingImage(false);
+    }
   };
 
   const createGoal = () => {
@@ -278,6 +437,8 @@ export function SavingsGoalWidget() {
       saved: 0,
       currency,
       color,
+      rewardName: rewardName.trim() || `Цель «${name.trim()}» выполнена`,
+      rewardImageUrl,
     });
     resetForm();
   };
@@ -370,6 +531,34 @@ export function SavingsGoalWidget() {
               className="w-12 h-12 p-1.5 rounded-xl bg-black/30 border border-white/10"
             />
           </div>
+          <input
+            value={rewardName}
+            onChange={event => setRewardName(event.target.value)}
+            placeholder="Название будущей медали"
+            className="bg-black/30 p-3 rounded-xl text-white font-bold border border-white/10 outline-none"
+          />
+          <label
+            className="min-h-20 rounded-2xl border border-dashed border-amber-300/20 bg-amber-400/[0.035] flex items-center gap-3 p-3 cursor-pointer hover:bg-amber-400/[0.07] transition-colors"
+          >
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={event => handleRewardImage(event.target.files?.[0])}
+            />
+            <div
+              className="w-14 h-14 rounded-2xl bg-amber-400/10 text-amber-300 flex items-center justify-center bg-cover bg-center flex-shrink-0"
+              style={rewardImageUrl ? { backgroundImage: `url(${rewardImageUrl})` } : undefined}
+            >
+              {!rewardImageUrl && <ImagePlus size={21} />}
+            </div>
+            <div>
+              <p className="text-xs font-black text-white/75">
+                {isProcessingImage ? 'Обрабатываю изображение…' : rewardImageUrl ? 'Заменить картинку медали' : 'Выбрать картинку медали'}
+              </p>
+              <p className="text-[9px] text-white/30 mt-1">Она появится в коллекции после выполнения цели</p>
+            </div>
+          </label>
           <button
             onClick={createGoal}
             disabled={!name.trim() || !target}
@@ -379,6 +568,8 @@ export function SavingsGoalWidget() {
           </button>
         </div>
       )}
+
+      {showRewards && <RewardsCollection />}
     </div>
   );
 }
