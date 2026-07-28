@@ -20,7 +20,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SpendingRing } from '@/components/wallets/spending-ring';
 import { SavingsGoalWidget } from './savings-goal-widget';
-import { SubscriptionsManager, UpcomingSubscriptionsWidget } from './subscriptions-section';
+import { UpcomingSubscriptionsWidget } from './subscriptions-section';
 
 export function ExpensesView() {
   const { expenses, preferences, categories } = useStore();
@@ -30,7 +30,7 @@ export function ExpensesView() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [viewMode, setViewMode] = useState<'personal' | 'work' | 'large' | 'subscriptions'>('personal');
+  const [viewMode, setViewMode] = useState<'personal' | 'work' | 'large'>('personal');
 
   const filteredExpenses = expenses.filter(e => {
     if (viewMode === 'work') return !!e.isWork;
@@ -80,10 +80,10 @@ export function ExpensesView() {
       {/* Page header */}
       <header className="pt-10 flex flex-col items-center text-center gap-2">
         <h1 className="text-3xl font-black text-white tracking-tight">
-          {viewMode === 'work' ? 'Рабочие Траты' : viewMode === 'large' ? 'Крупные Покупки' : viewMode === 'subscriptions' ? 'Подписки' : 'Обзор Трат'}
+          {viewMode === 'work' ? 'Рабочие Траты' : viewMode === 'large' ? 'Крупные Покупки' : 'Обзор Трат'}
         </h1>
         <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20">
-          {viewMode === 'work' ? 'Служебные расходы' : viewMode === 'large' ? 'Особые траты' : viewMode === 'subscriptions' ? 'Регулярные списания' : 'История и Календарь'}
+          {viewMode === 'work' ? 'Служебные расходы' : viewMode === 'large' ? 'Особые траты' : 'История и Календарь'}
         </p>
 
         {/* View mode switcher */}
@@ -91,7 +91,7 @@ export function ExpensesView() {
           <button
             onClick={() => setViewMode('personal')}
             className={cn(
-              "px-3 sm:px-5 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
+              "px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
               viewMode === 'personal' ? "bg-white text-black shadow-lg" : "text-white/40 hover:text-white/60"
             )}
           >
@@ -100,7 +100,7 @@ export function ExpensesView() {
           <button
             onClick={() => setViewMode('work')}
             className={cn(
-              "px-3 sm:px-5 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
+              "px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
               viewMode === 'work' ? "text-white shadow-lg" : "text-white/40 hover:text-white/60"
             )}
             style={viewMode === 'work' ? { background: 'linear-gradient(135deg,#f59e0b,#d97706)', boxShadow: '0 4px 20px rgba(245,158,11,0.3)' } : {}}
@@ -110,22 +110,12 @@ export function ExpensesView() {
           <button
             onClick={() => setViewMode('large')}
             className={cn(
-              "px-3 sm:px-5 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
+              "px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
               viewMode === 'large' ? "text-white shadow-lg" : "text-white/40 hover:text-white/60"
             )}
             style={viewMode === 'large' ? { background: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', boxShadow: '0 4px 20px rgba(139,92,246,0.3)' } : {}}
           >
             Крупные
-          </button>
-          <button
-            onClick={() => setViewMode('subscriptions')}
-            className={cn(
-              "px-3 sm:px-5 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
-              viewMode === 'subscriptions' ? "text-white shadow-lg" : "text-white/40 hover:text-white/60"
-            )}
-            style={viewMode === 'subscriptions' ? { background: 'linear-gradient(135deg,#10b981,#059669)', boxShadow: '0 4px 20px rgba(16,185,129,0.3)' } : {}}
-          >
-            Подписки
           </button>
         </div>
       </header>
@@ -133,9 +123,6 @@ export function ExpensesView() {
       <SavingsGoalWidget />
       <UpcomingSubscriptionsWidget />
 
-      {viewMode === 'subscriptions' ? (
-        <SubscriptionsManager />
-      ) : (
       <div className="flex flex-col gap-6">
         {/* Month Selector */}
         <div
@@ -312,13 +299,12 @@ export function ExpensesView() {
           </div>
         </div>
       </div>
-      )}
 
       <AddExpenseModal
         isOpen={isModalOpen}
         onClose={() => { setIsModalOpen(false); setEditingExpense(null); }}
         editingExpense={editingExpense}
-        initialViewMode={viewMode === 'subscriptions' ? 'personal' : viewMode}
+        initialViewMode={viewMode}
       />
     </div>
   );

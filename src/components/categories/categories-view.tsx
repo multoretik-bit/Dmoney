@@ -14,6 +14,7 @@ import { ru } from 'date-fns/locale';
 import { AddCategoryModal } from './add-category-modal';
 import { fetchCBRRates, CBRResponse } from '@/lib/cbr';
 import { useEffect } from 'react';
+import { SubscriptionsManager } from '@/components/expenses/subscriptions-section';
 
 const SAVINGS_GOAL_CATEGORIES: { key: SavingsGoalCategory; label: string; icon: string; color: string }[] = [
   { key: 'work', label: 'В работу', icon: '💼', color: '#f59e0b' },
@@ -281,6 +282,13 @@ export function CategoriesView() {
             })}
           </div>
         </div>
+      </section>
+
+      {/* Subscriptions live alongside category management — a subscription
+          is just another kind of expense you can pick when adding a trata,
+          the same way Дом/Развлечения/Быт are. */}
+      <section className="flex flex-col gap-4 mt-6">
+        <SubscriptionsManager />
       </section>
 
       <div className="flex justify-between items-center mt-6 px-2">
