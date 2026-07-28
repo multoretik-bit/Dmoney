@@ -22,7 +22,7 @@ export function AddExpenseModal({
   editingExpense?: Expense | null;
   initialViewMode?: 'personal' | 'work' | 'large';
 }) {
-  const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories, expenses } = useStore();
+  const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories } = useStore();
   const { baseCurrency } = preferences;
   
   const [amountInput, setAmountInput] = useState('');
@@ -35,39 +35,41 @@ export function AddExpenseModal({
   const [subscriptionNextChargeDate, setSubscriptionNextChargeDate] = useState('');
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
 
-  // Auto-select logic
+  // Auto-select logic — seeds the form ONLY when the modal opens (or when
+  // switching which expense is being edited). It intentionally does not
+  // depend on `expenses`/`wallets`/`baseCurrency`: those arrays get new
+  // references on every background sync (pullData), and depending on them
+  // here used to wipe out the amount/currency the user was mid-typing.
   useEffect(() => {
-    if (isOpen) {
-      if (editingExpense) {
-        setAmountInput(editingExpense.originalAmount.toString());
-        setCurrency(editingExpense.originalCurrency);
-        setCategoryId(editingExpense.categoryId);
-        setWalletId(editingExpense.walletId);
-        setIsWork(!!editingExpense.isWork);
-        setIsLarge(!!editingExpense.isLarge);
-        setIsSubscription(!!editingExpense.isSubscription);
-        setSubscriptionNextChargeDate(editingExpense.subscriptionNextChargeDate || '');
-      } else if (expenses.length > 0) {
-        const last = expenses[expenses.length - 1];
-        setCategoryId(last.categoryId);
-        setWalletId(last.walletId);
-        setCurrency(baseCurrency);
-        setAmountInput('');
-        setIsWork(initialViewMode === 'work');
-        setIsLarge(initialViewMode === 'large');
-        setIsSubscription(false);
-        setSubscriptionNextChargeDate('');
-      } else {
-        if (wallets.length > 0) setWalletId(wallets[0].id);
-        setCurrency(baseCurrency);
-        setAmountInput('');
-        setIsWork(initialViewMode === 'work');
-        setIsLarge(initialViewMode === 'large');
-        setIsSubscription(false);
-        setSubscriptionNextChargeDate('');
+    if (!isOpen) return;
+    const state = useStore.getState();
+
+    if (editingExpense) {
+      setAmountInput(editingExpense.originalAmount.toString());
+      setCurrency(editingExpense.originalCurrency);
+      setCategoryId(editingExpense.categoryId);
+      setWalletId(editingExpense.walletId);
+      setIsWork(!!editingExpense.isWork);
+      setIsLarge(!!editingExpense.isLarge);
+      setIsSubscription(!!editingExpense.isSubscription);
+      setSubscriptionNextChargeDate(editingExpense.subscriptionNextChargeDate || '');
+    } else {
+      const lastExpense = state.expenses[state.expenses.length - 1];
+      if (lastExpense) {
+        setCategoryId(lastExpense.categoryId);
+        setWalletId(lastExpense.walletId);
+      } else if (state.wallets.length > 0) {
+        setWalletId(state.wallets[0].id);
       }
+      setCurrency(state.preferences.baseCurrency);
+      setAmountInput('');
+      setIsWork(initialViewMode === 'work');
+      setIsLarge(initialViewMode === 'large');
+      setIsSubscription(false);
+      setSubscriptionNextChargeDate('');
     }
-  }, [isOpen, editingExpense, expenses, wallets, baseCurrency]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editingExpense]);
 
   const evaluateMath = (expr: string) => {
     try {

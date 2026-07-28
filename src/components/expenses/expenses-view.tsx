@@ -58,14 +58,15 @@ export function ExpensesView() {
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const getDaySpendingStatus = (date: Date) => {
-    const dayTotal = filteredExpenses
+  const getDayTotal = (date: Date) => {
+    return filteredExpenses
       .filter(e => isSameDay(new Date(e.date), date) && !excludeIds.has(e.categoryId))
       .reduce((sum, e) => sum + e.convertedAmount, 0);
-
-    if (dayTotal === 0) return null;
-    return dayTotal > 100 ? 'high' : 'low';
   };
+
+  const formatDayTotal = (amount: number) => (
+    amount >= 1000 ? `${(amount / 1000).toFixed(1)}k` : amount.toFixed(0)
+  );
 
   const accentColor = viewMode === 'work'
     ? { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', text: '#f59e0b', glow: 'rgba(245,158,11,0.3)' }
@@ -187,14 +188,14 @@ export function ExpensesView() {
               {calendarDays.map((date, i) => {
                 const isSelected = isSameDay(date, selectedDate);
                 const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-                const hasSpending = getDaySpendingStatus(date);
+                const dayTotal = getDayTotal(date);
                 const isToday = isSameDay(date, new Date());
 
                 return (
                   <button
                     key={i}
                     onClick={() => setSelectedDate(date)}
-                    className="relative flex flex-col items-center justify-center h-11 rounded-2xl transition-all active:scale-90"
+                    className="relative flex flex-col items-center justify-center h-14 gap-0.5 rounded-2xl transition-all active:scale-90"
                     style={isSelected ? {
                       background: accentColor.text,
                       boxShadow: `0 0 20px ${accentColor.glow}`,
@@ -209,11 +210,13 @@ export function ExpensesView() {
                     )}>
                       {format(date, 'd')}
                     </span>
-                    {hasSpending && !isSelected && (
-                      <div
-                        className="absolute bottom-1.5 w-1 h-1 rounded-full"
-                        style={{ background: accentColor.text, boxShadow: `0 0 6px ${accentColor.glow}` }}
-                      />
+                    {dayTotal > 0 && (
+                      <span
+                        className="text-[8px] font-black tabular-nums leading-none whitespace-nowrap"
+                        style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : `${accentColor.text}99` }}
+                      >
+                        {formatDayTotal(dayTotal)}
+                      </span>
                     )}
                   </button>
                 );
