@@ -6,7 +6,7 @@
 -- 2. Create Tables
 
 -- Categories
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   parent_id UUID REFERENCES categories(id) ON DELETE CASCADE,
@@ -19,7 +19,7 @@ CREATE TABLE categories (
  );
 
 -- Portfolios (Capitals)
-CREATE TABLE portfolios (
+CREATE TABLE IF NOT EXISTS portfolios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE portfolios (
 );
 
 -- Folders (inside Portfolios)
-CREATE TABLE folders (
+CREATE TABLE IF NOT EXISTS folders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   portfolio_id UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
@@ -40,7 +40,7 @@ CREATE TABLE folders (
 );
 
 -- Wallets (Accounts)
-CREATE TABLE wallets (
+CREATE TABLE IF NOT EXISTS wallets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   portfolio_id UUID NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
@@ -56,7 +56,7 @@ CREATE TABLE wallets (
 );
 
 -- Transactions (Expenses)
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
@@ -71,7 +71,7 @@ CREATE TABLE transactions (
 );
 
 -- User Preferences
-CREATE TABLE user_preferences (
+CREATE TABLE IF NOT EXISTS user_preferences (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   base_currency TEXT NOT NULL DEFAULT 'USD',
   saved_colors TEXT[], -- Array of hex strings
@@ -87,6 +87,13 @@ ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 
 -- 4. Create RLS Policies
+DROP POLICY IF EXISTS "Users can manage their own categories" ON categories;
+DROP POLICY IF EXISTS "Users can manage their own portfolios" ON portfolios;
+DROP POLICY IF EXISTS "Users can manage their own folders" ON folders;
+DROP POLICY IF EXISTS "Users can manage their own wallets" ON wallets;
+DROP POLICY IF EXISTS "Users can manage their own transactions" ON transactions;
+DROP POLICY IF EXISTS "Users can manage their own preferences" ON user_preferences;
+
 CREATE POLICY "Users can manage their own categories" ON categories FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own portfolios" ON portfolios FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can manage their own folders" ON folders FOR ALL USING (auth.uid() = user_id);

@@ -13,6 +13,7 @@ import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { AddExpenseModal } from './add-expense-modal';
 import { PassiveIncomeTab } from '@/components/ui/passive-income-tab';
+import { SavingsGoalWidget } from './savings-goal-widget';
 import { getNextChargeDate } from './subscriptions-section';
 
 type ViewMode = 'personal' | 'work' | 'large';
@@ -245,7 +246,7 @@ export function ExpensesView() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-12 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
+        <div className="xl:col-span-7 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
           <div className="flex items-center justify-between gap-4 mb-5">
             <div>
               <div className="flex items-center gap-2">
@@ -262,6 +263,9 @@ export function ExpensesView() {
           <PassiveIncomeTab selectedCurrency={displayCurrency} compact />
         </div>
 
+        <div className="xl:col-span-5">
+          <SavingsGoalWidget />
+        </div>
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
