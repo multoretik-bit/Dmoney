@@ -16,7 +16,7 @@ import { AddExpenseModal } from '@/components/expenses/add-expense-modal';
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, setUser, pullData, pushData, wallets,
     categories, portfolios, folders, expenses, preferences,
-    passiveIncomeSources, assets,
+    passiveIncomeSources, assets, subscriptions, runSubscriptionAutoCharges,
     isAuthModalOpen, setAuthModalOpen
   } = useStore();
   const [scrolled, setScrolled] = useState(false);
@@ -28,7 +28,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     setIsHydrated(true);
-  }, []);
+    // Runs once per app load (guest or logged-in) — persisted state has
+    // rehydrated from localStorage by the time this effect fires.
+    runSubscriptionAutoCharges();
+  }, [runSubscriptionAutoCharges]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -71,7 +74,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }, 2000);
 
     return () => clearTimeout(timeoutId);
-  }, [user, categories, portfolios, folders, wallets, expenses, preferences, passiveIncomeSources, assets, pushData]);
+  }, [user, categories, portfolios, folders, wallets, expenses, preferences, passiveIncomeSources, assets, subscriptions, pushData]);
 
   // Real-time pull from Supabase with debounce
   useEffect(() => {

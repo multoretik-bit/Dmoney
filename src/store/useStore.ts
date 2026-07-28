@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { convertAmount } from '@/lib/exchange';
+import { convertAmount, getExchangeRate } from '@/lib/exchange';
+import { generateUUID } from '@/lib/uuid';
 
 export function currentMonthKey(): string {
   const d = new Date();
@@ -62,6 +63,23 @@ export interface Asset {
   currency: string;
   color?: string;
   imageUrl?: string;
+  sortOrder?: number;
+}
+
+export type SubscriptionPeriod = 'monthly' | 'yearly';
+
+export interface Subscription {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  period: SubscriptionPeriod;
+  billingDay: number; // 1-31, clamped to the last day of the billing month
+  billingMonth?: number; // 1-12, only used when period === 'yearly'
+  walletId: string;
+  categoryId: string;
+  autoCharge: boolean;
+  lastChargedPeriod?: string; // 'yyyy-MM' for monthly, 'yyyy' for yearly — guards against double auto-charging
   sortOrder?: number;
 }
 
@@ -135,6 +153,7 @@ interface UserState {
   expenses: Expense[];
   passiveIncomeSources: PassiveIncomeSource[];
   assets: Asset[];
+  subscriptions: Subscription[];
   user: User | null;
   isAuthModalOpen: boolean;
   isReordering: boolean;
@@ -176,6 +195,11 @@ interface UserState {
   updateAsset: (id: string, updates: Partial<Asset>) => void;
   deleteAsset: (id: string) => Promise<void>;
 
+  addSubscription: (subscription: Subscription) => void;
+  updateSubscription: (id: string, updates: Partial<Subscription>) => void;
+  deleteSubscription: (id: string) => Promise<void>;
+  runSubscriptionAutoCharges: () => void;
+
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, expense: Expense) => void;
   deleteExpense: (id: string) => void;
@@ -207,6 +231,7 @@ export const useStore = create<UserState>()(
       expenses: [],
       passiveIncomeSources: [],
       assets: [],
+      subscriptions: [],
       capitalHistory: [],
       user: null,
       isAuthModalOpen: false,
@@ -629,6 +654,75 @@ export const useStore = create<UserState>()(
         }));
       },
 
+      addSubscription: (subscription) => set((state) => {
+        const sortOrder = subscription.sortOrder !== undefined
+          ? subscription.sortOrder
+          : (state.subscriptions.length > 0 ? Math.max(...state.subscriptions.map(s => s.sortOrder || 0)) + 1 : 0);
+        return { subscriptions: [...state.subscriptions, { ...subscription, sortOrder }] };
+      }),
+      updateSubscription: (id, updates) => set((state) => ({
+        subscriptions: state.subscriptions.map(s => s.id === id ? { ...s, ...updates } : s)
+      })),
+      deleteSubscription: async (id) => {
+        const { user } = useStore.getState();
+        if (user) {
+          await supabase.from('subscriptions').delete().eq('id', id);
+        }
+        set((state) => ({
+          subscriptions: state.subscriptions.filter(s => s.id !== id)
+        }));
+      },
+      runSubscriptionAutoCharges: () => {
+        const state = useStore.getState();
+        const now = new Date();
+        const year = now.getFullYear();
+        const currentMonthNum = now.getMonth() + 1; // 1-12
+        const today = now.getDate();
+
+        state.subscriptions.forEach(sub => {
+          if (!sub.autoCharge) return;
+
+          let periodKey: string;
+          if (sub.period === 'yearly') {
+            const billingMonth = sub.billingMonth || 1;
+            if (currentMonthNum !== billingMonth) return;
+            const daysInBillingMonth = new Date(year, billingMonth, 0).getDate();
+            const effectiveDay = Math.min(sub.billingDay, daysInBillingMonth);
+            if (today !== effectiveDay) return;
+            periodKey = String(year);
+          } else {
+            const daysInThisMonth = new Date(year, currentMonthNum, 0).getDate();
+            const effectiveDay = Math.min(sub.billingDay, daysInThisMonth);
+            if (today !== effectiveDay) return;
+            periodKey = currentMonthKey();
+          }
+
+          if (sub.lastChargedPeriod === periodKey) return;
+
+          const wallet = state.wallets.find(w => w.id === sub.walletId);
+          if (!wallet) return;
+
+          const walletAmount = convertAmount(sub.amount, sub.currency, wallet.currency);
+          const convertedAmount = convertAmount(sub.amount, sub.currency, state.preferences.baseCurrency);
+          const exchangeRate = getExchangeRate(sub.currency, wallet.currency);
+
+          useStore.getState().addExpense({
+            id: generateUUID(),
+            originalAmount: sub.amount,
+            originalCurrency: sub.currency,
+            convertedAmount,
+            walletAmount,
+            exchangeRate,
+            categoryId: sub.categoryId,
+            walletId: sub.walletId,
+            date: now.toISOString(),
+            isSubscription: true,
+          });
+
+          useStore.getState().updateSubscription(sub.id, { lastChargedPeriod: periodKey });
+        });
+      },
+
       addExpense: (expense) => set((state) => {
         const updatedWallets = state.wallets.map(w => {
           if (w.id === expense.walletId) {
@@ -743,7 +837,7 @@ export const useStore = create<UserState>()(
         try {
           console.log('🔄 Pulling data from Supabase...');
           // Fetch all in parallel
-          const [cats, ports, folds, walls, exps, prefs, pis, asts] = await Promise.all([
+          const [cats, ports, folds, walls, exps, prefs, pis, asts, subs] = await Promise.all([
             supabase.from('categories').select('*'),
             supabase.from('portfolios').select('*'),
             supabase.from('folders').select('*'),
@@ -752,6 +846,7 @@ export const useStore = create<UserState>()(
             supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
             supabase.from('passive_income_sources').select('*'),
             supabase.from('assets').select('*'),
+            supabase.from('subscriptions').select('*'),
           ]);
 
           if (cats.data && cats.data.length > 0) {
@@ -844,6 +939,23 @@ export const useStore = create<UserState>()(
             })) });
           }
 
+          if (subs.data) {
+            set({ subscriptions: subs.data.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              amount: s.amount,
+              currency: s.currency,
+              period: s.period || 'monthly',
+              billingDay: s.billing_day,
+              billingMonth: s.billing_month || undefined,
+              walletId: s.wallet_id,
+              categoryId: s.category_id,
+              autoCharge: s.auto_charge || false,
+              lastChargedPeriod: s.last_charged_period || undefined,
+              sortOrder: s.sort_order || 0
+            })) });
+          }
+
           if (prefs.data) {
             const currentPrefs = useStore.getState().preferences;
             set({ preferences: {
@@ -862,6 +974,7 @@ export const useStore = create<UserState>()(
           }
 
           useStore.getState().recordDailyCapital();
+          useStore.getState().runSubscriptionAutoCharges();
           console.log('✅ Data pulled successfully');
         } catch (error) {
           console.error('❌ Error pulling data:', error);
@@ -989,6 +1102,21 @@ export const useStore = create<UserState>()(
                   color: a.color || null,
                   image_url: a.imageUrl || null,
                   sort_order: a.sortOrder || 0
+               })), 'id'),
+               resilientUpsert('subscriptions', state.subscriptions.map(s => ({
+                  id: s.id,
+                  user_id: user.id,
+                  name: s.name,
+                  amount: s.amount,
+                  currency: s.currency,
+                  period: s.period,
+                  billing_day: s.billingDay,
+                  billing_month: s.billingMonth || null,
+                  wallet_id: s.walletId,
+                  category_id: s.categoryId,
+                  auto_charge: s.autoCharge,
+                  last_charged_period: s.lastChargedPeriod || null,
+                  sort_order: s.sortOrder || 0
                })), 'id'),
                prefUpsert
              ]);

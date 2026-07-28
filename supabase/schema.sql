@@ -141,3 +141,26 @@ ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can manage their own assets" ON assets;
 CREATE POLICY "Users can manage their own assets" ON assets FOR ALL USING (auth.uid() = user_id);
+
+-- 9. Subscriptions (Траты -> Подписки section)
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  amount NUMERIC NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  period TEXT NOT NULL DEFAULT 'monthly', -- 'monthly' | 'yearly'
+  billing_day NUMERIC NOT NULL DEFAULT 1, -- 1-31
+  billing_month NUMERIC, -- 1-12, only used when period = 'yearly'
+  wallet_id UUID REFERENCES wallets(id) ON DELETE SET NULL,
+  category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
+  auto_charge BOOLEAN NOT NULL DEFAULT false,
+  last_charged_period TEXT, -- 'yyyy-MM' for monthly, 'yyyy' for yearly
+  sort_order NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own subscriptions" ON subscriptions;
+CREATE POLICY "Users can manage their own subscriptions" ON subscriptions FOR ALL USING (auth.uid() = user_id);
