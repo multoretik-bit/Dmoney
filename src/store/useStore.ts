@@ -77,6 +77,7 @@ export interface Subscription {
   currency: string;
   kind: SubscriptionKind;
   color?: string;
+  imageUrl?: string;
   billingDay: number; // 1-31, clamped to the last day of the billing month
   billingMonth?: number; // 1-12, only used when kind === 'yearly'
   walletId: string;
@@ -984,6 +985,7 @@ export const useStore = create<UserState>()(
               currency: s.currency,
               kind: s.kind || 'personal',
               color: s.color || undefined,
+              imageUrl: s.image_url || undefined,
               billingDay: s.billing_day,
               billingMonth: s.billing_month || undefined,
               walletId: s.wallet_id,
@@ -1149,6 +1151,7 @@ export const useStore = create<UserState>()(
                   currency: s.currency,
                   kind: s.kind,
                   color: s.color || null,
+                  image_url: s.imageUrl || null,
                   billing_day: s.billingDay,
                   billing_month: s.billingMonth || null,
                   wallet_id: s.walletId,

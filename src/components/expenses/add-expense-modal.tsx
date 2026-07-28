@@ -1,459 +1,389 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ArrowRight, CalendarClock, Check, ChevronDown, Tag, Wallet, X,
+} from 'lucide-react';
 import { generateUUID } from '@/lib/uuid';
-
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Calculator, Wallet as WalletIcon, Tag, ArrowRight, ChevronDown, RefreshCw } from 'lucide-react';
 import { useStore, Expense } from '@/store/useStore';
 import { convertAmount, getExchangeRate } from '@/lib/exchange';
-import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { CurrencyPicker } from '@/components/ui/currency-picker';
-import { PaySubscriptionModal } from './subscriptions-section';
+import { getNextChargeDate } from './subscriptions-section';
 
-export function AddExpenseModal({ 
-  isOpen, 
-  onClose, 
+type ViewMode = 'personal' | 'work' | 'large';
+type ExpenseSource = 'regular' | 'recurring';
+
+export function AddExpenseModal({
+  isOpen,
+  onClose,
   editingExpense,
-  initialViewMode = 'personal'
-}: { 
-  isOpen: boolean; 
+  initialViewMode = 'personal',
+}: {
+  isOpen: boolean;
   onClose: () => void;
   editingExpense?: Expense | null;
-  initialViewMode?: 'personal' | 'work' | 'large';
+  initialViewMode?: ViewMode;
 }) {
-  const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories, subscriptions } = useStore();
+  const {
+    addExpense, updateExpense, deleteExpense, preferences,
+    wallets, categories, subscriptions,
+  } = useStore();
   const { baseCurrency } = preferences;
 
   const [amountInput, setAmountInput] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [categoryId, setCategoryId] = useState('');
+  const [currency, setCurrency] = useState(baseCurrency);
   const [walletId, setWalletId] = useState('');
-  const [isWork, setIsWork] = useState(false);
-  const [isLarge, setIsLarge] = useState(false);
-  const [isSubscription, setIsSubscription] = useState(false);
-  const [subscriptionNextChargeDate, setSubscriptionNextChargeDate] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [parentCategoryId, setParentCategoryId] = useState('');
+  const [source, setSource] = useState<ExpenseSource>('regular');
+  const [subscriptionId, setSubscriptionId] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('personal');
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
-  const [isPaySubscriptionOpen, setIsPaySubscriptionOpen] = useState(false);
 
-  // Auto-select logic — seeds the form ONLY when the modal opens (or when
-  // switching which expense is being edited). It intentionally does not
-  // depend on `expenses`/`wallets`/`baseCurrency`: those arrays get new
-  // references on every background sync (pullData), and depending on them
-  // here used to wipe out the amount/currency the user was mid-typing.
+  const rootCategories = useMemo(
+    () => categories.filter(category => !category.parentId).sort((a, b) => a.sortOrder - b.sortOrder),
+    [categories]
+  );
+  const childCategories = useMemo(
+    () => categories.filter(category => category.parentId === parentCategoryId).sort((a, b) => a.sortOrder - b.sortOrder),
+    [categories, parentCategoryId]
+  );
+
   useEffect(() => {
     if (!isOpen) return;
     const state = useStore.getState();
-
     if (editingExpense) {
+      const category = state.categories.find(item => item.id === editingExpense.categoryId);
       setAmountInput(editingExpense.originalAmount.toString());
       setCurrency(editingExpense.originalCurrency);
-      setCategoryId(editingExpense.categoryId);
       setWalletId(editingExpense.walletId);
-      setIsWork(!!editingExpense.isWork);
-      setIsLarge(!!editingExpense.isLarge);
-      setIsSubscription(!!editingExpense.isSubscription);
-      setSubscriptionNextChargeDate(editingExpense.subscriptionNextChargeDate || '');
+      setCategoryId(editingExpense.categoryId);
+      setParentCategoryId(category?.parentId || category?.id || '');
+      setSource(editingExpense.isSubscription ? 'recurring' : 'regular');
+      setSubscriptionId('');
+      setViewMode(editingExpense.isWork ? 'work' : editingExpense.isLarge ? 'large' : 'personal');
     } else {
       const lastExpense = state.expenses[state.expenses.length - 1];
-      if (lastExpense) {
-        setCategoryId(lastExpense.categoryId);
-        setWalletId(lastExpense.walletId);
-      } else if (state.wallets.length > 0) {
-        setWalletId(state.wallets[0].id);
-      }
-      setCurrency(state.preferences.baseCurrency);
+      const lastCategory = state.categories.find(item => item.id === lastExpense?.categoryId);
       setAmountInput('');
-      setIsWork(initialViewMode === 'work');
-      setIsLarge(initialViewMode === 'large');
-      setIsSubscription(false);
-      setSubscriptionNextChargeDate('');
+      setCurrency(state.preferences.baseCurrency);
+      setWalletId(lastExpense?.walletId || state.wallets[0]?.id || '');
+      setCategoryId(lastExpense?.categoryId || '');
+      setParentCategoryId(lastCategory?.parentId || lastCategory?.id || '');
+      setSource('regular');
+      setSubscriptionId('');
+      setViewMode(initialViewMode);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, editingExpense]);
+  }, [editingExpense, initialViewMode, isOpen]);
 
-  const evaluateMath = (expr: string) => {
+  const selectRootCategory = (id: string) => {
+    setSource('regular');
+    setSubscriptionId('');
+    setParentCategoryId(id);
+    const children = categories.filter(category => category.parentId === id);
+    setCategoryId(children.length === 0 ? id : '');
+  };
+
+  const selectRecurring = (id: string) => {
+    const recurring = subscriptions.find(item => item.id === id);
+    if (!recurring) return;
+    setSource('recurring');
+    setSubscriptionId(id);
+    setAmountInput(recurring.amount.toString());
+    setCurrency(recurring.currency);
+    setWalletId(recurring.walletId);
+    setCategoryId(recurring.categoryId);
+    const category = categories.find(item => item.id === recurring.categoryId);
+    setParentCategoryId(category?.parentId || category?.id || '');
+    setViewMode(recurring.kind === 'work' ? 'work' : 'personal');
+  };
+
+  const evaluateAmount = () => {
     try {
-      const sanitized = expr.replace(/[^-+*/().0-9]/g, '');
-      return Function(`'use strict'; return (${sanitized})`)();
+      const sanitized = amountInput.replace(/[^-+*/().0-9]/g, '');
+      const value = Function(`'use strict'; return (${sanitized})`)();
+      return Number(value);
     } catch {
-      return null;
+      return Number(amountInput);
     }
   };
 
   const handleSave = () => {
-    let numericAmount = evaluateMath(amountInput);
-    if (numericAmount === null || isNaN(numericAmount) || numericAmount <= 0) {
-      numericAmount = parseFloat(amountInput);
-    }
-    if (!numericAmount || isNaN(numericAmount) || !categoryId || !walletId) return;
-    
-    const wallet = wallets.find(w => w.id === walletId);
-    if (!wallet) return;
+    const numericAmount = evaluateAmount();
+    const wallet = wallets.find(item => item.id === walletId);
+    if (!numericAmount || numericAmount <= 0 || !wallet || !categoryId) return;
 
-    const walletAmount = convertAmount(numericAmount, currency, wallet.currency);
-    const convertedAmount = convertAmount(numericAmount, currency, baseCurrency);
-    const exchangeRate = getExchangeRate(currency, wallet.currency);
-
-    const expenseData = {
-      id: editingExpense ? editingExpense.id : generateUUID(),
+    const recurring = subscriptions.find(item => item.id === subscriptionId);
+    const expenseData: Expense = {
+      id: editingExpense?.id || generateUUID(),
       originalAmount: numericAmount,
       originalCurrency: currency,
-      convertedAmount,
-      walletAmount,
-      exchangeRate,
+      convertedAmount: convertAmount(numericAmount, currency, baseCurrency),
+      walletAmount: convertAmount(numericAmount, currency, wallet.currency),
+      exchangeRate: getExchangeRate(currency, wallet.currency),
       categoryId,
       walletId,
-      date: editingExpense ? editingExpense.date : new Date().toISOString(),
-      isWork,
-      isLarge,
-      isSubscription,
-      subscriptionNextChargeDate: isSubscription ? (subscriptionNextChargeDate || undefined) : undefined
+      date: editingExpense?.date || new Date().toISOString(),
+      isWork: viewMode === 'work',
+      isLarge: viewMode === 'large',
+      isSubscription: source === 'recurring',
+      subscriptionNextChargeDate: recurring
+        ? getNextChargeDate(recurring).toISOString().slice(0, 10)
+        : editingExpense?.subscriptionNextChargeDate,
     };
 
-    if (editingExpense) {
-      updateExpense(editingExpense.id, expenseData);
-    } else {
-      addExpense(expenseData);
-    }
-
-    if (navigator.vibrate) navigator.vibrate(50);
+    if (editingExpense) updateExpense(editingExpense.id, expenseData);
+    else addExpense(expenseData);
+    navigator.vibrate?.(40);
     onClose();
-    setAmountInput('');
   };
 
   return (
     <>
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-end bg-black/80 backdrop-blur-md px-4 pb-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={(e) => e.target === e.currentTarget && onClose()}
-        >
-          <motion.div 
-            className="glass-card w-full max-w-2xl max-h-[90vh] rounded-[48px] flex flex-col p-8 shadow-2xl relative border-t-4 border-t-accent"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 250 }}
-            onClick={(e) => e.stopPropagation()}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 z-[170] flex items-end justify-center bg-black/75 backdrop-blur-md p-3 sm:p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={event => event.target === event.currentTarget && onClose()}
           >
-            {/* CENTERED HEADER */}
-            <div className="flex flex-col items-center mb-10 relative">
-              <button 
-                onClick={onClose} 
-                className="absolute right-0 top-0 p-3 bg-white/5 hover:bg-white/10 rounded-full active:scale-95 text-white/40 transition-all"
-              >
-                <X size={20} />
-              </button>
-              
-              <div className="w-16 h-16 bg-accent/20 rounded-[28px] flex items-center justify-center text-accent mb-4 shadow-xl shadow-accent/10">
-                <Calculator size={32} strokeWidth={3} />
+            <motion.div
+              initial={{ y: 70, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 70, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="w-full max-w-3xl max-h-[94vh] overflow-y-auto hide-scrollbar rounded-[32px] border border-white/10 bg-[#0b1320] shadow-2xl"
+            >
+              <div className="sticky top-0 z-20 flex items-center justify-between px-5 sm:px-7 py-5 bg-[#0b1320]/90 backdrop-blur-xl border-b border-white/[0.06]">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-300">Новая операция</p>
+                  <h2 className="text-xl font-black text-white mt-1">
+                    {editingExpense ? 'Изменить трату' : 'Добавить трату'}
+                  </h2>
+                </div>
+                <button onClick={onClose} className="p-2.5 rounded-xl bg-white/5 text-white/40 hover:text-white">
+                  <X size={19} />
+                </button>
               </div>
-              <h2 className="text-3xl font-black uppercase tracking-[0.3em] text-white">
-                {editingExpense ? 'Правка' : 'Расход'}
-              </h2>
-            </div>
 
-            {!editingExpense && subscriptions.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setIsPaySubscriptionOpen(true)}
-                className="mb-8 -mt-4 flex items-center justify-center gap-2 py-4 rounded-[24px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black text-xs uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
-              >
-                <RefreshCw size={16} />
-                Оплатить одну из подписок
-              </button>
-            )}
-
-            <div className="flex-1 overflow-y-auto flex flex-col gap-10 hide-scrollbar pb-24">
-              {/* Amount Input with Enhanced Preview */}
-              <div className="flex flex-col items-center justify-center p-12 bg-black/20 rounded-[48px] border border-white/5 relative overflow-hidden min-h-[320px]">
-                <div className="text-[11px] text-white/20 font-black uppercase tracking-[0.4em] mb-10">Введите сумму</div>
-                
-                <div className="flex flex-col items-center gap-8 w-full">
-                  <div className="flex items-center justify-center gap-4 w-full">
-                    <button 
-                      type="button"
+              <div className="p-5 sm:p-7 space-y-7">
+                <section className="rounded-[26px] p-5 sm:p-7 bg-[linear-gradient(145deg,#1747a6_0%,#10234a_60%,#0b1426_100%)] border border-blue-300/15">
+                  <p className="text-xs font-bold text-blue-100/55">Сумма операции</p>
+                  <div className="flex items-end gap-3 mt-4">
+                    <input
+                      autoFocus
+                      inputMode="decimal"
+                      value={amountInput}
+                      onChange={event => setAmountInput(event.target.value)}
+                      placeholder="0"
+                      className="min-w-0 flex-1 bg-transparent outline-none text-5xl sm:text-6xl font-black tracking-[-0.04em] text-white placeholder:text-white/10"
+                    />
+                    <button
                       onClick={() => setIsCurrencyPickerOpen(true)}
-                      className="bg-white/5 px-5 h-16 rounded-[24px] text-xl font-black outline-none text-accent border border-accent/10 flex items-center gap-3 hover:bg-accent/10 transition-all"
+                      className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 border border-white/10 text-sm font-black text-white"
                     >
                       {currency}
-                      <ChevronDown size={14} className="text-accent/60" />
+                      <ChevronDown size={14} />
                     </button>
-                    <input 
-                      type="text" 
-                      inputMode="decimal"
-                      className="bg-transparent text-7xl font-black text-left outline-none min-w-[140px] max-w-[240px] text-white placeholder-white/5"
-                      placeholder="0"
-                      value={amountInput}
-                      onChange={(e) => setAmountInput(e.target.value)}
-                      autoFocus
-                    />
                   </div>
+                  {Number(amountInput) > 0 && currency !== baseCurrency && (
+                    <p className="text-xs text-blue-100/45 mt-4">
+                      ≈ {convertAmount(Number(amountInput), currency, baseCurrency).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {baseCurrency}
+                    </p>
+                  )}
+                </section>
 
-                  <CurrencyPicker 
-                    isOpen={isCurrencyPickerOpen} 
-                    onClose={() => setIsCurrencyPickerOpen(false)} 
-                    selectedCurrency={currency}
-                    onSelect={setCurrency}
-                  />
-
-                  <div className="h-40 flex items-center justify-center w-full">
-                    {(() => {
-                      const wallet = wallets.find(w => w.id === walletId);
-                      const numericAmount = parseFloat(amountInput) || 0;
-                      if (numericAmount > 0) {
-                        const convertedUSD = convertAmount(numericAmount, currency, 'USD');
-                        const convertedRUB = convertAmount(numericAmount, currency, 'RUB');
-                        const convertedWallet = wallet ? convertAmount(numericAmount, currency, wallet.currency) : null;
-                        
-                        return (
-                          <motion.div 
-                            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                            className="flex flex-col items-center gap-2 bg-accent/5 p-6 rounded-[32px] border border-accent/10 w-full"
-                          >
-                             <div className="flex items-center gap-3 text-accent">
-                                <span className="text-4xl font-black tracking-tight">
-                                  ≈ {convertedUSD.toFixed(1)} USD
-                                </span>
-                             </div>
-                             <div className="flex flex-col items-center gap-1 opacity-30">
-                                <span className="text-[13px] font-black uppercase tracking-widest text-white">
-                                  ≈ {convertedRUB.toFixed(1)} RUB
-                                </span>
-                                {wallet && wallet.currency !== 'USD' && wallet.currency !== 'RUB' && (
-                                  <span className="text-[10px] font-black uppercase tracking-widest">
-                                    {convertedWallet?.toFixed(1)} {wallet.currency} • {wallet.name}
-                                  </span>
-                                )}
-                             </div>
-                          </motion.div>
-                        );
-                      }
-                      return (
-                        <div className="text-[10px] font-black uppercase text-white/5 tracking-[0.5em] animate-pulse">
-                          Ожидание ввода
-                        </div>
-                      );
-                    })()}
+                <section>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag size={15} className="text-blue-300" />
+                    <h3 className="text-sm font-black text-white">Категория траты</h3>
                   </div>
-                </div>
-              </div>
-
-              {/* Category Selection */}
-              <div className="flex flex-col gap-6">
-                <div className="flex items-center gap-3 px-2">
-                  <span className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30">Категория</span>
-                  <div className="h-px bg-white/5 flex-1" />
-                </div>
-                {categories.length === 0 ? (
-                  <div className="text-center py-20 bg-white/[0.02] rounded-[40px] border-2 border-dashed border-white/5 text-[10px] font-black uppercase tracking-[0.4em] text-white/10">
-                    Сначала создайте категории
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-10">
-                    {categories.filter(c => !c.parentId).map(head => {
-                      const subs = categories.filter(c => c.parentId === head.id);
-                      return (
-                        <div key={head.id} className="flex flex-col gap-4">
-                          <span className="text-[11px] font-black uppercase text-white/40 tracking-[0.2em] px-2">{head.name}</span>
-                          <div className="grid grid-cols-4 gap-4">
-                            <button 
-                              onClick={() => setCategoryId(head.id)}
-                              className={cn(
-                                "flex flex-col items-center justify-center gap-3 h-24 rounded-[28px] transition-all border-l-4",
-                                categoryId === head.id ? "bg-accent/20 border-accent shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-105" : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
-                              )}
-                            >
-                              <div className="text-3xl" style={categoryId === head.id ? { color: head.color } : {}}>{head.icon}</div>
-                              <span className="text-[9px] font-black uppercase tracking-widest text-white/60">Все</span>
-                            </button>
-                            {subs.map(sub => (
-                              <button 
-                                key={sub.id} 
-                                onClick={() => setCategoryId(sub.id)}
-                                className={cn(
-                                  "flex flex-col items-center justify-center gap-3 h-24 rounded-[28px] transition-all border-l-4",
-                                  categoryId === sub.id ? "bg-accent/20 border-accent shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-105" : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
-                                )}
-                              >
-                                <div className="text-3xl" style={categoryId === sub.id ? { color: sub.color } : {}}>{sub.icon}</div>
-                                <span className="text-[9px] font-black uppercase tracking-widest text-white/60 truncate w-full px-2 text-center">{sub.name}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              
-               {/* Wallet Selection */}
-              {wallets.length > 0 && (
-                <div className="flex flex-col gap-6">
-                   <div className="flex items-center gap-3 px-2">
-                    <span className="text-[12px] font-black uppercase tracking-[0.4em] text-white/30">Списать с</span>
-                    <div className="h-px bg-white/5 flex-1" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {wallets.map(w => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {rootCategories.map(category => (
                       <button
-                        key={w.id}
-                        onClick={() => setWalletId(w.id)}
+                        key={category.id}
+                        onClick={() => selectRootCategory(category.id)}
                         className={cn(
-                          "p-5 rounded-[32px] flex items-center gap-4 transition-all active:scale-95 border-l-4",
-                          walletId === w.id ? "bg-accent/20 border-accent text-accent shadow-[0_0_20px_rgba(59,130,246,0.1)]" : "bg-white/5 border-transparent text-white/20"
+                          'flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all',
+                          source === 'regular' && parentCategoryId === category.id
+                            ? 'text-white'
+                            : 'bg-white/[0.025] border-white/[0.06] text-white/55 hover:text-white/80'
+                        )}
+                        style={source === 'regular' && parentCategoryId === category.id
+                          ? { background: `${category.color}20`, borderColor: `${category.color}70` }
+                          : {}}
+                      >
+                        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style={{ background: `${category.color}1d` }}>
+                          {category.icon}
+                        </span>
+                        <span className="text-xs font-bold truncate">{category.name}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setSource('recurring');
+                        setParentCategoryId('');
+                        setCategoryId('');
+                      }}
+                      className={cn(
+                        'flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all',
+                        source === 'recurring'
+                          ? 'bg-emerald-400/12 border-emerald-300/40 text-white'
+                          : 'bg-white/[0.025] border-white/[0.06] text-white/55 hover:text-white/80'
+                      )}
+                    >
+                      <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-400/12 text-emerald-300">
+                        <CalendarClock size={17} />
+                      </span>
+                      <span className="text-xs font-bold">Постоянные траты</span>
+                    </button>
+                  </div>
+
+                  {source === 'regular' && parentCategoryId && childCategories.length > 0 && (
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-2">На что именно</p>
+                      <div className="flex flex-wrap gap-2">
+                        {childCategories.map(category => (
+                          <button
+                            key={category.id}
+                            onClick={() => setCategoryId(category.id)}
+                            className={cn(
+                              'flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition-all',
+                              categoryId === category.id ? 'text-white' : 'bg-white/[0.025] border-white/[0.06] text-white/45'
+                            )}
+                            style={categoryId === category.id
+                              ? { background: `${category.color}20`, borderColor: `${category.color}70` }
+                              : {}}
+                          >
+                            <span>{category.icon}</span>
+                            {category.name}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {source === 'recurring' && (
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid sm:grid-cols-2 gap-2.5">
+                      {subscriptions.length === 0 ? (
+                        <div className="sm:col-span-2 p-7 text-center rounded-2xl border border-dashed border-white/10 text-xs text-white/35">
+                          Сначала добавьте постоянную трату в отдельном разделе
+                        </div>
+                      ) : subscriptions.map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => selectRecurring(item.id)}
+                          className={cn(
+                            'relative overflow-hidden flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                            subscriptionId === item.id
+                              ? 'border-emerald-300/50 bg-emerald-400/10'
+                              : 'border-white/[0.06] bg-white/[0.025]'
+                          )}
+                        >
+                          <span
+                            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-400/10 text-emerald-300 bg-cover bg-center"
+                            style={item.imageUrl ? { backgroundImage: `url(${item.imageUrl})` } : {}}
+                          >
+                            {!item.imageUrl && <CalendarClock size={18} />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-bold text-white truncate">{item.name}</span>
+                            <span className="block text-[10px] text-white/35 mt-0.5">
+                              {item.billingDay} числа · {item.amount.toLocaleString('ru-RU')} {item.currency}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </section>
+
+                <section>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Wallet size={15} className="text-blue-300" />
+                    <h3 className="text-sm font-black text-white">Списать со счёта</h3>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-2.5">
+                    {wallets.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => setWalletId(item.id)}
+                        className={cn(
+                          'flex items-center gap-3 p-3 rounded-2xl border text-left transition-all',
+                          walletId === item.id
+                            ? 'bg-blue-400/12 border-blue-300/40 text-white'
+                            : 'bg-white/[0.025] border-white/[0.06] text-white/45'
                         )}
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-black/20 flex items-center justify-center text-2xl" style={walletId === w.id ? { color: w.color } : {}}>
-                          {w.icon}
-                        </div>
-                        <div className="flex flex-col items-start min-w-0">
-                          <span className={cn("text-sm font-black uppercase tracking-tighter truncate w-full", walletId === w.id ? "text-white" : "text-white/40")}>{w.name}</span>
-                          <span className="text-[10px] font-black opacity-20 tracking-widest leading-none mt-1">{Number(w.balance || 0).toFixed(1)} {w.currency}</span>
-                        </div>
+                        <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/5">{item.icon || '◈'}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-xs font-bold truncate">{item.name}</span>
+                          <span className="block text-[10px] opacity-45">{item.balance.toLocaleString('ru-RU')} {item.currency}</span>
+                        </span>
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                </section>
 
-              {/* Work Expense Toggle */}
-              <div 
-                onClick={() => { setIsWork(!isWork); if (!isWork) setIsLarge(false); }}
-                className={cn(
-                  "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
-                  isWork 
-                    ? "bg-amber-500/10 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.1)]" 
-                    : "bg-white/5 border-transparent hover:bg-white/10"
-                )}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
-                    isWork ? "bg-amber-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
-                  )}>
-                    💼
-                  </div>
-                  <div className="flex flex-col">
-                    <span className={cn("text-base font-black transition-colors", isWork ? "text-amber-500" : "text-white/60")}>Рабочая трата</span>
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Отдельный учет и лимит</span>
-                  </div>
-                </div>
-                <div className={cn(
-                  "w-14 h-8 rounded-full p-1 transition-all",
-                  isWork ? "bg-amber-500" : "bg-white/10"
-                )}>
-                  <motion.div 
-                    animate={{ x: isWork ? 24 : 0 }}
-                    className="w-6 h-6 bg-white rounded-full shadow-lg"
-                  />
-                </div>
+                <section className="flex flex-wrap gap-2">
+                  {(['personal', 'work', 'large'] as ViewMode[]).map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => setViewMode(mode)}
+                      className={cn(
+                        'px-4 py-2.5 rounded-xl border text-xs font-bold transition-colors',
+                        viewMode === mode
+                          ? mode === 'work'
+                            ? 'bg-amber-400/15 border-amber-300/35 text-amber-200'
+                            : mode === 'large'
+                              ? 'bg-violet-400/15 border-violet-300/35 text-violet-200'
+                              : 'bg-blue-400/15 border-blue-300/35 text-blue-200'
+                          : 'bg-white/[0.025] border-white/[0.06] text-white/35'
+                      )}
+                    >
+                      {mode === 'personal' ? 'Личная' : mode === 'work' ? 'Рабочая' : 'Крупная'}
+                    </button>
+                  ))}
+                </section>
               </div>
 
-              {/* Large Purchase Toggle */}
-              <div 
-                onClick={() => { setIsLarge(!isLarge); if (!isLarge) setIsWork(false); }}
-                className={cn(
-                  "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
-                  isLarge 
-                    ? "bg-purple-500/10 border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.1)]" 
-                    : "bg-white/5 border-transparent hover:bg-white/10"
+              <div className="sticky bottom-0 flex gap-3 p-5 sm:px-7 bg-[#0b1320]/95 backdrop-blur-xl border-t border-white/[0.06]">
+                {editingExpense && (
+                  <button
+                    onClick={() => {
+                      deleteExpense(editingExpense.id);
+                      onClose();
+                    }}
+                    className="px-4 rounded-2xl border border-rose-400/20 text-rose-300 text-xs font-bold"
+                  >
+                    Удалить
+                  </button>
                 )}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
-                    isLarge ? "bg-purple-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
-                  )}>
-                    🛍️
-                  </div>
-                  <div className="flex flex-col">
-                    <span className={cn("text-base font-black transition-colors", isLarge ? "text-purple-500" : "text-white/60")}>Крупная покупка</span>
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Вне основного бюджета</span>
-                  </div>
-                </div>
-                <div className={cn(
-                  "w-14 h-8 rounded-full p-1 transition-all",
-                  isLarge ? "bg-purple-500" : "bg-white/10"
-                )}>
-                  <motion.div
-                    animate={{ x: isLarge ? 24 : 0 }}
-                    className="w-6 h-6 bg-white rounded-full shadow-lg"
-                  />
-                </div>
-              </div>
-
-              {/* Subscription Toggle */}
-              <div className="flex flex-col gap-4">
-                <div
-                  onClick={() => setIsSubscription(!isSubscription)}
-                  className={cn(
-                    "p-6 rounded-[32px] border-2 transition-all cursor-pointer flex items-center justify-between group",
-                    isSubscription
-                      ? "bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.1)]"
-                      : "bg-white/5 border-transparent hover:bg-white/10"
-                  )}
+                <button
+                  onClick={handleSave}
+                  disabled={!evaluateAmount() || !categoryId || !walletId}
+                  className="flex-1 min-h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:opacity-25 text-white font-black flex items-center justify-center gap-2 transition-all"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all",
-                      isSubscription ? "bg-emerald-500 text-white rotate-12 scale-110" : "bg-white/5 text-white/20"
-                    )}>
-                      🔁
-                    </div>
-                    <div className="flex flex-col">
-                      <span className={cn("text-base font-black transition-colors", isSubscription ? "text-emerald-500" : "text-white/60")}>Подписка</span>
-                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest leading-none mt-1">Показать дату след. списания</span>
-                    </div>
-                  </div>
-                  <div className={cn(
-                    "w-14 h-8 rounded-full p-1 transition-all",
-                    isSubscription ? "bg-emerald-500" : "bg-white/10"
-                  )}>
-                    <motion.div
-                      animate={{ x: isSubscription ? 24 : 0 }}
-                      className="w-6 h-6 bg-white rounded-full shadow-lg"
-                    />
-                  </div>
-                </div>
-
-                {isSubscription && (
-                  <div className="p-6 bg-emerald-500/5 rounded-[32px] border border-emerald-500/20 flex flex-col gap-3">
-                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Дата следующего списания</label>
-                    <input
-                      type="date"
-                      value={subscriptionNextChargeDate}
-                      onChange={(e) => setSubscriptionNextChargeDate(e.target.value)}
-                      className="bg-black/30 p-4 rounded-2xl text-white font-bold border border-white/10 outline-none"
-                    />
-                  </div>
-                )}
+                  <Check size={18} strokeWidth={3} />
+                  {editingExpense ? 'Сохранить' : 'Добавить трату'}
+                  <ArrowRight size={16} />
+                </button>
               </div>
-            </div>
-
-            <button
-              onClick={handleSave}
-              disabled={!amountInput || !categoryId || !walletId}
-              className="mt-6 min-h-[80px] bg-accent text-white text-2xl font-black rounded-[32px] flex items-center justify-center gap-4 shadow-2xl shadow-accent/20 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale group"
-            >
-              <Check size={32} strokeWidth={4} className="group-hover:scale-125 transition-transform" />
-              СОХРАНИТЬ
-            </button>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-    <PaySubscriptionModal
-      isOpen={isPaySubscriptionOpen}
-      onClose={() => { setIsPaySubscriptionOpen(false); onClose(); }}
-    />
+        )}
+      </AnimatePresence>
+
+      <CurrencyPicker
+        isOpen={isCurrencyPickerOpen}
+        onClose={() => setIsCurrencyPickerOpen(false)}
+        selectedCurrency={currency}
+        onSelect={setCurrency}
+      />
     </>
   );
 }

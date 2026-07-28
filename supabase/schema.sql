@@ -166,6 +166,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 -- "color". Safe to re-run.
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'personal';
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS color TEXT;
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 

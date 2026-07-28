@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, PieChart, Wallet, Settings2 } from 'lucide-react';
+import { LayoutGrid, PieChart, ReceiptText, Settings2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 const NAV_ITEMS = [
   { href: '/expenses', label: 'Обзор', icon: LayoutGrid },
-  { href: '/wallets', label: 'Капиталы', icon: Wallet },
+  { href: '/operations', label: 'Операции', icon: ReceiptText },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
+  { href: '/recurring', label: 'Постоянные', icon: RefreshCw },
   { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];
 
@@ -38,7 +39,7 @@ export function BottomNav() {
                 href={item.href}
                 className="relative flex flex-col items-center justify-center flex-1 h-full gap-1"
               >
-                <div className="relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl">
+                <div className="relative flex flex-col items-center gap-1 px-2 sm:px-3 py-2 rounded-2xl">
                   {isActive && (
                     <motion.div
                       layoutId="nav-pill"

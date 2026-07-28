@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LogOut, PieChart, Settings2, CircleDollarSign, Plus, LayoutGrid, Gem } from 'lucide-react';
+import { LogOut, PieChart, Settings2, CircleDollarSign, Plus, LayoutGrid, Gem, ReceiptText, RefreshCw } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { convertAmount } from '@/lib/exchange';
@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils';
 
 const STATIC_ITEMS = [
   { href: '/expenses', label: 'Обзор', icon: LayoutGrid },
+  { href: '/operations', label: 'Операции', icon: ReceiptText },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
+  { href: '/recurring', label: 'Постоянные траты', icon: RefreshCw },
   { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];
 

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore, Subscription, SubscriptionKind } from '@/store/useStore';
 import { generateUUID } from '@/lib/uuid';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { ColorPicker } from '@/components/ui/color-picker';
-import { Plus, Trash2, Edit2, Check, X, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, RefreshCw, ChevronDown, ChevronRight, ImagePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -23,6 +23,29 @@ const KIND_META: Record<SubscriptionKind, { label: string; blockLabel: string; c
   work: { label: 'Рабочая', blockLabel: 'Рабочие', color: '#f59e0b' },
   yearly: { label: 'Годовая', blockLabel: 'Годовые', color: '#8b5cf6' },
 };
+
+function resizeExpenseImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error('Не удалось загрузить изображение'));
+      image.onload = () => {
+        const scale = Math.min(1, 640 / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) return reject(new Error('Canvas недоступен'));
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
+      };
+      image.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function daysInMonth(year: number, month1to12: number) {
   return new Date(year, month1to12, 0).getDate();
@@ -202,11 +225,11 @@ export function PaySubscriptionModal({ isOpen, onClose }: { isOpen: boolean; onC
   );
 }
 
-export function SubscriptionsManager() {
+export function SubscriptionsManager({ alwaysExpanded = false }: { alwaysExpanded?: boolean }) {
   const { subscriptions, wallets, deleteSubscription } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(alwaysExpanded);
 
   const openAdd = () => { setEditingSubscription(null); setIsModalOpen(true); };
   const openEdit = (s: Subscription) => { setEditingSubscription(s); setIsModalOpen(true); };
@@ -222,16 +245,16 @@ export function SubscriptionsManager() {
     <div className="flex flex-col gap-5">
       <div className="flex justify-between items-center px-1">
         <button
-          onClick={() => setIsExpanded(v => !v)}
+          onClick={() => !alwaysExpanded && setIsExpanded(v => !v)}
           className="flex items-center gap-3 group flex-1 min-w-0"
         >
-          {isExpanded ? (
+          {!alwaysExpanded && (isExpanded ? (
             <ChevronDown size={14} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
           ) : (
             <ChevronRight size={14} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
-          )}
+          ))}
           <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 group-hover:text-white/50 transition-colors">
-            Подписки
+            Постоянные траты
           </span>
           {subscriptions.length > 0 && (
             <span className="text-[10px] font-black text-white/15">{subscriptions.length}</span>
@@ -252,7 +275,7 @@ export function SubscriptionsManager() {
           className="py-16 rounded-[36px] border-2 border-dashed border-white/[0.06] flex flex-col items-center justify-center gap-3 text-white/15 hover:text-white/40 hover:border-white/15 transition-all"
         >
           <Plus size={28} strokeWidth={3} />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Добавить первую подписку</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Добавить первую постоянную трату</span>
         </button>
       ) : (
         <div className="flex flex-col gap-7">
@@ -285,10 +308,12 @@ export function SubscriptionsManager() {
                       >
                         <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           <div
-                            className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0"
-                            style={{ background: `${color}18`, color }}
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg flex-shrink-0 bg-cover bg-center overflow-hidden"
+                            style={sub.imageUrl
+                              ? { backgroundImage: `url(${sub.imageUrl})` }
+                              : { backgroundColor: `${color}18`, color }}
                           >
-                            🔁
+                            {!sub.imageUrl && <RefreshCw size={17} />}
                           </div>
                           <div className="flex flex-col gap-0.5 min-w-0">
                             <span className="text-[15px] font-bold text-white/90 truncate">{sub.name}</span>
@@ -345,11 +370,14 @@ function SubscriptionModal({
   const [currency, setCurrency] = useState(preferences.baseCurrency);
   const [kind, setKind] = useState<SubscriptionKind>('personal');
   const [color, setColor] = useState(KIND_META.personal.color);
+  const [imageUrl, setImageUrl] = useState<string | undefined>();
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [billingDay, setBillingDay] = useState('1');
   const [billingMonth, setBillingMonth] = useState('1');
   const [walletId, setWalletId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [autoCharge, setAutoCharge] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Seeds the form ONLY when the modal opens (or when switching which
   // subscription is being edited). Deliberately does not depend on
@@ -365,6 +393,7 @@ function SubscriptionModal({
       setCurrency(editingSubscription.currency);
       setKind(editingSubscription.kind);
       setColor(editingSubscription.color || KIND_META[editingSubscription.kind].color);
+      setImageUrl(editingSubscription.imageUrl);
       setBillingDay(editingSubscription.billingDay.toString());
       setBillingMonth((editingSubscription.billingMonth || 1).toString());
       setWalletId(editingSubscription.walletId);
@@ -377,6 +406,7 @@ function SubscriptionModal({
       setCurrency(state.preferences.baseCurrency);
       setKind('personal');
       setColor(KIND_META.personal.color);
+      setImageUrl(undefined);
       setBillingDay('1');
       setBillingMonth('1');
       setWalletId(state.wallets[0]?.id || '');
@@ -385,6 +415,18 @@ function SubscriptionModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editingSubscription]);
+
+  const handleImage = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setIsProcessingImage(true);
+    try {
+      setImageUrl(await resizeExpenseImage(file));
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
 
   const handleSave = () => {
     const numAmount = parseFloat(amount);
@@ -398,6 +440,7 @@ function SubscriptionModal({
       currency,
       kind,
       color,
+      imageUrl,
       billingDay: day,
       billingMonth: kind === 'yearly' ? parseInt(billingMonth, 10) : undefined,
       walletId,
@@ -429,7 +472,7 @@ function SubscriptionModal({
           >
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-sm font-black uppercase tracking-widest text-white/40">
-                {editingSubscription ? 'Изменить подписку' : 'Новая подписка'}
+                {editingSubscription ? 'Изменить постоянную трату' : 'Новая постоянная трата'}
               </h2>
               <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/40">
                 <X size={20} />
@@ -456,6 +499,28 @@ function SubscriptionModal({
               </div>
 
               <ColorPicker color={color} onChange={setColor} />
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImage}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="relative h-40 rounded-[28px] border border-dashed border-white/10 overflow-hidden flex items-center justify-center bg-cover bg-center text-white/45 hover:text-white/70 transition-colors"
+                style={imageUrl ? { backgroundImage: `url(${imageUrl})`, borderStyle: 'solid' } : {}}
+              >
+                {imageUrl && <span className="absolute inset-0 bg-black/45" />}
+                <span className="relative z-10 flex flex-col items-center gap-2">
+                  <ImagePlus size={24} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    {isProcessingImage ? 'Обработка...' : imageUrl ? 'Заменить изображение' : 'Добавить изображение'}
+                  </span>
+                </span>
+              </button>
 
               <div className="bg-white/5 p-6 rounded-[32px] border border-white/5 flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
@@ -596,7 +661,7 @@ function SubscriptionModal({
               className="mt-2 min-h-[72px] bg-white text-black text-lg font-black rounded-3xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
             >
               <Check size={28} strokeWidth={4} />
-              {editingSubscription ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ ПОДПИСКУ'}
+              {editingSubscription ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ ПОСТОЯННУЮ ТРАТУ'}
             </button>
           </motion.div>
         </motion.div>

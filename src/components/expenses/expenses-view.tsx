@@ -309,8 +309,11 @@ export function ExpensesView() {
               </div>
             ) : upcoming.map(({ subscription, date, amount }) => (
               <div key={subscription.id} className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.025] border border-white/[0.05]">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-400/10 text-emerald-300">
-                  <ReceiptText size={16} />
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-400/10 text-emerald-300 bg-cover bg-center overflow-hidden"
+                  style={subscription.imageUrl ? { backgroundImage: `url(${subscription.imageUrl})` } : {}}
+                >
+                  {!subscription.imageUrl && <ReceiptText size={16} />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white/85 truncate">{subscription.name}</p>
