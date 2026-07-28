@@ -10,7 +10,6 @@ import { supabase } from '@/lib/supabase';
 import { CircleDollarSign, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { convertAmount } from '@/lib/exchange';
-import { CapitalsModal } from '@/components/ui/capitals-modal';
 import { AddExpenseModal } from '@/components/expenses/add-expense-modal';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +21,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [scrolled, setScrolled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [isHydrated, setIsHydrated] = useState(false);
-  const [isCapitalsModalOpen, setIsCapitalsModalOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const pushPendingRef = useRef(false);
 
@@ -184,10 +182,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </div>
             )}
 
-            {/* Balance button */}
-            <button
-              onClick={() => setIsCapitalsModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all active:scale-95"
+            {/* Read-only balance indicator */}
+            <div
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl"
               style={{
                 background: 'rgba(59,130,246,0.1)',
                 border: '1px solid rgba(59,130,246,0.2)',
@@ -196,15 +193,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <span className="text-sm font-black text-blue-300 tracking-tight">
                 ${totalBalance.toFixed(1)}
               </span>
-            </button>
+            </div>
           </div>
         </header>
 
-        {/* Balance button — desktop only, opens the same capitals overview modal as mobile */}
+        {/* Read-only balance indicator — desktop */}
         <div className="hidden lg:flex justify-end px-8 pt-6">
-          <button
-            onClick={() => setIsCapitalsModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl transition-all active:scale-95 hover:brightness-125"
+          <div
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl"
             style={{
               background: 'rgba(59,130,246,0.1)',
               border: '1px solid rgba(59,130,246,0.2)',
@@ -213,7 +209,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <span className="text-sm font-black text-blue-300 tracking-tight tabular-nums">
               {totalBalance.toFixed(1)} {preferences.baseCurrency}
             </span>
-          </button>
+          </div>
         </div>
 
         <main className="flex-1 w-full max-w-[1480px] mx-auto relative pb-36 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 px-5 lg:px-8">
@@ -237,7 +233,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setAuthModalOpen(false)} />
-      <CapitalsModal isOpen={isCapitalsModalOpen} onClose={() => setIsCapitalsModalOpen(false)} />
       <AddExpenseModal isOpen={isAddExpenseOpen} onClose={() => setIsAddExpenseOpen(false)} />
     </div>
   );

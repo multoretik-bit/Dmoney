@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, PieChart, ReceiptText, Settings2, RefreshCw } from 'lucide-react';
+import { LayoutGrid, PieChart, ReceiptText, Settings2, RefreshCw, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/expenses', label: 'Обзор', icon: LayoutGrid },
   { href: '/operations', label: 'Операции', icon: ReceiptText },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
+  { href: '/goals', label: 'Цели', icon: Target },
   { href: '/recurring', label: 'Постоянные', icon: RefreshCw },
   { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];

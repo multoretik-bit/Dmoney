@@ -85,7 +85,11 @@ export function PassiveIncomeTab({
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="font-black text-white text-sm tabular-nums">
-                {s.amount.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {s.currency}
+                {(compact
+                  ? convertAmount(s.amount, s.currency, selectedCurrency)
+                  : s.amount
+                ).toLocaleString('ru-RU', { maximumFractionDigits: 1 })}{' '}
+                {compact ? selectedCurrency : s.currency}
               </span>
               <button
                 onClick={() => startEdit(s)}

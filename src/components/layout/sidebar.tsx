@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LogOut, PieChart, Settings2, CircleDollarSign, Plus, LayoutGrid, Gem, ReceiptText, RefreshCw } from 'lucide-react';
+import { LogOut, PieChart, Settings2, CircleDollarSign, Plus, LayoutGrid, Gem, ReceiptText, RefreshCw, Target } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { convertAmount } from '@/lib/exchange';
@@ -13,6 +13,7 @@ const STATIC_ITEMS = [
   { href: '/expenses', label: 'Обзор', icon: LayoutGrid },
   { href: '/operations', label: 'Операции', icon: ReceiptText },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
+  { href: '/goals', label: 'Цели', icon: Target },
   { href: '/recurring', label: 'Постоянные траты', icon: RefreshCw },
   { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];
@@ -53,9 +54,9 @@ export function Sidebar() {
   const initial = (user?.email?.[0] || '?').toUpperCase();
 
   return (
-    <aside className="hidden lg:flex flex-col w-[288px] flex-shrink-0 h-screen sticky top-0 py-7 px-5 gap-8 border-r border-white/[0.06]">
+    <aside className="hidden lg:flex flex-col w-[288px] flex-shrink-0 h-screen sticky top-0 py-7 px-5 gap-5 border-r border-white/[0.06]">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-1">
+      <div className="order-1 flex items-center gap-2.5 px-1">
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center"
           style={{
@@ -79,7 +80,7 @@ export function Sidebar() {
       </div>
 
       {/* User */}
-      <div className="flex items-center gap-3 px-1">
+      <div className="order-4 flex items-center gap-3 px-1 pt-4 border-t border-white/[0.06]">
         <div
           className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 p-[2px]"
           style={{ background: 'linear-gradient(135deg, #60a5fa, #a78bfa)' }}
@@ -99,7 +100,7 @@ export function Sidebar() {
       </div>
 
       {/* Capitals list */}
-      <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto hide-scrollbar">
+      <div className="order-3 flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto hide-scrollbar">
         <div className="flex items-center justify-between px-1 mb-1">
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/25">Мои капиталы</span>
           <Link
@@ -184,7 +185,7 @@ export function Sidebar() {
       </div>
 
       {/* Static nav + logout */}
-      <div className="flex flex-col gap-1 pt-3 border-t border-white/[0.06]">
+      <div className="order-2 flex flex-col gap-1 pb-4 border-b border-white/[0.06]">
         {STATIC_ITEMS.map(item => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;

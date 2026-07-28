@@ -4,12 +4,12 @@ import { useMemo, useState } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import {
-  ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
-  Gem, Landmark, LayoutDashboard, Plus, ReceiptText, Sparkles, WalletCards,
+  ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
+  LayoutDashboard, Plus, ReceiptText, Sparkles, TrendingDown, WalletCards,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useStore, Expense } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
+import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { AddExpenseModal } from './add-expense-modal';
 import { SpendingRing } from '@/components/wallets/spending-ring';
@@ -33,17 +33,17 @@ function money(value: number, currency: string, digits = 0) {
 
 export function ExpensesView() {
   const {
-    expenses, preferences, categories, portfolios, wallets, assets,
+    expenses, preferences, categories, portfolios, wallets,
     subscriptions, passiveIncomeSources, capitalHistory,
   } = useStore();
   const { baseCurrency } = preferences;
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('personal');
+  const [displayCurrency, setDisplayCurrency] = useState(baseCurrency);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const monthKey = format(currentMonth, 'yyyy-MM');
-  const selectedMeta = VIEW_META[viewMode];
 
   const filteredExpenses = useMemo(() => expenses.filter(expense => {
     if (viewMode === 'work') return !!expense.isWork;
@@ -69,36 +69,33 @@ export function ExpensesView() {
         sum + (!excludedCategoryIds.has(category.id) && category.budgetLimit ? category.budgetLimit : 0), 0);
 
   const totalWallets = wallets.reduce((sum, wallet) =>
-    sum + convertAmount(Number(wallet.balance || 0), wallet.currency, baseCurrency), 0);
-  const totalAssets = assets.reduce((sum, asset) =>
-    sum + convertAmount(Number(asset.estimatedValue || 0), asset.currency, baseCurrency), 0);
-  const totalCapital = totalWallets + totalAssets;
-
-  const portfolioRows = [...portfolios]
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map(portfolio => ({
-      ...portfolio,
-      total: wallets
-        .filter(wallet => wallet.portfolioId === portfolio.id)
-        .reduce((sum, wallet) =>
-          sum + convertAmount(Number(wallet.balance || 0), wallet.currency, baseCurrency), 0),
-    }));
-
-  const recentExpenses = [...filteredExpenses]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 6);
+    sum + convertAmount(Number(wallet.balance || 0), wallet.currency, displayCurrency), 0);
+  const totalCapital = totalWallets;
 
   const upcoming = subscriptions
     .map(subscription => ({
       subscription,
       date: getNextChargeDate(subscription),
-      amount: convertAmount(subscription.amount, subscription.currency, baseCurrency),
+      amount: convertAmount(subscription.amount, subscription.currency, displayCurrency),
     }))
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .slice(0, 4);
 
   const passiveTotal = passiveIncomeSources.reduce((sum, source) =>
-    sum + convertAmount(source.amount, source.currency, baseCurrency), 0);
+    sum + convertAmount(source.amount, source.currency, displayCurrency), 0);
+
+  const monthSpentBase = monthExpenses.reduce((sum, expense) => sum + expense.convertedAmount, 0);
+  const monthSpent = convertAmount(monthSpentBase, baseCurrency, displayCurrency);
+  const topSpentCategories = Object.entries(monthExpenses.reduce<Record<string, number>>((totals, expense) => {
+    totals[expense.categoryId] = (totals[expense.categoryId] || 0) + expense.convertedAmount;
+    return totals;
+  }, {}))
+    .map(([id, amount]) => ({
+      category: categories.find(category => category.id === id),
+      amount: convertAmount(amount, baseCurrency, displayCurrency),
+    }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
 
   const historyBars = useMemo(() => {
     const points = (capitalHistory || []).slice(-18);
@@ -181,12 +178,12 @@ export function ExpensesView() {
               <div>
                 <p className="text-sm font-bold text-blue-100/75">Общий капитал</p>
                 <p className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black tracking-[-0.04em] text-white tabular-nums">
-                  {money(totalCapital, baseCurrency, 1)}
+                  {money(totalCapital, displayCurrency, 1)}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-4">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-400/12 border border-emerald-300/15 text-[11px] font-bold text-emerald-300">
                     <ArrowUpRight size={13} />
-                    {portfolioRows.length} капиталов
+                    {portfolios.length} капиталов
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.07] border border-white/10 text-[11px] font-bold text-white/60">
                     <WalletCards size={13} />
@@ -194,9 +191,16 @@ export function ExpensesView() {
                   </span>
                 </div>
               </div>
-              <span className="px-3 py-1.5 rounded-xl bg-black/15 border border-white/10 text-[11px] font-black text-blue-100">
-                {baseCurrency}
-              </span>
+              <select
+                value={displayCurrency}
+                onChange={event => setDisplayCurrency(event.target.value)}
+                aria-label="Валюта отображения"
+                className="px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-[11px] font-black text-blue-100 outline-none"
+              >
+                {COMMON_CURRENCIES.map(currency => (
+                  <option key={currency} value={currency} className="bg-[#10234a]">{currency}</option>
+                ))}
+              </select>
             </div>
 
             <div className="flex items-end gap-1 h-16" aria-label="История общего капитала">
@@ -218,48 +222,32 @@ export function ExpensesView() {
         </div>
 
         <div className="xl:col-span-5 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075] shadow-[0_20px_50px_-34px_rgba(0,0,0,0.9)]">
-          <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-5">
             <div>
-              <h2 className="text-base font-black text-white">Счета и капиталы</h2>
-              <p className="text-[11px] text-white/35 mt-0.5">Все суммы приведены к {baseCurrency}</p>
+              <h2 className="text-base font-black text-white">Потрачено за месяц</h2>
+              <p className="text-[11px] text-white/35 mt-0.5 capitalize">{format(currentMonth, 'LLLL yyyy', { locale: ru })}</p>
             </div>
-            <Landmark size={19} className="text-blue-300" />
+            <div className="w-10 h-10 rounded-2xl bg-rose-400/10 text-rose-300 flex items-center justify-center">
+              <TrendingDown size={18} />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            {portfolioRows.slice(0, 5).map(portfolio => (
-              <div key={portfolio.id} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-white/[0.035] transition-colors">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: `${portfolio.color}1f` }}>
-                  {portfolio.icon}
+          <p className="text-4xl font-black tracking-[-0.04em] text-white tabular-nums mb-5">
+            {money(monthSpent, displayCurrency, 1)}
+          </p>
+
+          <div className="space-y-2">
+            {topSpentCategories.length === 0 ? (
+              <div className="py-8 text-center text-xs text-white/30">В этом месяце трат ещё нет</div>
+            ) : topSpentCategories.map(({ category, amount }) => (
+              <div key={category?.id || amount} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-white/[0.025]">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: `${category?.color || '#60a5fa'}1f` }}>
+                  {category?.icon || '•'}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white/85 truncate">{portfolio.name}</p>
-                  <p className="text-[10px] text-white/30">
-                    {wallets.filter(wallet => wallet.portfolioId === portfolio.id).length} счетов
-                  </p>
-                </div>
-                <span className="text-sm font-black text-white tabular-nums">{money(portfolio.total, baseCurrency)}</span>
+                <p className="min-w-0 flex-1 text-sm font-bold text-white/70 truncate">{category?.name || 'Другое'}</p>
+                <span className="text-sm font-black text-white tabular-nums">{money(amount, displayCurrency)}</span>
               </div>
             ))}
-
-            {assets.length > 0 && (
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-white/[0.035] transition-colors">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-400/10 text-amber-300">
-                  <Gem size={16} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white/85">Активы</p>
-                  <p className="text-[10px] text-white/30">{assets.length} позиций</p>
-                </div>
-                <span className="text-sm font-black text-white tabular-nums">{money(totalAssets, baseCurrency)}</span>
-              </div>
-            )}
-
-            {portfolioRows.length === 0 && assets.length === 0 && (
-              <div className="py-10 text-center text-xs font-medium text-white/30">
-                Добавьте первый капитал или счёт
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -276,10 +264,10 @@ export function ExpensesView() {
             </div>
             <div className="text-right">
               <p className="text-[10px] font-bold uppercase tracking-wider text-white/30">Всего в месяц</p>
-              <p className="text-xl font-black text-emerald-300 tabular-nums">{money(passiveTotal, baseCurrency, 1)}</p>
+              <p className="text-xl font-black text-emerald-300 tabular-nums">{money(passiveTotal, displayCurrency, 1)}</p>
             </div>
           </div>
-          <PassiveIncomeTab selectedCurrency={baseCurrency} compact />
+          <PassiveIncomeTab selectedCurrency={displayCurrency} compact />
         </div>
 
         <div className="xl:col-span-4">
@@ -288,7 +276,7 @@ export function ExpensesView() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-4 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
+        <div className="xl:col-span-12 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
           <div className="flex items-center justify-between gap-3 mb-5">
             <div>
               <div className="flex items-center gap-2">
@@ -302,7 +290,7 @@ export function ExpensesView() {
             </span>
           </div>
 
-          <div className="space-y-2">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
             {upcoming.length === 0 ? (
               <div className="py-12 text-center text-xs font-medium text-white/30">
                 Ближайших списаний нет
@@ -319,80 +307,9 @@ export function ExpensesView() {
                   <p className="text-sm font-bold text-white/85 truncate">{subscription.name}</p>
                   <p className="text-[10px] text-white/35">{format(date, 'd MMMM', { locale: ru })}</p>
                 </div>
-                <span className="text-xs font-black text-white tabular-nums">{money(amount, baseCurrency)}</span>
+                <span className="text-xs font-black text-white tabular-nums">{money(amount, displayCurrency)}</span>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div className="xl:col-span-8 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <div>
-              <h2 className="text-base font-black text-white">Последние операции</h2>
-              <p className="text-[11px] text-white/35 mt-1">{selectedMeta.label} расходы</p>
-            </div>
-            <button
-              onClick={() => openExpense()}
-              className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-400/15 text-blue-300 hover:bg-blue-500/20 transition-colors"
-              aria-label="Добавить операцию"
-            >
-              <Plus size={16} strokeWidth={2.5} />
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <div className="min-w-[580px]">
-              <div className="grid grid-cols-[1.5fr_1fr_0.8fr_0.7fr] gap-3 px-3 pb-2 text-[9px] font-black uppercase tracking-[0.14em] text-white/25">
-                <span>Операция</span>
-                <span>Счёт</span>
-                <span>Дата</span>
-                <span className="text-right">Сумма</span>
-              </div>
-
-              <div className="space-y-1">
-                {recentExpenses.length === 0 ? (
-                  <div className="py-12 text-center text-xs font-medium text-white/30 border border-dashed border-white/[0.07] rounded-2xl">
-                    Операций пока нет
-                  </div>
-                ) : recentExpenses.map((expense, index) => {
-                  const category = categories.find(item => item.id === expense.categoryId);
-                  const wallet = wallets.find(item => item.id === expense.walletId);
-                  const color = category?.color || selectedMeta.accent;
-                  return (
-                    <motion.button
-                      key={expense.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.025 }}
-                      onClick={() => openExpense(expense)}
-                      className="w-full grid grid-cols-[1.5fr_1fr_0.8fr_0.7fr] gap-3 items-center px-3 py-3 rounded-2xl text-left hover:bg-white/[0.035] transition-colors"
-                    >
-                      <span className="flex items-center gap-3 min-w-0">
-                        <span
-                          className="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
-                          style={{ background: `${color}18`, color }}
-                        >
-                          {category?.icon || <ArrowDownLeft size={14} />}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-xs font-bold text-white/85 truncate">{category?.name || 'Другое'}</span>
-                          <span className="block text-[10px] text-white/25 truncate">
-                            {expense.isSubscription ? 'Подписка' : 'Расход'}
-                          </span>
-                        </span>
-                      </span>
-                      <span className="text-xs font-medium text-white/45 truncate">{wallet?.name || 'Без счёта'}</span>
-                      <span className="text-xs font-medium text-white/40">
-                        {format(new Date(expense.date), 'd MMM', { locale: ru })}
-                      </span>
-                      <span className="text-xs font-black text-white text-right tabular-nums">
-                        −{money(expense.convertedAmount, baseCurrency, 1)}
-                      </span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </div>
       </section>
