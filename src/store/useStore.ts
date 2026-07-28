@@ -66,20 +66,22 @@ export interface Asset {
   sortOrder?: number;
 }
 
-export type SubscriptionPeriod = 'monthly' | 'yearly';
+// 'personal' and 'work' bill monthly (mirrors the isWork split on regular
+// expenses); 'yearly' bills once a year on a specific day+month.
+export type SubscriptionKind = 'personal' | 'work' | 'yearly';
 
 export interface Subscription {
   id: string;
   name: string;
   amount: number;
   currency: string;
-  period: SubscriptionPeriod;
+  kind: SubscriptionKind;
   billingDay: number; // 1-31, clamped to the last day of the billing month
-  billingMonth?: number; // 1-12, only used when period === 'yearly'
+  billingMonth?: number; // 1-12, only used when kind === 'yearly'
   walletId: string;
   categoryId: string;
   autoCharge: boolean;
-  lastChargedPeriod?: string; // 'yyyy-MM' for monthly, 'yyyy' for yearly — guards against double auto-charging
+  lastChargedPeriod?: string; // 'yyyy-MM' for personal/work, 'yyyy' for yearly — guards against double auto-charging
   sortOrder?: number;
 }
 
@@ -683,7 +685,7 @@ export const useStore = create<UserState>()(
           if (!sub.autoCharge) return;
 
           let periodKey: string;
-          if (sub.period === 'yearly') {
+          if (sub.kind === 'yearly') {
             const billingMonth = sub.billingMonth || 1;
             if (currentMonthNum !== billingMonth) return;
             const daysInBillingMonth = new Date(year, billingMonth, 0).getDate();
@@ -716,6 +718,7 @@ export const useStore = create<UserState>()(
             categoryId: sub.categoryId,
             walletId: sub.walletId,
             date: now.toISOString(),
+            isWork: sub.kind === 'work',
             isSubscription: true,
           });
 
@@ -945,7 +948,7 @@ export const useStore = create<UserState>()(
               name: s.name,
               amount: s.amount,
               currency: s.currency,
-              period: s.period || 'monthly',
+              kind: s.kind || 'personal',
               billingDay: s.billing_day,
               billingMonth: s.billing_month || undefined,
               walletId: s.wallet_id,
@@ -1109,7 +1112,7 @@ export const useStore = create<UserState>()(
                   name: s.name,
                   amount: s.amount,
                   currency: s.currency,
-                  period: s.period,
+                  kind: s.kind,
                   billing_day: s.billingDay,
                   billing_month: s.billingMonth || null,
                   wallet_id: s.walletId,

@@ -149,13 +149,13 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   name TEXT NOT NULL,
   amount NUMERIC NOT NULL DEFAULT 0,
   currency TEXT NOT NULL DEFAULT 'USD',
-  period TEXT NOT NULL DEFAULT 'monthly', -- 'monthly' | 'yearly'
+  kind TEXT NOT NULL DEFAULT 'personal', -- 'personal' | 'work' | 'yearly'
   billing_day NUMERIC NOT NULL DEFAULT 1, -- 1-31
-  billing_month NUMERIC, -- 1-12, only used when period = 'yearly'
+  billing_month NUMERIC, -- 1-12, only used when kind = 'yearly'
   wallet_id UUID REFERENCES wallets(id) ON DELETE SET NULL,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   auto_charge BOOLEAN NOT NULL DEFAULT false,
-  last_charged_period TEXT, -- 'yyyy-MM' for monthly, 'yyyy' for yearly
+  last_charged_period TEXT, -- 'yyyy-MM' for personal/work, 'yyyy' for yearly
   sort_order NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );

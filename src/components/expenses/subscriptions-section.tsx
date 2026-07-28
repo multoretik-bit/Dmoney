@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStore, Subscription, SubscriptionPeriod } from '@/store/useStore';
+import { useStore, Subscription, SubscriptionKind } from '@/store/useStore';
 import { generateUUID } from '@/lib/uuid';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { Plus, Trash2, Edit2, Check, X, RefreshCw } from 'lucide-react';
@@ -15,6 +15,14 @@ const MONTH_NAMES = [
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ];
 
+const KIND_ORDER: SubscriptionKind[] = ['personal', 'work', 'yearly'];
+
+const KIND_META: Record<SubscriptionKind, { label: string; blockLabel: string; color: string }> = {
+  personal: { label: 'Обычная', blockLabel: 'Обычные', color: '#60a5fa' },
+  work: { label: 'Рабочая', blockLabel: 'Рабочие', color: '#f59e0b' },
+  yearly: { label: 'Годовая', blockLabel: 'Годовые', color: '#8b5cf6' },
+};
+
 function daysInMonth(year: number, month1to12: number) {
   return new Date(year, month1to12, 0).getDate();
 }
@@ -22,7 +30,7 @@ function daysInMonth(year: number, month1to12: number) {
 export function getNextChargeDate(sub: Subscription, from: Date = new Date()): Date {
   const todayMidnight = new Date(from.getFullYear(), from.getMonth(), from.getDate());
 
-  if (sub.period === 'yearly') {
+  if (sub.kind === 'yearly') {
     const month = sub.billingMonth || 1;
     let year = from.getFullYear();
     let day = Math.min(sub.billingDay, daysInMonth(year, month));
@@ -66,6 +74,7 @@ export function UpcomingSubscriptionsWidget() {
         {sorted.slice(0, 5).map(sub => {
           const wallet = wallets.find(w => w.id === sub.walletId);
           const nextDate = getNextChargeDate(sub);
+          const meta = KIND_META[sub.kind];
           return (
             <div
               key={sub.id}
@@ -74,7 +83,8 @@ export function UpcomingSubscriptionsWidget() {
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-bold text-white truncate">{sub.name}</span>
                 <span className="text-[10px] font-bold text-white/30 truncate">
-                  {format(nextDate, 'd MMMM', { locale: ru })}
+                  <span style={{ color: meta.color }}>{meta.label}</span>
+                  {' · '}{format(nextDate, 'd MMMM', { locale: ru })}
                   {' · '}{wallet ? wallet.name : 'счёт не найден'}
                   {sub.autoCharge && ' · авто'}
                 </span>
@@ -95,12 +105,15 @@ export function SubscriptionsManager() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
 
-  const sorted = [...subscriptions].sort(
-    (a, b) => getNextChargeDate(a).getTime() - getNextChargeDate(b).getTime()
-  );
-
   const openAdd = () => { setEditingSubscription(null); setIsModalOpen(true); };
   const openEdit = (s: Subscription) => { setEditingSubscription(s); setIsModalOpen(true); };
+
+  const byKind = KIND_ORDER.map(kind => ({
+    kind,
+    items: subscriptions
+      .filter(s => s.kind === kind)
+      .sort((a, b) => getNextChargeDate(a).getTime() - getNextChargeDate(b).getTime()),
+  }));
 
   return (
     <div className="flex flex-col gap-5">
@@ -117,7 +130,7 @@ export function SubscriptionsManager() {
         </button>
       </div>
 
-      {sorted.length === 0 ? (
+      {subscriptions.length === 0 ? (
         <button
           onClick={openAdd}
           className="py-16 rounded-[36px] border-2 border-dashed border-white/[0.06] flex flex-col items-center justify-center gap-3 text-white/15 hover:text-white/40 hover:border-white/15 transition-all"
@@ -126,44 +139,65 @@ export function SubscriptionsManager() {
           <span className="text-[10px] font-black uppercase tracking-[0.3em]">Добавить первую подписку</span>
         </button>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {sorted.map(sub => {
-            const wallet = wallets.find(w => w.id === sub.walletId);
-            const nextDate = getNextChargeDate(sub);
+        <div className="flex flex-col gap-7">
+          {byKind.map(({ kind, items }) => {
+            if (items.length === 0) return null;
+            const meta = KIND_META[kind];
             return (
-              <div
-                key={sub.id}
-                className="p-4 flex items-center justify-between rounded-[20px] group"
-                style={{
-                  background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-                <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0 bg-emerald-500/10 text-emerald-400">
-                    🔁
-                  </div>
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-[15px] font-bold text-white/90 truncate">{sub.name}</span>
-                    <span className="text-[10px] font-bold text-white/30 truncate">
-                      {sub.period === 'yearly' ? 'Раз в год' : 'Ежемесячно'} · {format(nextDate, 'd MMMM', { locale: ru })}
-                      {' · '}{wallet ? wallet.name : 'счёт не найден'}
-                      {sub.autoCharge && ' · автосписание'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-[15px] font-black text-white tabular-nums">
-                    {sub.amount.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {sub.currency}
+              <div key={kind} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: meta.color }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: meta.color }}>
+                    {meta.blockLabel}
                   </span>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEdit(sub)} className="p-1.5 text-white/20 hover:text-white">
-                      <Edit2 size={14} />
-                    </button>
-                    <button onClick={() => deleteSubscription(sub.id)} className="p-1.5 text-white/20 hover:text-rose-400">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {items.map(sub => {
+                    const wallet = wallets.find(w => w.id === sub.walletId);
+                    const nextDate = getNextChargeDate(sub);
+                    return (
+                      <div
+                        key={sub.id}
+                        className="p-4 flex items-center justify-between rounded-[20px] group"
+                        style={{
+                          background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                        }}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          <div
+                            className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0"
+                            style={{ background: `${meta.color}18`, color: meta.color }}
+                          >
+                            🔁
+                          </div>
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-[15px] font-bold text-white/90 truncate">{sub.name}</span>
+                            <span className="text-[10px] font-bold text-white/30 truncate">
+                              {kind === 'yearly'
+                                ? format(nextDate, 'd MMMM', { locale: ru })
+                                : `${sub.billingDay} числа`}
+                              {' · '}{wallet ? wallet.name : 'счёт не найден'}
+                              {sub.autoCharge && ' · автосписание'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className="text-[15px] font-black text-white tabular-nums">
+                            {sub.amount.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {sub.currency}
+                          </span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openEdit(sub)} className="p-1.5 text-white/20 hover:text-white">
+                              <Edit2 size={14} />
+                            </button>
+                            <button onClick={() => deleteSubscription(sub.id)} className="p-1.5 text-white/20 hover:text-rose-400">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -190,7 +224,7 @@ function SubscriptionModal({
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState(preferences.baseCurrency);
-  const [period, setPeriod] = useState<SubscriptionPeriod>('monthly');
+  const [kind, setKind] = useState<SubscriptionKind>('personal');
   const [billingDay, setBillingDay] = useState('1');
   const [billingMonth, setBillingMonth] = useState('1');
   const [walletId, setWalletId] = useState('');
@@ -203,7 +237,7 @@ function SubscriptionModal({
       setName(editingSubscription.name);
       setAmount(editingSubscription.amount.toString());
       setCurrency(editingSubscription.currency);
-      setPeriod(editingSubscription.period);
+      setKind(editingSubscription.kind);
       setBillingDay(editingSubscription.billingDay.toString());
       setBillingMonth((editingSubscription.billingMonth || 1).toString());
       setWalletId(editingSubscription.walletId);
@@ -213,7 +247,7 @@ function SubscriptionModal({
       setName('');
       setAmount('');
       setCurrency(preferences.baseCurrency);
-      setPeriod('monthly');
+      setKind('personal');
       setBillingDay('1');
       setBillingMonth('1');
       setWalletId(wallets[0]?.id || '');
@@ -232,9 +266,9 @@ function SubscriptionModal({
       name: name.trim(),
       amount: numAmount,
       currency,
-      period,
+      kind,
       billingDay: day,
-      billingMonth: period === 'yearly' ? parseInt(billingMonth, 10) : undefined,
+      billingMonth: kind === 'yearly' ? parseInt(billingMonth, 10) : undefined,
       walletId,
       categoryId,
       autoCharge,
@@ -272,28 +306,22 @@ function SubscriptionModal({
             </div>
 
             <div className="flex flex-col gap-6">
-              {/* Period toggle */}
+              {/* Kind selector: обычная / рабочая / годовая */}
               <div className="flex bg-white/5 p-1 rounded-2xl">
-                <button
-                  type="button"
-                  onClick={() => setPeriod('monthly')}
-                  className={cn(
-                    'flex-1 py-3 text-center text-xs font-bold rounded-xl transition-colors',
-                    period === 'monthly' ? 'bg-emerald-500 text-white' : 'text-white/50 hover:text-white'
-                  )}
-                >
-                  Ежемесячно
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeriod('yearly')}
-                  className={cn(
-                    'flex-1 py-3 text-center text-xs font-bold rounded-xl transition-colors',
-                    period === 'yearly' ? 'bg-emerald-500 text-white' : 'text-white/50 hover:text-white'
-                  )}
-                >
-                  Раз в год
-                </button>
+                {KIND_ORDER.map(k => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKind(k)}
+                    className={cn(
+                      'flex-1 py-3 text-center text-xs font-bold rounded-xl transition-colors',
+                      kind === k ? 'text-white' : 'text-white/50 hover:text-white'
+                    )}
+                    style={kind === k ? { background: KIND_META[k].color } : {}}
+                  >
+                    {KIND_META[k].label}
+                  </button>
+                ))}
               </div>
 
               <div className="bg-white/5 p-6 rounded-[32px] border border-white/5 flex flex-col gap-4">
@@ -336,7 +364,7 @@ function SubscriptionModal({
 
                 <div className="h-px bg-white/5 mx-[-24px]" />
 
-                <div className={cn('grid gap-4', period === 'yearly' ? 'grid-cols-2' : 'grid-cols-1')}>
+                <div className={cn('grid gap-4', kind === 'yearly' ? 'grid-cols-2' : 'grid-cols-1')}>
                   <div className="flex flex-col gap-2">
                     <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Число месяца</label>
                     <input
@@ -348,7 +376,7 @@ function SubscriptionModal({
                       onChange={(e) => setBillingDay(e.target.value)}
                     />
                   </div>
-                  {period === 'yearly' && (
+                  {kind === 'yearly' && (
                     <div className="flex flex-col gap-2 border-l border-white/5 pl-4">
                       <label className="text-[9px] font-black uppercase text-white/20 tracking-widest">Месяц</label>
                       <select
