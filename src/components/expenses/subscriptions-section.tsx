@@ -6,7 +6,7 @@ import { useStore, Subscription, SubscriptionKind } from '@/store/useStore';
 import { generateUUID } from '@/lib/uuid';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { ColorPicker } from '@/components/ui/color-picker';
-import { Plus, Trash2, Edit2, Check, X, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, RefreshCw, ChevronDown, ChevronRight, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -57,8 +57,19 @@ export function getNextChargeDate(sub: Subscription, from: Date = new Date()): D
   return candidate;
 }
 
+// Stable ordering by calendar day (1st -> 31st), not by "next occurrence" —
+// so the list never reshuffles as today's date changes. Yearly subs sort by
+// month first, then day; personal/work only have a day to sort by.
+function compareBillingOrder(a: Subscription, b: Subscription): number {
+  const am = a.billingMonth || 1;
+  const bm = b.billingMonth || 1;
+  if (am !== bm) return am - bm;
+  return a.billingDay - b.billingDay;
+}
+
 export function UpcomingSubscriptionsWidget() {
   const { subscriptions, wallets } = useStore();
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   if (subscriptions.length === 0) return null;
 
   const sorted = [...subscriptions].sort(
@@ -67,9 +78,18 @@ export function UpcomingSubscriptionsWidget() {
 
   return (
     <div className="flex flex-col gap-3 p-5 rounded-[28px] bg-white/[0.03] border border-white/5">
-      <div className="flex items-center gap-2 px-1">
-        <RefreshCw size={14} className="text-emerald-400" />
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Ближайшие подписки</span>
+      <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <RefreshCw size={14} className="text-emerald-400 flex-shrink-0" />
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 truncate">Ближайшие подписки</span>
+        </div>
+        <button
+          onClick={() => setIsPayModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500/25 transition-all flex-shrink-0"
+        >
+          <CreditCard size={12} />
+          Оплатил
+        </button>
       </div>
       <div className="flex flex-col gap-2">
         {sorted.slice(0, 5).map(sub => {
@@ -99,7 +119,98 @@ export function UpcomingSubscriptionsWidget() {
           );
         })}
       </div>
+
+      <PaySubscriptionModal isOpen={isPayModalOpen} onClose={() => setIsPayModalOpen(false)} />
     </div>
+  );
+}
+
+function PaySubscriptionModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { subscriptions, wallets, paySubscriptionNow } = useStore();
+  const [paidId, setPaidId] = useState<string | null>(null);
+
+  const handlePick = (id: string) => {
+    paySubscriptionNow(id);
+    setPaidId(id);
+    setTimeout(() => {
+      onClose();
+      setPaidId(null);
+    }, 900);
+  };
+
+  const sorted = [...subscriptions].sort(compareBillingOrder);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[160] flex flex-col items-center justify-end bg-black/80 backdrop-blur-sm px-4 pb-4"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={(e) => e.target === e.currentTarget && onClose()}
+        >
+          <motion.div
+            className="bg-[#0d1117] w-full max-w-xl max-h-[80vh] rounded-[40px] p-8 flex flex-col gap-5 border border-white/10 shadow-2xl overflow-y-auto hide-scrollbar"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm font-black uppercase tracking-widest text-white/40">
+                Какую подписку вы оплатили?
+              </h2>
+              <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/40">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              {sorted.map(sub => {
+                const wallet = wallets.find(w => w.id === sub.walletId);
+                const meta = KIND_META[sub.kind];
+                const color = sub.color || meta.color;
+                const isPaid = paidId === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    onClick={() => handlePick(sub.id)}
+                    disabled={paidId !== null}
+                    className="p-4 flex items-center justify-between rounded-[20px] text-left transition-all active:scale-[0.98] disabled:opacity-60"
+                    style={{
+                      background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderLeft: `4px solid ${color}`,
+                    }}
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                      <div
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0"
+                        style={{ background: `${color}18`, color }}
+                      >
+                        {isPaid ? <Check size={18} /> : '🔁'}
+                      </div>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-[15px] font-bold text-white/90 truncate">{sub.name}</span>
+                        <span className="text-[10px] font-bold text-white/30 truncate">
+                          {wallet ? wallet.name : 'счёт не найден'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[15px] font-black text-white tabular-nums flex-shrink-0">
+                      {sub.amount.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {sub.currency}
+                    </span>
+                  </button>
+                );
+              })}
+              {sorted.length === 0 && (
+                <div className="text-center py-10 text-white/30 text-sm font-bold">
+                  Пока нет ни одной подписки
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -107,6 +218,7 @@ export function SubscriptionsManager() {
   const { subscriptions, wallets, deleteSubscription } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const openAdd = () => { setEditingSubscription(null); setIsModalOpen(true); };
   const openEdit = (s: Subscription) => { setEditingSubscription(s); setIsModalOpen(true); };
@@ -115,25 +227,38 @@ export function SubscriptionsManager() {
     kind,
     items: subscriptions
       .filter(s => s.kind === kind)
-      .sort((a, b) => getNextChargeDate(a).getTime() - getNextChargeDate(b).getTime()),
+      .sort(compareBillingOrder),
   }));
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex justify-between items-center px-1">
-        <div className="flex items-center gap-3">
-          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30">Подписки</span>
-          <div className="h-px bg-white/[0.06] w-16 sm:w-32" />
-        </div>
+        <button
+          onClick={() => setIsExpanded(v => !v)}
+          className="flex items-center gap-3 group flex-1 min-w-0"
+        >
+          {isExpanded ? (
+            <ChevronDown size={14} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
+          ) : (
+            <ChevronRight size={14} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
+          )}
+          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 group-hover:text-white/50 transition-colors">
+            Подписки
+          </span>
+          {subscriptions.length > 0 && (
+            <span className="text-[10px] font-black text-white/15">{subscriptions.length}</span>
+          )}
+          <div className="h-px bg-white/[0.06] flex-1" />
+        </button>
         <button
           onClick={openAdd}
-          className="p-2.5 bg-emerald-500/20 rounded-xl text-emerald-400 hover:bg-emerald-500/30 transition-all"
+          className="p-2.5 bg-emerald-500/20 rounded-xl text-emerald-400 hover:bg-emerald-500/30 transition-all flex-shrink-0"
         >
           <Plus size={16} strokeWidth={4} />
         </button>
       </div>
 
-      {subscriptions.length === 0 ? (
+      {isExpanded && (subscriptions.length === 0 ? (
         <button
           onClick={openAdd}
           className="py-16 rounded-[36px] border-2 border-dashed border-white/[0.06] flex flex-col items-center justify-center gap-3 text-white/15 hover:text-white/40 hover:border-white/15 transition-all"
@@ -209,7 +334,7 @@ export function SubscriptionsManager() {
             );
           })}
         </div>
-      )}
+      ))}
 
       <SubscriptionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} editingSubscription={editingSubscription} />
     </div>

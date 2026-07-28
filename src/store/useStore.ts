@@ -202,6 +202,7 @@ interface UserState {
   updateSubscription: (id: string, updates: Partial<Subscription>) => void;
   deleteSubscription: (id: string) => Promise<void>;
   runSubscriptionAutoCharges: () => void;
+  paySubscriptionNow: (id: string) => void;
 
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, expense: Expense) => void;
@@ -725,6 +726,38 @@ export const useStore = create<UserState>()(
 
           useStore.getState().updateSubscription(sub.id, { lastChargedPeriod: periodKey });
         });
+      },
+
+      paySubscriptionNow: (id) => {
+        const state = useStore.getState();
+        const sub = state.subscriptions.find(s => s.id === id);
+        if (!sub) return;
+
+        const wallet = state.wallets.find(w => w.id === sub.walletId);
+        if (!wallet) return;
+
+        const now = new Date();
+        const periodKey = sub.kind === 'yearly' ? String(now.getFullYear()) : currentMonthKey();
+
+        const walletAmount = convertAmount(sub.amount, sub.currency, wallet.currency);
+        const convertedAmount = convertAmount(sub.amount, sub.currency, state.preferences.baseCurrency);
+        const exchangeRate = getExchangeRate(sub.currency, wallet.currency);
+
+        useStore.getState().addExpense({
+          id: generateUUID(),
+          originalAmount: sub.amount,
+          originalCurrency: sub.currency,
+          convertedAmount,
+          walletAmount,
+          exchangeRate,
+          categoryId: sub.categoryId,
+          walletId: sub.walletId,
+          date: now.toISOString(),
+          isWork: sub.kind === 'work',
+          isSubscription: true,
+        });
+
+        useStore.getState().updateSubscription(sub.id, { lastChargedPeriod: periodKey });
       },
 
       addExpense: (expense) => set((state) => {
