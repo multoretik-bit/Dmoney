@@ -10,6 +10,8 @@ export function RecurringExpensesView() {
   const monthlyTotal = subscriptions
     .filter(item => item.kind !== 'yearly')
     .reduce((sum, item) => sum + convertAmount(item.amount, item.currency, preferences.baseCurrency), 0);
+  const regularCount = subscriptions.filter(item => item.group === 'regular').length;
+  const subscriptionCount = subscriptions.filter(item => (item.group || 'subscription') === 'subscription').length;
 
   return (
     <div className="flex flex-col gap-5 pb-32">
@@ -37,8 +39,8 @@ export function RecurringExpensesView() {
         <div className="rounded-[28px] p-6 bg-[#0c1422] border border-white/[0.075] flex flex-col justify-between gap-6">
           <CalendarClock className="text-blue-300" size={22} />
           <div>
-            <p className="text-3xl font-black text-white">{subscriptions.length}</p>
-            <p className="text-xs text-white/40 mt-1">активных постоянных трат</p>
+            <p className="text-3xl font-black text-white">{regularCount} + {subscriptionCount}</p>
+            <p className="text-xs text-white/40 mt-1">обычных трат и подписок</p>
           </div>
         </div>
       </section>
@@ -46,9 +48,17 @@ export function RecurringExpensesView() {
       <section className="rounded-[28px] p-5 sm:p-6 bg-[#0c1422] border border-white/[0.075]">
         <div className="flex items-center gap-2 mb-5">
           <WalletCards size={17} className="text-blue-300" />
-          <p className="text-xs text-white/40">Каждой трате можно назначить категорию, дату списания, счёт, цвет и изображение.</p>
+          <p className="text-xs text-white/40">Аренда, транспорт и другие обязательные расходы без деления на тип подписки.</p>
         </div>
-        <SubscriptionsManager alwaysExpanded />
+        <SubscriptionsManager alwaysExpanded group="regular" />
+      </section>
+
+      <section className="rounded-[28px] p-5 sm:p-6 bg-[#0c1422] border border-white/[0.075]">
+        <div className="flex items-center gap-2 mb-5">
+          <RefreshCw size={17} className="text-emerald-300" />
+          <p className="text-xs text-white/40">Подписки разделяются на обычные, рабочие и годовые.</p>
+        </div>
+        <SubscriptionsManager alwaysExpanded group="subscription" />
       </section>
     </div>
   );

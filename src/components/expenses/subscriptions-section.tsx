@@ -225,7 +225,13 @@ export function PaySubscriptionModal({ isOpen, onClose }: { isOpen: boolean; onC
   );
 }
 
-export function SubscriptionsManager({ alwaysExpanded = false }: { alwaysExpanded?: boolean }) {
+export function SubscriptionsManager({
+  alwaysExpanded = false,
+  group = 'subscription',
+}: {
+  alwaysExpanded?: boolean;
+  group?: 'regular' | 'subscription';
+}) {
   const { subscriptions, wallets, deleteSubscription } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
@@ -234,9 +240,10 @@ export function SubscriptionsManager({ alwaysExpanded = false }: { alwaysExpande
   const openAdd = () => { setEditingSubscription(null); setIsModalOpen(true); };
   const openEdit = (s: Subscription) => { setEditingSubscription(s); setIsModalOpen(true); };
 
-  const byKind = KIND_ORDER.map(kind => ({
+  const groupItems = subscriptions.filter(s => (s.group || 'subscription') === group);
+  const byKind = (group === 'regular' ? (['personal'] as SubscriptionKind[]) : KIND_ORDER).map(kind => ({
     kind,
-    items: subscriptions
+    items: groupItems
       .filter(s => s.kind === kind)
       .sort(compareBillingOrder),
   }));
@@ -254,10 +261,10 @@ export function SubscriptionsManager({ alwaysExpanded = false }: { alwaysExpande
             <ChevronRight size={14} className="text-white/20 group-hover:text-white/50 transition-colors flex-shrink-0" />
           ))}
           <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 group-hover:text-white/50 transition-colors">
-            Постоянные траты
+            {group === 'regular' ? 'Обычные постоянные траты' : 'Подписки'}
           </span>
-          {subscriptions.length > 0 && (
-            <span className="text-[10px] font-black text-white/15">{subscriptions.length}</span>
+          {groupItems.length > 0 && (
+            <span className="text-[10px] font-black text-white/15">{groupItems.length}</span>
           )}
           <div className="h-px bg-white/[0.06] flex-1" />
         </button>
@@ -269,13 +276,15 @@ export function SubscriptionsManager({ alwaysExpanded = false }: { alwaysExpande
         </button>
       </div>
 
-      {isExpanded && (subscriptions.length === 0 ? (
+      {isExpanded && (groupItems.length === 0 ? (
         <button
           onClick={openAdd}
           className="py-16 rounded-[36px] border-2 border-dashed border-white/[0.06] flex flex-col items-center justify-center gap-3 text-white/15 hover:text-white/40 hover:border-white/15 transition-all"
         >
           <Plus size={28} strokeWidth={3} />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Добавить первую постоянную трату</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em]">
+            {group === 'regular' ? 'Добавить обычную постоянную трату' : 'Добавить первую подписку'}
+          </span>
         </button>
       ) : (
         <div className="flex flex-col gap-7">
@@ -284,12 +293,12 @@ export function SubscriptionsManager({ alwaysExpanded = false }: { alwaysExpande
             const meta = KIND_META[kind];
             return (
               <div key={kind} className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 px-1">
+                {group === 'subscription' && <div className="flex items-center gap-2 px-1">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: meta.color }} />
                   <span className="text-[10px] font-black uppercase tracking-[0.3em]" style={{ color: meta.color }}>
                     {meta.blockLabel}
                   </span>
-                </div>
+                </div>}
                 <div className="flex flex-col gap-2.5">
                   {items.map(sub => {
                     const wallet = wallets.find(w => w.id === sub.walletId);
@@ -349,7 +358,12 @@ export function SubscriptionsManager({ alwaysExpanded = false }: { alwaysExpande
         </div>
       ))}
 
-      <SubscriptionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} editingSubscription={editingSubscription} />
+      <SubscriptionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        editingSubscription={editingSubscription}
+        group={group}
+      />
     </div>
   );
 }
@@ -358,10 +372,12 @@ function SubscriptionModal({
   isOpen,
   onClose,
   editingSubscription,
+  group,
 }: {
   isOpen: boolean;
   onClose: () => void;
   editingSubscription: Subscription | null;
+  group: 'regular' | 'subscription';
 }) {
   const { addSubscription, updateSubscription, wallets, categories, preferences } = useStore();
 
@@ -438,6 +454,7 @@ function SubscriptionModal({
       name: name.trim(),
       amount: numAmount,
       currency,
+      group,
       kind,
       color,
       imageUrl,
@@ -472,7 +489,9 @@ function SubscriptionModal({
           >
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-sm font-black uppercase tracking-widest text-white/40">
-                {editingSubscription ? 'Изменить постоянную трату' : 'Новая постоянная трата'}
+                {editingSubscription
+                  ? group === 'regular' ? 'Изменить обычную трату' : 'Изменить подписку'
+                  : group === 'regular' ? 'Новая обычная трата' : 'Новая подписка'}
               </h2>
               <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/40">
                 <X size={20} />
@@ -481,7 +500,7 @@ function SubscriptionModal({
 
             <div className="flex flex-col gap-6">
               {/* Kind selector: обычная / рабочая / годовая */}
-              <div className="flex bg-white/5 p-1 rounded-2xl">
+              {group === 'subscription' && <div className="flex bg-white/5 p-1 rounded-2xl">
                 {KIND_ORDER.map(k => (
                   <button
                     key={k}
@@ -496,7 +515,7 @@ function SubscriptionModal({
                     {KIND_META[k].label}
                   </button>
                 ))}
-              </div>
+              </div>}
 
               <ColorPicker color={color} onChange={setColor} />
 
@@ -661,7 +680,9 @@ function SubscriptionModal({
               className="mt-2 min-h-[72px] bg-white text-black text-lg font-black rounded-3xl active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
             >
               <Check size={28} strokeWidth={4} />
-              {editingSubscription ? 'СОХРАНИТЬ' : 'ДОБАВИТЬ ПОСТОЯННУЮ ТРАТУ'}
+              {editingSubscription
+                ? 'СОХРАНИТЬ'
+                : group === 'regular' ? 'ДОБАВИТЬ ОБЫЧНУЮ ТРАТУ' : 'ДОБАВИТЬ ПОДПИСКУ'}
             </button>
           </motion.div>
         </motion.div>

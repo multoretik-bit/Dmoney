@@ -75,6 +75,7 @@ export interface Subscription {
   name: string;
   amount: number;
   currency: string;
+  group?: 'regular' | 'subscription';
   kind: SubscriptionKind;
   color?: string;
   imageUrl?: string;
@@ -983,6 +984,7 @@ export const useStore = create<UserState>()(
               name: s.name,
               amount: s.amount,
               currency: s.currency,
+              group: s.group_type || 'subscription',
               kind: s.kind || 'personal',
               color: s.color || undefined,
               imageUrl: s.image_url || undefined,
@@ -1149,6 +1151,7 @@ export const useStore = create<UserState>()(
                   name: s.name,
                   amount: s.amount,
                   currency: s.currency,
+                  group_type: s.group || 'subscription',
                   kind: s.kind,
                   color: s.color || null,
                   image_url: s.imageUrl || null,

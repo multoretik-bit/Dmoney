@@ -183,13 +183,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             )}
 
             {/* Read-only balance indicator */}
-            <div
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl"
-              style={{
-                background: 'rgba(59,130,246,0.1)',
-                border: '1px solid rgba(59,130,246,0.2)',
-              }}
-            >
+            <div className="flex items-center gap-1.5 px-2 py-2">
               <span className="text-sm font-black text-blue-300 tracking-tight">
                 ${totalBalance.toFixed(1)}
               </span>
@@ -199,13 +193,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Read-only balance indicator — desktop */}
         <div className="hidden lg:flex justify-end px-8 pt-6">
-          <div
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl"
-            style={{
-              background: 'rgba(59,130,246,0.1)',
-              border: '1px solid rgba(59,130,246,0.2)',
-            }}
-          >
+          <div className="flex items-center gap-1.5 px-2 py-2.5">
             <span className="text-sm font-black text-blue-300 tracking-tight tabular-nums">
               {totalBalance.toFixed(1)} {preferences.baseCurrency}
             </span>

@@ -12,7 +12,6 @@ import { convertAmount } from '@/lib/exchange';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { AddExpenseModal } from './add-expense-modal';
-import { SpendingRing } from '@/components/wallets/spending-ring';
 import { PassiveIncomeTab } from '@/components/ui/passive-income-tab';
 import { getNextChargeDate } from './subscriptions-section';
 
@@ -60,13 +59,6 @@ export function ExpensesView() {
     expense.date.startsWith(monthKey)
     && (viewMode !== 'personal' || !excludedCategoryIds.has(expense.categoryId))
   ), [excludedCategoryIds, filteredExpenses, monthKey, viewMode]);
-
-  const budgetLimit = viewMode === 'work'
-    ? (preferences.workBudgetLimit || 0)
-    : viewMode === 'large'
-      ? (preferences.largeBudgetLimit || 0)
-      : categories.reduce((sum, category) =>
-        sum + (!excludedCategoryIds.has(category.id) && category.budgetLimit ? category.budgetLimit : 0), 0);
 
   const totalWallets = wallets.reduce((sum, wallet) =>
     sum + convertAmount(Number(wallet.balance || 0), wallet.currency, displayCurrency), 0);
@@ -253,7 +245,7 @@ export function ExpensesView() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-8 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
+        <div className="xl:col-span-12 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
           <div className="flex items-center justify-between gap-4 mb-5">
             <div>
               <div className="flex items-center gap-2">
@@ -270,9 +262,6 @@ export function ExpensesView() {
           <PassiveIncomeTab selectedCurrency={displayCurrency} compact />
         </div>
 
-        <div className="xl:col-span-4">
-          <SpendingRing expenses={monthExpenses} limit={budgetLimit} emptyLabel="Нет трат за этот месяц" />
-        </div>
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
@@ -295,11 +284,19 @@ export function ExpensesView() {
               <div className="py-12 text-center text-xs font-medium text-white/30">
                 Ближайших списаний нет
               </div>
-            ) : upcoming.map(({ subscription, date, amount }) => (
-              <div key={subscription.id} className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.025] border border-white/[0.05]">
+            ) : upcoming.map(({ subscription, date, amount }) => {
+              const color = subscription.color || '#10b981';
+              return (
+              <div
+                key={subscription.id}
+                className="flex items-center gap-3 p-3 rounded-2xl border"
+                style={{ background: `${color}12`, borderColor: `${color}32` }}
+              >
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-400/10 text-emerald-300 bg-cover bg-center overflow-hidden"
-                  style={subscription.imageUrl ? { backgroundImage: `url(${subscription.imageUrl})` } : {}}
+                  style={subscription.imageUrl
+                    ? { backgroundImage: `url(${subscription.imageUrl})` }
+                    : { backgroundColor: `${color}20`, color }}
                 >
                   {!subscription.imageUrl && <ReceiptText size={16} />}
                 </div>
@@ -309,7 +306,7 @@ export function ExpensesView() {
                 </div>
                 <span className="text-xs font-black text-white tabular-nums">{money(amount, displayCurrency)}</span>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       </section>
