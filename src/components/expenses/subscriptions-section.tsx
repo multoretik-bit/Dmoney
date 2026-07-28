@@ -80,7 +80,8 @@ export function UpcomingSubscriptionsWidget() {
           return (
             <div
               key={sub.id}
-              className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white/[0.02] border border-white/5"
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-white/[0.02]"
+              style={{ border: '1px solid rgba(255,255,255,0.05)', borderLeft: `4px solid ${color}` }}
             >
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-bold text-white truncate">{sub.name}</span>
@@ -165,6 +166,8 @@ export function SubscriptionsManager() {
                         style={{
                           background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
                           border: '1px solid rgba(255,255,255,0.06)',
+                          borderLeft: `4px solid ${color}`,
+                          boxShadow: `0 4px 20px rgba(0,0,0,0.3), -4px 0 16px -6px ${color}40`,
                         }}
                       >
                         <div className="flex items-center gap-3.5 min-w-0 flex-1">
