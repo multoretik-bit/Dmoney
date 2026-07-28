@@ -9,3 +9,6 @@ ALTER TABLE public.subscriptions
 UPDATE public.subscriptions
 SET group_type = 'subscription'
 WHERE group_type IS NULL;
+
+ALTER TABLE public.user_preferences
+  ADD COLUMN IF NOT EXISTS long_term_goals JSONB DEFAULT '[]'::jsonb;

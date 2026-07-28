@@ -141,12 +141,22 @@ export interface SavingsGoal {
 
 export type SavingsGoals = Partial<Record<SavingsGoalCategory, SavingsGoal>>;
 
+export interface LongTermGoal {
+  id: string;
+  name: string;
+  target: number;
+  saved: number;
+  currency: string;
+  color: string;
+}
+
 export interface UserPreferences {
   baseCurrency: string;
   savedColors: string[];
   workBudgetLimit?: number;
   largeBudgetLimit?: number;
   savingsGoals?: SavingsGoals;
+  longTermGoals?: LongTermGoal[];
 }
 
 interface UserState {
@@ -171,6 +181,9 @@ interface UserState {
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   setSavingsGoalTarget: (category: SavingsGoalCategory, target: number) => void;
   addSavingsProgress: (category: SavingsGoalCategory, amount: number) => void;
+  addLongTermGoal: (goal: LongTermGoal) => void;
+  updateLongTermGoal: (id: string, updates: Partial<LongTermGoal>) => void;
+  deleteLongTermGoal: (id: string) => void;
   addSavedColor: (color: string) => void;
   addCategory: (category: Category) => Promise<void>;
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
@@ -321,6 +334,26 @@ export const useStore = create<UserState>()(
           },
         };
       }),
+      addLongTermGoal: (goal) => set((state) => ({
+        preferences: {
+          ...state.preferences,
+          longTermGoals: [...(state.preferences.longTermGoals || []), goal],
+        },
+      })),
+      updateLongTermGoal: (id, updates) => set((state) => ({
+        preferences: {
+          ...state.preferences,
+          longTermGoals: (state.preferences.longTermGoals || []).map(goal =>
+            goal.id === id ? { ...goal, ...updates } : goal
+          ),
+        },
+      })),
+      deleteLongTermGoal: (id) => set((state) => ({
+        preferences: {
+          ...state.preferences,
+          longTermGoals: (state.preferences.longTermGoals || []).filter(goal => goal.id !== id),
+        },
+      })),
       addSavedColor: (color) => set((state) => {
         if (state.preferences.savedColors.includes(color)) return state;
         return { preferences: { ...state.preferences, savedColors: [...state.preferences.savedColors, color] } };
@@ -1008,6 +1041,9 @@ export const useStore = create<UserState>()(
               savingsGoals: prefs.data.savings_goals !== undefined
                 ? prefs.data.savings_goals
                 : (prefs.data.savings_goal ? { savings: prefs.data.savings_goal } : currentPrefs.savingsGoals),
+              longTermGoals: prefs.data.long_term_goals !== undefined
+                ? (prefs.data.long_term_goals || [])
+                : (currentPrefs.longTermGoals || []),
             }});
             
             if (prefs.data.capital_history) {
@@ -1036,6 +1072,7 @@ export const useStore = create<UserState>()(
            work_budget_limit: state.preferences.workBudgetLimit || 0,
            large_budget_limit: state.preferences.largeBudgetLimit || 0,
            savings_goals: state.preferences.savingsGoals || null,
+           long_term_goals: state.preferences.longTermGoals || [],
            capital_history: state.capitalHistory || [],
            updated_at: new Date().toISOString()
          };

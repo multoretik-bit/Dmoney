@@ -111,6 +111,7 @@ ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS large_budget_limit NUMERIC
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS capital_history JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goal JSONB; -- deprecated, superseded by savings_goals below
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS savings_goals JSONB; -- { work: {month,target,saved}, savings: {...}, invest: {...} }
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS long_term_goals JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_subscription BOOLEAN DEFAULT false;
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS subscription_next_charge_date DATE;
 
