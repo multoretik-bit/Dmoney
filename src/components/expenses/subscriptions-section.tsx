@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore, Subscription, SubscriptionKind } from '@/store/useStore';
 import { generateUUID } from '@/lib/uuid';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
+import { ColorPicker } from '@/components/ui/color-picker';
 import { Plus, Trash2, Edit2, Check, X, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -75,6 +76,7 @@ export function UpcomingSubscriptionsWidget() {
           const wallet = wallets.find(w => w.id === sub.walletId);
           const nextDate = getNextChargeDate(sub);
           const meta = KIND_META[sub.kind];
+          const color = sub.color || meta.color;
           return (
             <div
               key={sub.id}
@@ -83,7 +85,7 @@ export function UpcomingSubscriptionsWidget() {
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-bold text-white truncate">{sub.name}</span>
                 <span className="text-[10px] font-bold text-white/30 truncate">
-                  <span style={{ color: meta.color }}>{meta.label}</span>
+                  <span style={{ color }}>{meta.label}</span>
                   {' · '}{format(nextDate, 'd MMMM', { locale: ru })}
                   {' · '}{wallet ? wallet.name : 'счёт не найден'}
                   {sub.autoCharge && ' · авто'}
@@ -155,6 +157,7 @@ export function SubscriptionsManager() {
                   {items.map(sub => {
                     const wallet = wallets.find(w => w.id === sub.walletId);
                     const nextDate = getNextChargeDate(sub);
+                    const color = sub.color || meta.color;
                     return (
                       <div
                         key={sub.id}
@@ -167,7 +170,7 @@ export function SubscriptionsManager() {
                         <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           <div
                             className="w-11 h-11 rounded-2xl flex items-center justify-center text-lg flex-shrink-0"
-                            style={{ background: `${meta.color}18`, color: meta.color }}
+                            style={{ background: `${color}18`, color }}
                           >
                             🔁
                           </div>
@@ -225,6 +228,7 @@ function SubscriptionModal({
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState(preferences.baseCurrency);
   const [kind, setKind] = useState<SubscriptionKind>('personal');
+  const [color, setColor] = useState(KIND_META.personal.color);
   const [billingDay, setBillingDay] = useState('1');
   const [billingMonth, setBillingMonth] = useState('1');
   const [walletId, setWalletId] = useState('');
@@ -238,6 +242,7 @@ function SubscriptionModal({
       setAmount(editingSubscription.amount.toString());
       setCurrency(editingSubscription.currency);
       setKind(editingSubscription.kind);
+      setColor(editingSubscription.color || KIND_META[editingSubscription.kind].color);
       setBillingDay(editingSubscription.billingDay.toString());
       setBillingMonth((editingSubscription.billingMonth || 1).toString());
       setWalletId(editingSubscription.walletId);
@@ -248,6 +253,7 @@ function SubscriptionModal({
       setAmount('');
       setCurrency(preferences.baseCurrency);
       setKind('personal');
+      setColor(KIND_META.personal.color);
       setBillingDay('1');
       setBillingMonth('1');
       setWalletId(wallets[0]?.id || '');
@@ -267,6 +273,7 @@ function SubscriptionModal({
       amount: numAmount,
       currency,
       kind,
+      color,
       billingDay: day,
       billingMonth: kind === 'yearly' ? parseInt(billingMonth, 10) : undefined,
       walletId,
@@ -323,6 +330,8 @@ function SubscriptionModal({
                   </button>
                 ))}
               </div>
+
+              <ColorPicker color={color} onChange={setColor} />
 
               <div className="bg-white/5 p-6 rounded-[32px] border border-white/5 flex flex-col gap-4">
                 <div className="flex flex-col gap-2">

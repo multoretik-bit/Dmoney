@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   amount NUMERIC NOT NULL DEFAULT 0,
   currency TEXT NOT NULL DEFAULT 'USD',
   kind TEXT NOT NULL DEFAULT 'personal', -- 'personal' | 'work' | 'yearly'
+  color TEXT,
   billing_day NUMERIC NOT NULL DEFAULT 1, -- 1-31
   billing_month NUMERIC, -- 1-12, only used when kind = 'yearly'
   wallet_id UUID REFERENCES wallets(id) ON DELETE SET NULL,
@@ -159,6 +160,12 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   sort_order NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Incremental fix: the table may already exist from an earlier version of
+-- this app that used a "period" column instead of "kind", and predates
+-- "color". Safe to re-run.
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'personal';
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS color TEXT;
 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 
