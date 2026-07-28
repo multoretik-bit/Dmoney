@@ -4,12 +4,13 @@ import { generateUUID } from '@/lib/uuid';
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Calculator, Wallet as WalletIcon, Tag, ArrowRight, ChevronDown } from 'lucide-react';
+import { X, Check, Calculator, Wallet as WalletIcon, Tag, ArrowRight, ChevronDown, RefreshCw } from 'lucide-react';
 import { useStore, Expense } from '@/store/useStore';
 import { convertAmount, getExchangeRate } from '@/lib/exchange';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { CurrencyPicker } from '@/components/ui/currency-picker';
+import { PaySubscriptionModal } from './subscriptions-section';
 
 export function AddExpenseModal({ 
   isOpen, 
@@ -22,9 +23,9 @@ export function AddExpenseModal({
   editingExpense?: Expense | null;
   initialViewMode?: 'personal' | 'work' | 'large';
 }) {
-  const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories } = useStore();
+  const { addExpense, updateExpense, deleteExpense, preferences, wallets, categories, subscriptions } = useStore();
   const { baseCurrency } = preferences;
-  
+
   const [amountInput, setAmountInput] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [categoryId, setCategoryId] = useState('');
@@ -34,6 +35,7 @@ export function AddExpenseModal({
   const [isSubscription, setIsSubscription] = useState(false);
   const [subscriptionNextChargeDate, setSubscriptionNextChargeDate] = useState('');
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
+  const [isPaySubscriptionOpen, setIsPaySubscriptionOpen] = useState(false);
 
   // Auto-select logic — seeds the form ONLY when the modal opens (or when
   // switching which expense is being edited). It intentionally does not
@@ -122,9 +124,10 @@ export function AddExpenseModal({
   };
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
+        <motion.div
           className="fixed inset-0 z-[100] flex flex-col items-center justify-end bg-black/80 backdrop-blur-md px-4 pb-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -155,6 +158,17 @@ export function AddExpenseModal({
                 {editingExpense ? 'Правка' : 'Расход'}
               </h2>
             </div>
+
+            {!editingExpense && subscriptions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsPaySubscriptionOpen(true)}
+                className="mb-8 -mt-4 flex items-center justify-center gap-2 py-4 rounded-[24px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black text-xs uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+              >
+                <RefreshCw size={16} />
+                Оплатить одну из подписок
+              </button>
+            )}
 
             <div className="flex-1 overflow-y-auto flex flex-col gap-10 hide-scrollbar pb-24">
               {/* Amount Input with Enhanced Preview */}
@@ -436,5 +450,10 @@ export function AddExpenseModal({
         </motion.div>
       )}
     </AnimatePresence>
+    <PaySubscriptionModal
+      isOpen={isPaySubscriptionOpen}
+      onClose={() => { setIsPaySubscriptionOpen(false); onClose(); }}
+    />
+    </>
   );
 }

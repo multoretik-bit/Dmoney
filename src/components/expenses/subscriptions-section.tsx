@@ -6,7 +6,7 @@ import { useStore, Subscription, SubscriptionKind } from '@/store/useStore';
 import { generateUUID } from '@/lib/uuid';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { ColorPicker } from '@/components/ui/color-picker';
-import { Plus, Trash2, Edit2, Check, X, RefreshCw, ChevronDown, ChevronRight, CreditCard } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -69,7 +69,6 @@ function compareBillingOrder(a: Subscription, b: Subscription): number {
 
 export function UpcomingSubscriptionsWidget() {
   const { subscriptions, wallets } = useStore();
-  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   if (subscriptions.length === 0) return null;
 
   const sorted = [...subscriptions].sort(
@@ -78,18 +77,9 @@ export function UpcomingSubscriptionsWidget() {
 
   return (
     <div className="flex flex-col gap-3 p-5 rounded-[28px] bg-white/[0.03] border border-white/5">
-      <div className="flex items-center justify-between gap-2 px-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <RefreshCw size={14} className="text-emerald-400 flex-shrink-0" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 truncate">Ближайшие подписки</span>
-        </div>
-        <button
-          onClick={() => setIsPayModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500/25 transition-all flex-shrink-0"
-        >
-          <CreditCard size={12} />
-          Оплатил
-        </button>
+      <div className="flex items-center gap-2 px-1">
+        <RefreshCw size={14} className="text-emerald-400 flex-shrink-0" />
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 truncate">Ближайшие подписки</span>
       </div>
       <div className="flex flex-col gap-2">
         {sorted.slice(0, 5).map(sub => {
@@ -119,13 +109,11 @@ export function UpcomingSubscriptionsWidget() {
           );
         })}
       </div>
-
-      <PaySubscriptionModal isOpen={isPayModalOpen} onClose={() => setIsPayModalOpen(false)} />
     </div>
   );
 }
 
-function PaySubscriptionModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function PaySubscriptionModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { subscriptions, wallets, paySubscriptionNow } = useStore();
   const [paidId, setPaidId] = useState<string | null>(null);
 
