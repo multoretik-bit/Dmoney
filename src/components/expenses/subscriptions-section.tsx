@@ -235,6 +235,12 @@ function SubscriptionModal({
   const [categoryId, setCategoryId] = useState('');
   const [autoCharge, setAutoCharge] = useState(false);
 
+  // Seeds the form ONLY when the modal opens (or when switching which
+  // subscription is being edited). Deliberately does not depend on
+  // wallets/categories/preferences: those get new references on every
+  // background sync (pullData), and depending on them here used to reset
+  // whatever kind/wallet/category the user had just picked mid-edit —
+  // this is the same bug class fixed earlier in add-expense-modal.tsx.
   useEffect(() => {
     if (!isOpen) return;
     if (editingSubscription) {
@@ -249,18 +255,20 @@ function SubscriptionModal({
       setCategoryId(editingSubscription.categoryId);
       setAutoCharge(editingSubscription.autoCharge);
     } else {
+      const state = useStore.getState();
       setName('');
       setAmount('');
-      setCurrency(preferences.baseCurrency);
+      setCurrency(state.preferences.baseCurrency);
       setKind('personal');
       setColor(KIND_META.personal.color);
       setBillingDay('1');
       setBillingMonth('1');
-      setWalletId(wallets[0]?.id || '');
-      setCategoryId(categories[0]?.id || '');
+      setWalletId(state.wallets[0]?.id || '');
+      setCategoryId(state.categories[0]?.id || '');
       setAutoCharge(false);
     }
-  }, [isOpen, editingSubscription, preferences.baseCurrency, wallets, categories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editingSubscription]);
 
   const handleSave = () => {
     const numAmount = parseFloat(amount);
