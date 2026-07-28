@@ -1,308 +1,405 @@
 'use client';
 
-import { useState } from 'react';
-import { useStore, Category, Expense } from '@/store/useStore';
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  isSameDay,
-  eachDayOfInterval,
-  startOfWeek,
-  endOfWeek,
-  addMonths,
-  subMonths
-} from 'date-fns';
+import { useMemo, useState } from 'react';
+import { format, addMonths, subMonths } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { AddExpenseModal } from './add-expense-modal';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
+  Gem, Landmark, LayoutDashboard, Plus, ReceiptText, Sparkles, WalletCards,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useStore, Expense } from '@/store/useStore';
+import { convertAmount } from '@/lib/exchange';
 import { cn } from '@/lib/utils';
+import { AddExpenseModal } from './add-expense-modal';
 import { SpendingRing } from '@/components/wallets/spending-ring';
-import { SavingsGoalWidget } from './savings-goal-widget';
-import { UpcomingSubscriptionsWidget } from './subscriptions-section';
+import { PassiveIncomeTab } from '@/components/ui/passive-income-tab';
+import { getNextChargeDate } from './subscriptions-section';
+
+type ViewMode = 'personal' | 'work' | 'large';
+
+const VIEW_META: Record<ViewMode, { label: string; accent: string }> = {
+  personal: { label: 'Личные', accent: '#60a5fa' },
+  work: { label: 'Рабочие', accent: '#f59e0b' },
+  large: { label: 'Крупные', accent: '#a78bfa' },
+};
+
+function money(value: number, currency: string, digits = 0) {
+  return `${value.toLocaleString('ru-RU', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })} ${currency}`;
+}
 
 export function ExpensesView() {
-  const { expenses, preferences, categories } = useStore();
+  const {
+    expenses, preferences, categories, portfolios, wallets, assets,
+    subscriptions, passiveIncomeSources, capitalHistory,
+  } = useStore();
   const { baseCurrency } = preferences;
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>('personal');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [viewMode, setViewMode] = useState<'personal' | 'work' | 'large'>('personal');
+  const monthKey = format(currentMonth, 'yyyy-MM');
+  const selectedMeta = VIEW_META[viewMode];
 
-  const filteredExpenses = expenses.filter(e => {
-    if (viewMode === 'work') return !!e.isWork;
-    if (viewMode === 'large') return !!e.isLarge;
-    return !e.isWork && !e.isLarge;
-  });
-  const dayExpenses = filteredExpenses.filter(e => isSameDay(new Date(e.date), selectedDate));
-  const excludeIds = new Set(categories.filter(c => {
-    const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
-    return c.excludeFromBudget || (parent && parent.excludeFromBudget);
-  }).map(c => c.id));
+  const filteredExpenses = useMemo(() => expenses.filter(expense => {
+    if (viewMode === 'work') return !!expense.isWork;
+    if (viewMode === 'large') return !!expense.isLarge;
+    return !expense.isWork && !expense.isLarge;
+  }), [expenses, viewMode]);
 
-  const ringExpenses = filteredExpenses.filter(e =>
-    e.date.startsWith(format(currentMonth, 'yyyy-MM')) && (viewMode !== 'personal' || !excludeIds.has(e.categoryId))
-  );
-  const ringLimit = viewMode === 'work'
+  const excludedCategoryIds = useMemo(() => new Set(categories.filter(category => {
+    const parent = category.parentId ? categories.find(item => item.id === category.parentId) : null;
+    return category.excludeFromBudget || parent?.excludeFromBudget;
+  }).map(category => category.id)), [categories]);
+
+  const monthExpenses = useMemo(() => filteredExpenses.filter(expense =>
+    expense.date.startsWith(monthKey)
+    && (viewMode !== 'personal' || !excludedCategoryIds.has(expense.categoryId))
+  ), [excludedCategoryIds, filteredExpenses, monthKey, viewMode]);
+
+  const budgetLimit = viewMode === 'work'
     ? (preferences.workBudgetLimit || 0)
     : viewMode === 'large'
       ? (preferences.largeBudgetLimit || 0)
-      : categories.reduce((sum, c) => sum + (!excludeIds.has(c.id) && c.budgetLimit ? c.budgetLimit : 0), 0);
+      : categories.reduce((sum, category) =>
+        sum + (!excludedCategoryIds.has(category.id) && category.budgetLimit ? category.budgetLimit : 0), 0);
 
-  // Calendar logic
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(monthStart);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  const totalWallets = wallets.reduce((sum, wallet) =>
+    sum + convertAmount(Number(wallet.balance || 0), wallet.currency, baseCurrency), 0);
+  const totalAssets = assets.reduce((sum, asset) =>
+    sum + convertAmount(Number(asset.estimatedValue || 0), asset.currency, baseCurrency), 0);
+  const totalCapital = totalWallets + totalAssets;
 
-  const getDayTotal = (date: Date) => {
-    return filteredExpenses
-      .filter(e => isSameDay(new Date(e.date), date) && !excludeIds.has(e.categoryId))
-      .reduce((sum, e) => sum + e.convertedAmount, 0);
+  const portfolioRows = [...portfolios]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map(portfolio => ({
+      ...portfolio,
+      total: wallets
+        .filter(wallet => wallet.portfolioId === portfolio.id)
+        .reduce((sum, wallet) =>
+          sum + convertAmount(Number(wallet.balance || 0), wallet.currency, baseCurrency), 0),
+    }));
+
+  const recentExpenses = [...filteredExpenses]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 6);
+
+  const upcoming = subscriptions
+    .map(subscription => ({
+      subscription,
+      date: getNextChargeDate(subscription),
+      amount: convertAmount(subscription.amount, subscription.currency, baseCurrency),
+    }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .slice(0, 4);
+
+  const passiveTotal = passiveIncomeSources.reduce((sum, source) =>
+    sum + convertAmount(source.amount, source.currency, baseCurrency), 0);
+
+  const historyBars = useMemo(() => {
+    const points = (capitalHistory || []).slice(-18);
+    if (points.length < 2) return [];
+    const values = points.map(point => point.overallTotal);
+    const min = Math.min(...values);
+    const range = Math.max(Math.max(...values) - min, 1);
+    return values.map(value => 28 + ((value - min) / range) * 72);
+  }, [capitalHistory]);
+
+  const openExpense = (expense?: Expense) => {
+    setEditingExpense(expense || null);
+    setIsModalOpen(true);
   };
 
-  const formatDayTotal = (amount: number) => (
-    amount >= 1000 ? `${(amount / 1000).toFixed(1)}k` : amount.toFixed(0)
-  );
-
-  const accentColor = viewMode === 'work'
-    ? { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', text: '#f59e0b', glow: 'rgba(245,158,11,0.3)' }
-    : viewMode === 'large'
-      ? { bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.3)', text: '#8b5cf6', glow: 'rgba(139,92,246,0.3)' }
-      : { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa', glow: 'rgba(59,130,246,0.4)' };
-
   return (
-    <div className="flex flex-col gap-7 pb-32">
-      {/* Page header */}
-      <header className="pt-10 flex flex-col items-center text-center gap-2">
-        <h1 className="text-3xl font-black text-white tracking-tight">
-          {viewMode === 'work' ? 'Рабочие Траты' : viewMode === 'large' ? 'Крупные Покупки' : 'Обзор Трат'}
-        </h1>
-        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/20">
-          {viewMode === 'work' ? 'Служебные расходы' : viewMode === 'large' ? 'Особые траты' : 'История и Календарь'}
-        </p>
+    <div className="flex flex-col gap-5 pb-32">
+      <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-400/20 flex items-center justify-center text-blue-300">
+            <LayoutDashboard size={21} />
+          </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-white">Обзор</h1>
+            <p className="text-xs font-medium text-white/40 mt-0.5">Всё важное о ваших деньгах</p>
+          </div>
+        </div>
 
-        {/* View mode switcher */}
-        <div className="mt-5 flex bg-black/40 p-1 rounded-2xl border border-white/[0.06]" style={{ backdropFilter: 'blur(16px)' }}>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center p-1 rounded-2xl bg-white/[0.035] border border-white/[0.07]">
+            {(Object.keys(VIEW_META) as ViewMode[]).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={cn(
+                  'px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all',
+                  viewMode === mode ? 'bg-white/[0.1] text-white shadow-sm' : 'text-white/35 hover:text-white/65'
+                )}
+              >
+                {VIEW_META[mode].label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center rounded-2xl bg-white/[0.035] border border-white/[0.07] p-1">
+            <button
+              aria-label="Предыдущий месяц"
+              onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
+              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="min-w-[116px] text-center text-xs font-black capitalize text-white/80">
+              {format(currentMonth, 'LLLL yyyy', { locale: ru })}
+            </span>
+            <button
+              aria-label="Следующий месяц"
+              onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
+              className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
           <button
-            onClick={() => setViewMode('personal')}
-            className={cn(
-              "px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
-              viewMode === 'personal' ? "bg-white text-black shadow-lg" : "text-white/40 hover:text-white/60"
-            )}
+            onClick={() => openExpense()}
+            className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-[0_10px_30px_-12px_rgba(37,99,235,0.8)] transition-all active:scale-[0.98]"
           >
-            Личные
-          </button>
-          <button
-            onClick={() => setViewMode('work')}
-            className={cn(
-              "px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
-              viewMode === 'work' ? "text-white shadow-lg" : "text-white/40 hover:text-white/60"
-            )}
-            style={viewMode === 'work' ? { background: 'linear-gradient(135deg,#f59e0b,#d97706)', boxShadow: '0 4px 20px rgba(245,158,11,0.3)' } : {}}
-          >
-            Рабочие
-          </button>
-          <button
-            onClick={() => setViewMode('large')}
-            className={cn(
-              "px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-200",
-              viewMode === 'large' ? "text-white shadow-lg" : "text-white/40 hover:text-white/60"
-            )}
-            style={viewMode === 'large' ? { background: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', boxShadow: '0 4px 20px rgba(139,92,246,0.3)' } : {}}
-          >
-            Крупные
+            <Plus size={16} strokeWidth={3} />
+            Добавить операцию
           </button>
         </div>
       </header>
 
-      <SavingsGoalWidget />
-      <UpcomingSubscriptionsWidget />
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div className="xl:col-span-7 min-h-[270px] rounded-[28px] p-6 lg:p-8 relative overflow-hidden border border-blue-400/20 bg-[linear-gradient(145deg,#1747a6_0%,#102b66_46%,#0b1426_100%)] shadow-[0_24px_70px_-35px_rgba(37,99,235,0.75)]">
+          <div className="absolute -top-28 -right-20 w-80 h-80 rounded-full bg-blue-300/10 blur-3xl" />
+          <div className="relative z-10 h-full flex flex-col justify-between gap-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-blue-100/75">Общий капитал</p>
+                <p className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black tracking-[-0.04em] text-white tabular-nums">
+                  {money(totalCapital, baseCurrency, 1)}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-400/12 border border-emerald-300/15 text-[11px] font-bold text-emerald-300">
+                    <ArrowUpRight size={13} />
+                    {portfolioRows.length} капиталов
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.07] border border-white/10 text-[11px] font-bold text-white/60">
+                    <WalletCards size={13} />
+                    {wallets.length} счетов
+                  </span>
+                </div>
+              </div>
+              <span className="px-3 py-1.5 rounded-xl bg-black/15 border border-white/10 text-[11px] font-black text-blue-100">
+                {baseCurrency}
+              </span>
+            </div>
 
-      <div className="flex flex-col gap-6">
-        {/* Month Selector */}
-        <div
-          className="flex justify-between items-center p-1.5 rounded-2xl self-center"
-          style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <button
-            onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
-            className="p-2 text-white/25 hover:text-white/70 transition-colors"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <div className="flex flex-col items-center min-w-[130px]">
-            <span className="text-sm font-black uppercase tracking-widest text-white leading-none">
-              {format(currentMonth, 'MMMM', { locale: ru })}
-            </span>
-            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest mt-1">
-              {format(currentMonth, 'yyyy')}
-            </span>
-          </div>
-          <button
-            onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
-            className="p-2 text-white/25 hover:text-white/70 transition-colors"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        {/* Spending ring, attached to the calendar below */}
-        <div className="flex flex-col gap-3">
-          <SpendingRing expenses={ringExpenses} limit={ringLimit} emptyLabel="Нет трат за этот месяц" />
-
-          {(viewMode === 'work' || viewMode === 'large') && (
-            <button
-              onClick={() => {
-                const isWork = viewMode === 'work';
-                const current = isWork ? preferences.workBudgetLimit : preferences.largeBudgetLimit;
-                const val = prompt(
-                  `${current ? 'Введите новый' : 'Установите'} лимит для ${isWork ? 'рабочих трат' : 'крупных покупок'}:`,
-                  (current ?? 0).toString()
-                );
-                if (val === null) return;
-                if (isWork) useStore.getState().updatePreferences({ workBudgetLimit: parseFloat(val) || 0 });
-                else useStore.getState().updatePreferences({ largeBudgetLimit: parseFloat(val) || 0 });
-              }}
-              className="self-center px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-              style={{ background: accentColor.bg, border: `1px solid ${accentColor.border}`, color: accentColor.text }}
-            >
-              {ringLimit > 0 ? 'Изменить лимит' : 'Установить лимит'}
-            </button>
-          )}
-
-          {/* Calendar Grid */}
-          <div
-            className="rounded-[40px] p-6 shadow-card"
-            style={{
-              background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
-              border: '1px solid rgba(255,255,255,0.07)',
-            }}
-          >
-            <div className="grid grid-cols-7 gap-y-3 text-center">
-              {['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map(d => (
-                <span key={d} className="text-[9px] font-black text-white/15 tracking-widest uppercase mb-1">{d}</span>
-              ))}
-              {calendarDays.map((date, i) => {
-                const isSelected = isSameDay(date, selectedDate);
-                const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
-                const dayTotal = getDayTotal(date);
-                const isToday = isSameDay(date, new Date());
-
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedDate(date)}
-                    className="relative flex flex-col items-center justify-center h-14 gap-0.5 rounded-2xl transition-all active:scale-90"
-                    style={isSelected ? {
-                      background: accentColor.text,
-                      boxShadow: `0 0 20px ${accentColor.glow}`,
-                      transform: 'scale(1.08)',
-                      zIndex: 10,
-                    } : {}}
-                  >
-                    <span className={cn(
-                      "text-[11px] font-black transition-colors",
-                      isSelected ? "text-white" : isCurrentMonth ? "text-white/60" : "text-white/12",
-                      isToday && !isSelected && "text-blue-400"
-                    )}>
-                      {format(date, 'd')}
-                    </span>
-                    {dayTotal > 0 && (
-                      <span
-                        className="text-[8px] font-black tabular-nums leading-none whitespace-nowrap"
-                        style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : `${accentColor.text}99` }}
-                      >
-                        {formatDayTotal(dayTotal)}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            <div className="flex items-end gap-1 h-16" aria-label="История общего капитала">
+              {historyBars.length > 0 ? historyBars.map((height, index) => (
+                <div
+                  key={index}
+                  className="flex-1 min-w-1 rounded-t-md bg-gradient-to-t from-blue-400/20 to-cyan-200/80"
+                  style={{ height: `${height}%`, opacity: 0.38 + (index / historyBars.length) * 0.62 }}
+                />
+              )) : (
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-200/40 to-transparent relative">
+                  <span className="absolute left-0 -top-6 text-[10px] font-medium text-blue-100/40">
+                    Динамика появится после накопления истории
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Transaction list */}
-        <div className="flex flex-col gap-5">
-          <div className="flex items-center gap-3 px-2">
-            <span className="text-[10px] font-black uppercase text-white/25 tracking-[0.4em]">История</span>
-            <div className="h-px bg-white/[0.06] flex-1" />
+        <div className="xl:col-span-5 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075] shadow-[0_20px_50px_-34px_rgba(0,0,0,0.9)]">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-base font-black text-white">Счета и капиталы</h2>
+              <p className="text-[11px] text-white/35 mt-0.5">Все суммы приведены к {baseCurrency}</p>
+            </div>
+            <Landmark size={19} className="text-blue-300" />
           </div>
 
-          <div className="flex flex-col gap-2.5">
-            {dayExpenses.length === 0 ? (
-              <div
-                className="text-center py-16 rounded-[36px] text-[10px] font-black uppercase tracking-[0.4em] text-white/15"
-                style={{ border: '2px dashed rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)' }}
-              >
-                Нет транзакций
+          <div className="space-y-1.5">
+            {portfolioRows.slice(0, 5).map(portfolio => (
+              <div key={portfolio.id} className="flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-white/[0.035] transition-colors">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: `${portfolio.color}1f` }}>
+                  {portfolio.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white/85 truncate">{portfolio.name}</p>
+                  <p className="text-[10px] text-white/30">
+                    {wallets.filter(wallet => wallet.portfolioId === portfolio.id).length} счетов
+                  </p>
+                </div>
+                <span className="text-sm font-black text-white tabular-nums">{money(portfolio.total, baseCurrency)}</span>
               </div>
-            ) : (
-              dayExpenses.map((exp, idx) => {
-                const cat = categories.find(c => c.id === exp.categoryId) || { icon: '🔹', name: 'Other', color: '#3b82f6' };
-                const catColor = cat.color || '#3b82f6';
+            ))}
 
-                return (
-                  <motion.div
-                    key={exp.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.04, duration: 0.25 }}
-                    onClick={() => { setEditingExpense(exp); setIsModalOpen(true); }}
-                    className="p-4 flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer relative overflow-hidden"
-                    style={{
-                      background: 'linear-gradient(145deg, #0d1626 0%, #090e1a 100%)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      borderLeft: `3px solid ${catColor}`,
-                      borderRadius: '20px',
-                      boxShadow: `0 4px 20px rgba(0,0,0,0.3), -4px 0 16px -6px ${catColor}40`,
-                    }}
-                  >
-                    {/* Category icon */}
-                    <div className="flex items-center gap-3.5 flex-1">
-                      <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
-                        style={{ background: `${catColor}18`, border: `1px solid ${catColor}25` }}
-                      >
-                        {cat.icon}
-                      </div>
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-[15px] font-bold text-white/90 leading-tight truncate">{cat.name}</span>
-                        <span className="text-[10px] font-bold text-white/25 uppercase tracking-widest">
-                          {format(new Date(exp.date), 'HH:mm')}
-                        </span>
-                        {exp.isSubscription && exp.subscriptionNextChargeDate && (
-                          <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1 mt-0.5">
-                            🔁 Спишется {format(new Date(exp.subscriptionNextChargeDate), 'd MMM', { locale: ru })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Amount */}
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-[17px] font-black text-white">
-                        −${exp.convertedAmount.toFixed(1)}
-                      </span>
-                      <span className="text-[9px] font-bold text-white/25 uppercase tracking-widest">
-                        {exp.originalAmount.toFixed(1)} {exp.originalCurrency}
-                      </span>
-                    </div>
-                  </motion.div>
-                );
-              })
+            {assets.length > 0 && (
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl hover:bg-white/[0.035] transition-colors">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-400/10 text-amber-300">
+                  <Gem size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white/85">Активы</p>
+                  <p className="text-[10px] text-white/30">{assets.length} позиций</p>
+                </div>
+                <span className="text-sm font-black text-white tabular-nums">{money(totalAssets, baseCurrency)}</span>
+              </div>
+            )}
+
+            {portfolioRows.length === 0 && assets.length === 0 && (
+              <div className="py-10 text-center text-xs font-medium text-white/30">
+                Добавьте первый капитал или счёт
+              </div>
             )}
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div className="xl:col-span-8 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
+          <div className="flex items-center justify-between gap-4 mb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles size={17} className="text-emerald-300" />
+                <h2 className="text-base font-black text-white">Пассивный доход</h2>
+              </div>
+              <p className="text-[11px] text-white/35 mt-1">Источники, которые работают каждый месяц</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/30">Всего в месяц</p>
+              <p className="text-xl font-black text-emerald-300 tabular-nums">{money(passiveTotal, baseCurrency, 1)}</p>
+            </div>
+          </div>
+          <PassiveIncomeTab selectedCurrency={baseCurrency} compact />
+        </div>
+
+        <div className="xl:col-span-4">
+          <SpendingRing expenses={monthExpenses} limit={budgetLimit} emptyLabel="Нет трат за этот месяц" />
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div className="xl:col-span-4 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <CalendarClock size={17} className="text-emerald-300" />
+                <h2 className="text-base font-black text-white">Ближайшие траты</h2>
+              </div>
+              <p className="text-[11px] text-white/35 mt-1">Запланированные списания</p>
+            </div>
+            <span className="text-[10px] font-black text-emerald-300 bg-emerald-400/10 border border-emerald-300/10 px-2.5 py-1.5 rounded-xl">
+              {upcoming.length}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {upcoming.length === 0 ? (
+              <div className="py-12 text-center text-xs font-medium text-white/30">
+                Ближайших списаний нет
+              </div>
+            ) : upcoming.map(({ subscription, date, amount }) => (
+              <div key={subscription.id} className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.025] border border-white/[0.05]">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-400/10 text-emerald-300">
+                  <ReceiptText size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white/85 truncate">{subscription.name}</p>
+                  <p className="text-[10px] text-white/35">{format(date, 'd MMMM', { locale: ru })}</p>
+                </div>
+                <span className="text-xs font-black text-white tabular-nums">{money(amount, baseCurrency)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="xl:col-span-8 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div>
+              <h2 className="text-base font-black text-white">Последние операции</h2>
+              <p className="text-[11px] text-white/35 mt-1">{selectedMeta.label} расходы</p>
+            </div>
+            <button
+              onClick={() => openExpense()}
+              className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-400/15 text-blue-300 hover:bg-blue-500/20 transition-colors"
+              aria-label="Добавить операцию"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="min-w-[580px]">
+              <div className="grid grid-cols-[1.5fr_1fr_0.8fr_0.7fr] gap-3 px-3 pb-2 text-[9px] font-black uppercase tracking-[0.14em] text-white/25">
+                <span>Операция</span>
+                <span>Счёт</span>
+                <span>Дата</span>
+                <span className="text-right">Сумма</span>
+              </div>
+
+              <div className="space-y-1">
+                {recentExpenses.length === 0 ? (
+                  <div className="py-12 text-center text-xs font-medium text-white/30 border border-dashed border-white/[0.07] rounded-2xl">
+                    Операций пока нет
+                  </div>
+                ) : recentExpenses.map((expense, index) => {
+                  const category = categories.find(item => item.id === expense.categoryId);
+                  const wallet = wallets.find(item => item.id === expense.walletId);
+                  const color = category?.color || selectedMeta.accent;
+                  return (
+                    <motion.button
+                      key={expense.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.025 }}
+                      onClick={() => openExpense(expense)}
+                      className="w-full grid grid-cols-[1.5fr_1fr_0.8fr_0.7fr] gap-3 items-center px-3 py-3 rounded-2xl text-left hover:bg-white/[0.035] transition-colors"
+                    >
+                      <span className="flex items-center gap-3 min-w-0">
+                        <span
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                          style={{ background: `${color}18`, color }}
+                        >
+                          {category?.icon || <ArrowDownLeft size={14} />}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-bold text-white/85 truncate">{category?.name || 'Другое'}</span>
+                          <span className="block text-[10px] text-white/25 truncate">
+                            {expense.isSubscription ? 'Подписка' : 'Расход'}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="text-xs font-medium text-white/45 truncate">{wallet?.name || 'Без счёта'}</span>
+                      <span className="text-xs font-medium text-white/40">
+                        {format(new Date(expense.date), 'd MMM', { locale: ru })}
+                      </span>
+                      <span className="text-xs font-black text-white text-right tabular-nums">
+                        −{money(expense.convertedAmount, baseCurrency, 1)}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <AddExpenseModal
         isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingExpense(null); }}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingExpense(null);
+        }}
         editingExpense={editingExpense}
         initialViewMode={viewMode}
       />

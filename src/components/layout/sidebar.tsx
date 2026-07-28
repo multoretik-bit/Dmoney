@@ -10,7 +10,7 @@ import { convertAmount } from '@/lib/exchange';
 import { cn } from '@/lib/utils';
 
 const STATIC_ITEMS = [
-  { href: '/expenses', label: 'История', icon: LayoutGrid },
+  { href: '/expenses', label: 'Обзор', icon: LayoutGrid },
   { href: '/budget', label: 'Бюджет', icon: PieChart },
   { href: '/categories', label: 'Настройки', icon: Settings2 },
 ];

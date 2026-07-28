@@ -216,7 +216,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </button>
         </div>
 
-        <main className="flex-1 w-full max-w-6xl mx-auto relative pb-36 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 px-5 lg:px-8">
+        <main className="flex-1 w-full max-w-[1480px] mx-auto relative pb-36 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 px-5 lg:px-8">
           {children}
         </main>
 

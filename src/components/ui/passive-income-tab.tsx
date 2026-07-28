@@ -7,7 +7,13 @@ import { generateUUID } from '@/lib/uuid';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { Plus, Trash2, Edit2, Check, Sprout } from 'lucide-react';
 
-export function PassiveIncomeTab({ selectedCurrency }: { selectedCurrency: string }) {
+export function PassiveIncomeTab({
+  selectedCurrency,
+  compact = false,
+}: {
+  selectedCurrency: string;
+  compact?: boolean;
+}) {
   const { passiveIncomeSources, addPassiveIncomeSource, updatePassiveIncomeSource, deletePassiveIncomeSource } = useStore();
 
   const [isAdding, setIsAdding] = useState(false);
@@ -50,14 +56,14 @@ export function PassiveIncomeTab({ selectedCurrency }: { selectedCurrency: strin
   };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {/* Hero total */}
-      <div className="flex flex-col items-center text-center gap-1.5 p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+      {!compact && <div className="flex flex-col items-center text-center gap-1.5 p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400/70">Сумма пассивно в месяц</span>
         <span className="text-3xl font-black text-emerald-400 tabular-nums">
           {total.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {selectedCurrency}
         </span>
-      </div>
+      </div>}
 
       {/* List of sources */}
       <div className="flex flex-col gap-2.5">
@@ -69,13 +75,13 @@ export function PassiveIncomeTab({ selectedCurrency }: { selectedCurrency: strin
         {passiveIncomeSources.map(s => (
           <div
             key={s.id}
-            className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 group"
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.025] border border-white/[0.055] group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 flex-shrink-0">
                 <Sprout size={18} />
               </div>
-              <span className="font-bold text-white truncate">{s.name}</span>
+              <span className="text-sm font-bold text-white/85 truncate">{s.name}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="font-black text-white text-sm tabular-nums">
@@ -100,7 +106,7 @@ export function PassiveIncomeTab({ selectedCurrency }: { selectedCurrency: strin
 
       {/* Add / Edit form */}
       {isAdding ? (
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-3">
+        <div className="p-4 rounded-2xl bg-white/[0.035] border border-white/10 flex flex-col gap-3">
           <input
             autoFocus
             placeholder="Например, Аренда квартиры"
@@ -146,7 +152,7 @@ export function PassiveIncomeTab({ selectedCurrency }: { selectedCurrency: strin
       ) : (
         <button
           onClick={() => setIsAdding(true)}
-          className="p-4 rounded-2xl border-2 border-dashed border-white/10 text-white/30 hover:text-white/50 hover:border-white/20 font-bold text-sm flex items-center justify-center gap-2 transition-all"
+          className="p-3.5 rounded-2xl border border-dashed border-emerald-400/20 text-emerald-300/60 hover:text-emerald-300 hover:bg-emerald-400/5 font-bold text-xs flex items-center justify-center gap-2 transition-all"
         >
           <Plus size={16} /> Добавить источник дохода
         </button>
