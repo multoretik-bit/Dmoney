@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BottomNav } from '@/components/layout/bottom-nav';
+import { MobileSidebar } from '@/components/layout/bottom-nav';
 import { Sidebar } from '@/components/layout/sidebar';
 import { AuthModal } from '@/components/auth/auth-modal';
 import { useStore } from '@/store/useStore';
@@ -123,7 +123,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Header — mobile only, desktop uses the sidebar for branding/sync/balance */}
         <header className={cn(
-          "lg:hidden fixed top-0 left-0 right-0 z-[100] transition-all duration-300 px-5 py-4 flex items-center justify-between",
+          "lg:hidden fixed top-0 left-[60px] right-0 z-[100] transition-all duration-300 px-4 py-4 flex items-center justify-between",
           scrolled
             ? "bg-[#060B14]/80 backdrop-blur-2xl border-b border-white/[0.06] py-3"
             : "bg-transparent"
@@ -200,17 +200,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
-        <main className="flex-1 w-full max-w-[1480px] mx-auto relative pb-36 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 px-5 lg:px-8">
+        <main className="flex-1 w-full max-w-[1480px] mx-auto relative pb-24 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 pl-[76px] pr-4 lg:px-8">
           {children}
         </main>
 
-        <BottomNav />
+        <MobileSidebar />
 
         {/* Global add-expense FAB — reachable from every page */}
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsAddExpenseOpen(true)}
-          className="fixed bottom-32 lg:bottom-10 right-5 lg:right-10 w-16 h-16 rounded-[22px] flex items-center justify-center text-white z-40 group"
+          className="fixed bottom-6 lg:bottom-10 right-5 lg:right-10 w-16 h-16 rounded-[22px] flex items-center justify-center text-white z-40 group"
           style={{
             background: 'linear-gradient(135deg, #3b82f6 0%, #818cf8 100%)',
             boxShadow: '0 8px 30px rgba(59,130,246,0.4)',
