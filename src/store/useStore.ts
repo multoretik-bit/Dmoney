@@ -109,6 +109,34 @@ export interface Wallet {
   sortOrder?: number;
 }
 
+function walletToDatabaseRow(wallet: Wallet, userId: string) {
+  return {
+    id: wallet.id,
+    user_id: userId,
+    portfolio_id: wallet.portfolioId,
+    folder_id: wallet.folderId || null,
+    name: wallet.name,
+    currency: wallet.currency,
+    balance: Number(wallet.balance || 0),
+    icon: wallet.icon,
+    color: wallet.color,
+    target_amount: wallet.targetAmount,
+    sort_order: wallet.sortOrder || 0,
+  };
+}
+
+async function persistWallets(wallets: Wallet[], userId: string, operation: string) {
+  if (wallets.length === 0) return;
+
+  const { error } = await supabase
+    .from('wallets')
+    .upsert(wallets.map(wallet => walletToDatabaseRow(wallet, userId)), { onConflict: 'id' });
+
+  if (error) {
+    console.error(`Sync error (${operation}):`, error);
+  }
+}
+
 export interface Expense {
   id: string;
   originalAmount: number;
@@ -580,36 +608,62 @@ export const useStore = create<UserState>()(
         }));
       },
 
-      addWallet: (wallet) => set((state) => {
-        const siblings = state.wallets.filter(w => w.portfolioId === wallet.portfolioId && (w.folderId || undefined) === (wallet.folderId || undefined));
-        const sortOrder = wallet.sortOrder !== undefined ? wallet.sortOrder : (
-          siblings.length > 0 ? Math.max(...siblings.map(w => w.sortOrder || 0)) + 1 : 0
-        );
-        return { wallets: [...state.wallets, { ...wallet, sortOrder }] };
-      }),
-      updateWallet: (id, updates) => set((state) => {
-        const wallets = state.wallets.map(w => {
-          if (w.id === id) {
-            const portfolioChanged = updates.portfolioId !== undefined && updates.portfolioId !== w.portfolioId;
-            const folderChanged = updates.folderId !== undefined && (updates.folderId || undefined) !== (w.folderId || undefined);
-            
-            let sortOrder = w.sortOrder;
-            if (portfolioChanged || folderChanged) {
-              const newPortfolioId = updates.portfolioId !== undefined ? updates.portfolioId : w.portfolioId;
-              const newFolderId = updates.folderId !== undefined ? updates.folderId : w.folderId;
-              const siblings = state.wallets.filter(sw => sw.portfolioId === newPortfolioId && (sw.folderId || undefined) === (newFolderId || undefined) && sw.id !== id);
-              sortOrder = siblings.length > 0 ? Math.max(...siblings.map(sw => sw.sortOrder || 0)) + 1 : 0;
-            }
-            
-            return { ...w, ...updates, sortOrder };
-          }
-          return w;
+      addWallet: (wallet) => {
+        set((state) => {
+          const siblings = state.wallets.filter(w => w.portfolioId === wallet.portfolioId && (w.folderId || undefined) === (wallet.folderId || undefined));
+          const sortOrder = wallet.sortOrder !== undefined ? wallet.sortOrder : (
+            siblings.length > 0 ? Math.max(...siblings.map(w => w.sortOrder || 0)) + 1 : 0
+          );
+          return { wallets: [...state.wallets, { ...wallet, sortOrder }] };
         });
-        return { wallets };
-      }),
-      updateWalletBalance: (walletId, amountChange) => set((state) => ({
-        wallets: state.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance + amountChange } : w)
-      })),
+
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === wallet.id);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'addWallet');
+        }
+      },
+      updateWallet: (id, updates) => {
+        set((state) => {
+          const wallets = state.wallets.map(w => {
+            if (w.id === id) {
+              const portfolioChanged = updates.portfolioId !== undefined && updates.portfolioId !== w.portfolioId;
+              const folderChanged = updates.folderId !== undefined && (updates.folderId || undefined) !== (w.folderId || undefined);
+
+              let sortOrder = w.sortOrder;
+              if (portfolioChanged || folderChanged) {
+                const newPortfolioId = updates.portfolioId !== undefined ? updates.portfolioId : w.portfolioId;
+                const newFolderId = updates.folderId !== undefined ? updates.folderId : w.folderId;
+                const siblings = state.wallets.filter(sw => sw.portfolioId === newPortfolioId && (sw.folderId || undefined) === (newFolderId || undefined) && sw.id !== id);
+                sortOrder = siblings.length > 0 ? Math.max(...siblings.map(sw => sw.sortOrder || 0)) + 1 : 0;
+              }
+
+              return { ...w, ...updates, sortOrder };
+            }
+            return w;
+          });
+          return { wallets };
+        });
+
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === id);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'updateWallet');
+        }
+      },
+      updateWalletBalance: (walletId, amountChange) => {
+        set((state) => ({
+          wallets: state.wallets.map(w => w.id === walletId
+            ? { ...w, balance: Number(w.balance || 0) + amountChange }
+            : w)
+        }));
+
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === walletId);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'updateWalletBalance');
+        }
+      },
       updateWalletOrder: async (id, direction) => {
         const state = useStore.getState();
         if (state.isReordering) return;
@@ -820,56 +874,83 @@ export const useStore = create<UserState>()(
         useStore.getState().updateSubscription(sub.id, { lastChargedPeriod: periodKey });
       },
 
-      addExpense: (expense) => set((state) => {
-        const updatedWallets = state.wallets.map(w => {
-          if (w.id === expense.walletId) {
-            return { ...w, balance: w.balance - expense.walletAmount };
-          }
-          return w;
-        });
-        return { expenses: [...state.expenses, expense], wallets: updatedWallets };
-      }),
-      deleteExpense: (id) => set((state) => {
-        const expense = state.expenses.find(e => e.id === id);
-        if (!expense) return state;
-        
-        const updatedWallets = state.wallets.map(w => {
-          if (w.id === expense.walletId) {
-            return { ...w, balance: w.balance + expense.walletAmount };
-          }
-          return w;
-        });
-        
-        return { 
-          expenses: state.expenses.filter(e => e.id !== id),
-          wallets: updatedWallets 
-        };
-      }),
-      updateExpense: (id, newExpense) => set((state) => {
-        const oldExpense = state.expenses.find(e => e.id === id);
-        if (!oldExpense) return state;
-
-        // "Undo" old expense balance
-        let intermediateWallets = state.wallets.map(w => {
-          if (w.id === oldExpense.walletId) {
-            return { ...w, balance: w.balance + oldExpense.walletAmount };
-          }
-          return w;
+      addExpense: (expense) => {
+        set((state) => {
+          const updatedWallets = state.wallets.map(w => {
+            if (w.id === expense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) - expense.walletAmount };
+            }
+            return w;
+          });
+          return { expenses: [...state.expenses, expense], wallets: updatedWallets };
         });
 
-        // "Apply" new expense balance
-        const updatedWallets = intermediateWallets.map(w => {
-          if (w.id === newExpense.walletId) {
-            return { ...w, balance: w.balance - newExpense.walletAmount };
-          }
-          return w;
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === expense.walletId);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'addExpense');
+        }
+      },
+      deleteExpense: (id) => {
+        const walletId = useStore.getState().expenses.find(e => e.id === id)?.walletId;
+        set((state) => {
+          const expense = state.expenses.find(e => e.id === id);
+          if (!expense) return state;
+
+          const updatedWallets = state.wallets.map(w => {
+            if (w.id === expense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) + expense.walletAmount };
+            }
+            return w;
+          });
+
+          return {
+            expenses: state.expenses.filter(e => e.id !== id),
+            wallets: updatedWallets
+          };
         });
 
-        return {
-          expenses: state.expenses.map(e => e.id === id ? newExpense : e),
-          wallets: updatedWallets
-        };
-      }),
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === walletId);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'deleteExpense');
+        }
+      },
+      updateExpense: (id, newExpense) => {
+        const oldWalletId = useStore.getState().expenses.find(e => e.id === id)?.walletId;
+        set((state) => {
+          const oldExpense = state.expenses.find(e => e.id === id);
+          if (!oldExpense) return state;
+
+          // "Undo" old expense balance
+          const intermediateWallets = state.wallets.map(w => {
+            if (w.id === oldExpense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) + oldExpense.walletAmount };
+            }
+            return w;
+          });
+
+          // "Apply" new expense balance
+          const updatedWallets = intermediateWallets.map(w => {
+            if (w.id === newExpense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) - newExpense.walletAmount };
+            }
+            return w;
+          });
+
+          return {
+            expenses: state.expenses.map(e => e.id === id ? newExpense : e),
+            wallets: updatedWallets
+          };
+        });
+
+        const state = useStore.getState();
+        const affectedWalletIds = new Set([oldWalletId, newExpense.walletId]);
+        const savedWallets = state.wallets.filter(w => affectedWalletIds.has(w.id));
+        if (state.user) {
+          void persistWallets(savedWallets, state.user.id, 'updateExpense');
+        }
+      },
 
       transferFunds: async (fromWalletId, toWalletId, amount) => {
         const state = useStore.getState();
@@ -893,37 +974,8 @@ export const useStore = create<UserState>()(
         set({ wallets: updatedWallets });
 
         if (state.user) {
-          const fromWalletUpdated = updatedWallets.find(w => w.id === fromWalletId)!;
-          const toWalletUpdated = updatedWallets.find(w => w.id === toWalletId)!;
-          
-          await supabase.from('wallets').upsert([
-            {
-              id: fromWalletUpdated.id,
-              user_id: state.user.id,
-              portfolio_id: fromWalletUpdated.portfolioId,
-              folder_id: fromWalletUpdated.folderId || null,
-              name: fromWalletUpdated.name,
-              currency: fromWalletUpdated.currency,
-              balance: fromWalletUpdated.balance,
-              icon: fromWalletUpdated.icon,
-              color: fromWalletUpdated.color,
-              target_amount: fromWalletUpdated.targetAmount,
-              sort_order: fromWalletUpdated.sortOrder || 0
-            },
-            {
-              id: toWalletUpdated.id,
-              user_id: state.user.id,
-              portfolio_id: toWalletUpdated.portfolioId,
-              folder_id: toWalletUpdated.folderId || null,
-              name: toWalletUpdated.name,
-              currency: toWalletUpdated.currency,
-              balance: toWalletUpdated.balance,
-              icon: toWalletUpdated.icon,
-              color: toWalletUpdated.color,
-              target_amount: toWalletUpdated.targetAmount,
-              sort_order: toWalletUpdated.sortOrder || 0
-            }
-          ], { onConflict: 'id' });
+          const changedWallets = updatedWallets.filter(w => w.id === fromWalletId || w.id === toWalletId);
+          await persistWallets(changedWallets, state.user.id, 'transferFunds');
         }
       },
 
