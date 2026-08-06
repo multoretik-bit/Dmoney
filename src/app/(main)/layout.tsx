@@ -26,6 +26,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     setIsHydrated(true);
+    // Ask supported browsers not to evict DMoney's local session and queued
+    // finance data under storage pressure. Browsers may safely decline.
+    if (navigator.storage?.persist) {
+      void navigator.storage.persist().catch(() => false);
+    }
     // Runs once per app load (guest or logged-in) — persisted state has
     // rehydrated from localStorage by the time this effect fires.
     runSubscriptionAutoCharges();
@@ -38,17 +43,43 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let active = true;
+
+    const restoreSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (!active) return;
+
+      // A temporary storage/network error must not turn a remembered user into
+      // a guest. Supabase will retry token refresh automatically.
+      if (error) {
+        console.error('Session restore error:', error);
+        return;
+      }
+
       setUser(session?.user ?? null);
-      if (session?.user) pullData();
-    });
+      if (session?.user) await pullData();
+    };
+
+    void restoreSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (event === 'SIGNED_IN' && session?.user) pullData();
+      if (!active) return;
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        return;
+      }
+
+      if (session?.user) {
+        setUser(session.user);
+        if (event === 'SIGNED_IN') void pullData();
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [setUser, pullData]);
 
   // Auto-push changes to Supabase.
