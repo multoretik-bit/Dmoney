@@ -109,6 +109,34 @@ export interface Wallet {
   sortOrder?: number;
 }
 
+function walletToDatabaseRow(wallet: Wallet, userId: string) {
+  return {
+    id: wallet.id,
+    user_id: userId,
+    portfolio_id: wallet.portfolioId,
+    folder_id: wallet.folderId || null,
+    name: wallet.name,
+    currency: wallet.currency,
+    balance: Number(wallet.balance || 0),
+    icon: wallet.icon,
+    color: wallet.color,
+    target_amount: wallet.targetAmount,
+    sort_order: wallet.sortOrder || 0,
+  };
+}
+
+async function persistWallets(wallets: Wallet[], userId: string, operation: string) {
+  if (wallets.length === 0) return;
+
+  const { error } = await supabase
+    .from('wallets')
+    .upsert(wallets.map(wallet => walletToDatabaseRow(wallet, userId)), { onConflict: 'id' });
+
+  if (error) {
+    console.error(`Sync error (${operation}):`, error);
+  }
+}
+
 export interface Expense {
   id: string;
   originalAmount: number;
@@ -123,6 +151,25 @@ export interface Expense {
   isLarge?: boolean;
   isSubscription?: boolean;
   subscriptionNextChargeDate?: string;
+}
+
+function expenseToDatabaseRow(expense: Expense, userId: string) {
+  return {
+    id: expense.id,
+    user_id: userId,
+    category_id: expense.categoryId,
+    wallet_id: expense.walletId,
+    amount: expense.originalAmount,
+    currency: expense.originalCurrency,
+    converted_amount: expense.convertedAmount,
+    wallet_amount: expense.walletAmount,
+    exchange_rate: expense.exchangeRate,
+    date: expense.date,
+    is_work: expense.isWork || false,
+    is_large: expense.isLarge || false,
+    is_subscription: expense.isSubscription || false,
+    subscription_next_charge_date: expense.subscriptionNextChargeDate || null,
+  };
 }
 
 export interface DailyCapitalEntry {
@@ -180,6 +227,8 @@ interface UserState {
   folders: Folder[];
   wallets: Wallet[];
   expenses: Expense[];
+  pendingExpenseUpserts: string[];
+  pendingExpenseDeletes: string[];
   passiveIncomeSources: PassiveIncomeSource[];
   assets: Asset[];
   subscriptions: Subscription[];
@@ -237,6 +286,7 @@ interface UserState {
   addExpense: (expense: Expense) => void;
   updateExpense: (id: string, expense: Expense) => void;
   deleteExpense: (id: string) => void;
+  syncPendingExpenses: () => Promise<void>;
   transferFunds: (fromWalletId: string, toWalletId: string, amount: number) => Promise<void>;
   pullData: () => Promise<void>;
   pushData: () => Promise<void>;
@@ -263,6 +313,8 @@ export const useStore = create<UserState>()(
       folders: [],
       wallets: [],
       expenses: [],
+      pendingExpenseUpserts: [],
+      pendingExpenseDeletes: [],
       passiveIncomeSources: [],
       assets: [],
       subscriptions: [],
@@ -580,36 +632,62 @@ export const useStore = create<UserState>()(
         }));
       },
 
-      addWallet: (wallet) => set((state) => {
-        const siblings = state.wallets.filter(w => w.portfolioId === wallet.portfolioId && (w.folderId || undefined) === (wallet.folderId || undefined));
-        const sortOrder = wallet.sortOrder !== undefined ? wallet.sortOrder : (
-          siblings.length > 0 ? Math.max(...siblings.map(w => w.sortOrder || 0)) + 1 : 0
-        );
-        return { wallets: [...state.wallets, { ...wallet, sortOrder }] };
-      }),
-      updateWallet: (id, updates) => set((state) => {
-        const wallets = state.wallets.map(w => {
-          if (w.id === id) {
-            const portfolioChanged = updates.portfolioId !== undefined && updates.portfolioId !== w.portfolioId;
-            const folderChanged = updates.folderId !== undefined && (updates.folderId || undefined) !== (w.folderId || undefined);
-            
-            let sortOrder = w.sortOrder;
-            if (portfolioChanged || folderChanged) {
-              const newPortfolioId = updates.portfolioId !== undefined ? updates.portfolioId : w.portfolioId;
-              const newFolderId = updates.folderId !== undefined ? updates.folderId : w.folderId;
-              const siblings = state.wallets.filter(sw => sw.portfolioId === newPortfolioId && (sw.folderId || undefined) === (newFolderId || undefined) && sw.id !== id);
-              sortOrder = siblings.length > 0 ? Math.max(...siblings.map(sw => sw.sortOrder || 0)) + 1 : 0;
-            }
-            
-            return { ...w, ...updates, sortOrder };
-          }
-          return w;
+      addWallet: (wallet) => {
+        set((state) => {
+          const siblings = state.wallets.filter(w => w.portfolioId === wallet.portfolioId && (w.folderId || undefined) === (wallet.folderId || undefined));
+          const sortOrder = wallet.sortOrder !== undefined ? wallet.sortOrder : (
+            siblings.length > 0 ? Math.max(...siblings.map(w => w.sortOrder || 0)) + 1 : 0
+          );
+          return { wallets: [...state.wallets, { ...wallet, sortOrder }] };
         });
-        return { wallets };
-      }),
-      updateWalletBalance: (walletId, amountChange) => set((state) => ({
-        wallets: state.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance + amountChange } : w)
-      })),
+
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === wallet.id);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'addWallet');
+        }
+      },
+      updateWallet: (id, updates) => {
+        set((state) => {
+          const wallets = state.wallets.map(w => {
+            if (w.id === id) {
+              const portfolioChanged = updates.portfolioId !== undefined && updates.portfolioId !== w.portfolioId;
+              const folderChanged = updates.folderId !== undefined && (updates.folderId || undefined) !== (w.folderId || undefined);
+
+              let sortOrder = w.sortOrder;
+              if (portfolioChanged || folderChanged) {
+                const newPortfolioId = updates.portfolioId !== undefined ? updates.portfolioId : w.portfolioId;
+                const newFolderId = updates.folderId !== undefined ? updates.folderId : w.folderId;
+                const siblings = state.wallets.filter(sw => sw.portfolioId === newPortfolioId && (sw.folderId || undefined) === (newFolderId || undefined) && sw.id !== id);
+                sortOrder = siblings.length > 0 ? Math.max(...siblings.map(sw => sw.sortOrder || 0)) + 1 : 0;
+              }
+
+              return { ...w, ...updates, sortOrder };
+            }
+            return w;
+          });
+          return { wallets };
+        });
+
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === id);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'updateWallet');
+        }
+      },
+      updateWalletBalance: (walletId, amountChange) => {
+        set((state) => ({
+          wallets: state.wallets.map(w => w.id === walletId
+            ? { ...w, balance: Number(w.balance || 0) + amountChange }
+            : w)
+        }));
+
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === walletId);
+        if (state.user && savedWallet) {
+          void persistWallets([savedWallet], state.user.id, 'updateWalletBalance');
+        }
+      },
       updateWalletOrder: async (id, direction) => {
         const state = useStore.getState();
         if (state.isReordering) return;
@@ -820,56 +898,133 @@ export const useStore = create<UserState>()(
         useStore.getState().updateSubscription(sub.id, { lastChargedPeriod: periodKey });
       },
 
-      addExpense: (expense) => set((state) => {
-        const updatedWallets = state.wallets.map(w => {
-          if (w.id === expense.walletId) {
-            return { ...w, balance: w.balance - expense.walletAmount };
-          }
-          return w;
-        });
-        return { expenses: [...state.expenses, expense], wallets: updatedWallets };
-      }),
-      deleteExpense: (id) => set((state) => {
-        const expense = state.expenses.find(e => e.id === id);
-        if (!expense) return state;
-        
-        const updatedWallets = state.wallets.map(w => {
-          if (w.id === expense.walletId) {
-            return { ...w, balance: w.balance + expense.walletAmount };
-          }
-          return w;
-        });
-        
-        return { 
-          expenses: state.expenses.filter(e => e.id !== id),
-          wallets: updatedWallets 
-        };
-      }),
-      updateExpense: (id, newExpense) => set((state) => {
-        const oldExpense = state.expenses.find(e => e.id === id);
-        if (!oldExpense) return state;
-
-        // "Undo" old expense balance
-        let intermediateWallets = state.wallets.map(w => {
-          if (w.id === oldExpense.walletId) {
-            return { ...w, balance: w.balance + oldExpense.walletAmount };
-          }
-          return w;
+      addExpense: (expense) => {
+        set((state) => {
+          const updatedWallets = state.wallets.map(w => {
+            if (w.id === expense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) - expense.walletAmount };
+            }
+            return w;
+          });
+          return {
+            expenses: [...state.expenses, expense],
+            wallets: updatedWallets,
+            pendingExpenseUpserts: Array.from(new Set([...state.pendingExpenseUpserts, expense.id])),
+            pendingExpenseDeletes: state.pendingExpenseDeletes.filter(id => id !== expense.id),
+          };
         });
 
-        // "Apply" new expense balance
-        const updatedWallets = intermediateWallets.map(w => {
-          if (w.id === newExpense.walletId) {
-            return { ...w, balance: w.balance - newExpense.walletAmount };
-          }
-          return w;
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === expense.walletId);
+        if (state.user) {
+          if (savedWallet) void persistWallets([savedWallet], state.user.id, 'addExpense');
+          void state.syncPendingExpenses().catch(error => {
+            console.error('Sync error (addExpense):', error);
+          });
+        }
+      },
+      deleteExpense: (id) => {
+        const walletId = useStore.getState().expenses.find(e => e.id === id)?.walletId;
+        set((state) => {
+          const expense = state.expenses.find(e => e.id === id);
+          if (!expense) return state;
+
+          const updatedWallets = state.wallets.map(w => {
+            if (w.id === expense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) + expense.walletAmount };
+            }
+            return w;
+          });
+
+          return {
+            expenses: state.expenses.filter(e => e.id !== id),
+            wallets: updatedWallets,
+            pendingExpenseUpserts: state.pendingExpenseUpserts.filter(expenseId => expenseId !== id),
+            pendingExpenseDeletes: Array.from(new Set([...state.pendingExpenseDeletes, id])),
+          };
         });
 
-        return {
-          expenses: state.expenses.map(e => e.id === id ? newExpense : e),
-          wallets: updatedWallets
-        };
-      }),
+        const state = useStore.getState();
+        const savedWallet = state.wallets.find(w => w.id === walletId);
+        if (state.user) {
+          if (savedWallet) void persistWallets([savedWallet], state.user.id, 'deleteExpense');
+          void state.syncPendingExpenses().catch(error => {
+            console.error('Sync error (deleteExpense):', error);
+          });
+        }
+      },
+      updateExpense: (id, newExpense) => {
+        const oldWalletId = useStore.getState().expenses.find(e => e.id === id)?.walletId;
+        set((state) => {
+          const oldExpense = state.expenses.find(e => e.id === id);
+          if (!oldExpense) return state;
+
+          // "Undo" old expense balance
+          const intermediateWallets = state.wallets.map(w => {
+            if (w.id === oldExpense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) + oldExpense.walletAmount };
+            }
+            return w;
+          });
+
+          // "Apply" new expense balance
+          const updatedWallets = intermediateWallets.map(w => {
+            if (w.id === newExpense.walletId) {
+              return { ...w, balance: Number(w.balance || 0) - newExpense.walletAmount };
+            }
+            return w;
+          });
+
+          return {
+            expenses: state.expenses.map(e => e.id === id ? newExpense : e),
+            wallets: updatedWallets,
+            pendingExpenseUpserts: Array.from(new Set([...state.pendingExpenseUpserts, newExpense.id])),
+            pendingExpenseDeletes: state.pendingExpenseDeletes.filter(expenseId => expenseId !== newExpense.id),
+          };
+        });
+
+        const state = useStore.getState();
+        const affectedWalletIds = new Set([oldWalletId, newExpense.walletId]);
+        const savedWallets = state.wallets.filter(w => affectedWalletIds.has(w.id));
+        if (state.user) {
+          void persistWallets(savedWallets, state.user.id, 'updateExpense');
+          void state.syncPendingExpenses().catch(error => {
+            console.error('Sync error (updateExpense):', error);
+          });
+        }
+      },
+
+      syncPendingExpenses: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const state = useStore.getState();
+        const upsertIds = [...state.pendingExpenseUpserts];
+        const deleteIds = [...state.pendingExpenseDeletes];
+        const expensesToSave = state.expenses.filter(expense => upsertIds.includes(expense.id));
+
+        if (expensesToSave.length > 0) {
+          const result = await resilientUpsert(
+            'transactions',
+            expensesToSave.map(expense => expenseToDatabaseRow(expense, user.id)),
+            'id'
+          );
+          if (result.error) throw result.error;
+
+          set(current => ({
+            pendingExpenseUpserts: current.pendingExpenseUpserts.filter(id => !upsertIds.includes(id)),
+          }));
+        }
+
+        if (deleteIds.length > 0) {
+          const { error } = await supabase.from('transactions').delete().in('id', deleteIds);
+          if (error) throw error;
+
+          set(current => ({
+            pendingExpenseDeletes: current.pendingExpenseDeletes.filter(id => !deleteIds.includes(id)),
+          }));
+        }
+      },
 
       transferFunds: async (fromWalletId, toWalletId, amount) => {
         const state = useStore.getState();
@@ -893,37 +1048,8 @@ export const useStore = create<UserState>()(
         set({ wallets: updatedWallets });
 
         if (state.user) {
-          const fromWalletUpdated = updatedWallets.find(w => w.id === fromWalletId)!;
-          const toWalletUpdated = updatedWallets.find(w => w.id === toWalletId)!;
-          
-          await supabase.from('wallets').upsert([
-            {
-              id: fromWalletUpdated.id,
-              user_id: state.user.id,
-              portfolio_id: fromWalletUpdated.portfolioId,
-              folder_id: fromWalletUpdated.folderId || null,
-              name: fromWalletUpdated.name,
-              currency: fromWalletUpdated.currency,
-              balance: fromWalletUpdated.balance,
-              icon: fromWalletUpdated.icon,
-              color: fromWalletUpdated.color,
-              target_amount: fromWalletUpdated.targetAmount,
-              sort_order: fromWalletUpdated.sortOrder || 0
-            },
-            {
-              id: toWalletUpdated.id,
-              user_id: state.user.id,
-              portfolio_id: toWalletUpdated.portfolioId,
-              folder_id: toWalletUpdated.folderId || null,
-              name: toWalletUpdated.name,
-              currency: toWalletUpdated.currency,
-              balance: toWalletUpdated.balance,
-              icon: toWalletUpdated.icon,
-              color: toWalletUpdated.color,
-              target_amount: toWalletUpdated.targetAmount,
-              sort_order: toWalletUpdated.sortOrder || 0
-            }
-          ], { onConflict: 'id' });
+          const changedWallets = updatedWallets.filter(w => w.id === fromWalletId || w.id === toWalletId);
+          await persistWallets(changedWallets, state.user.id, 'transferFunds');
         }
       },
 
@@ -932,6 +1058,10 @@ export const useStore = create<UserState>()(
         if (!user) return;
 
         try {
+          // Save every local transaction before accepting the server snapshot.
+          // If this fails (for example, while offline), the pull is aborted so
+          // local expenses can never be overwritten by older cloud data.
+          await useStore.getState().syncPendingExpenses();
           console.log('🔄 Pulling data from Supabase...');
           // Fetch all in parallel
           const [cats, ports, folds, walls, exps, prefs, pis, asts, subs] = await Promise.all([
@@ -1090,7 +1220,8 @@ export const useStore = create<UserState>()(
       pushData: async () => {
          const { data: { user } } = await supabase.auth.getUser();
          if (!user) return;
-         
+
+         await useStore.getState().syncPendingExpenses();
          const state = useStore.getState();
           
          const prefDataWithAll = {
@@ -1177,22 +1308,11 @@ export const useStore = create<UserState>()(
                   target_amount: w.targetAmount,
                   sort_order: w.sortOrder || 0
                })), { onConflict: 'id' }),
-               resilientUpsert('transactions', state.expenses.map(e => ({
-                  id: e.id,
-                  user_id: user.id,
-                  category_id: e.categoryId,
-                  wallet_id: e.walletId,
-                  amount: e.originalAmount,
-                  currency: e.originalCurrency,
-                  converted_amount: e.convertedAmount,
-                  wallet_amount: e.walletAmount,
-                  exchange_rate: e.exchangeRate,
-                  date: e.date,
-                  is_work: e.isWork || false,
-                  is_large: e.isLarge || false,
-                  is_subscription: e.isSubscription || false,
-                  subscription_next_charge_date: e.subscriptionNextChargeDate || null
-               })), 'id'),
+               resilientUpsert(
+                  'transactions',
+                  state.expenses.map(e => expenseToDatabaseRow(e, user.id)),
+                  'id'
+               ),
                resilientUpsert('passive_income_sources', state.passiveIncomeSources.map(s => ({
                   id: s.id,
                   user_id: user.id,
@@ -1247,6 +1367,21 @@ export const useStore = create<UserState>()(
     }),
     {
       name: 'dmoney-storage',
+      version: 2,
+      migrate: (persistedState: any, version) => {
+        if (version < 2) {
+          const expenses = Array.isArray(persistedState?.expenses) ? persistedState.expenses : [];
+          return {
+            ...persistedState,
+            // Existing local expenses may never have reached Supabase in older
+            // versions. Queue all of them once before the first cloud pull.
+            pendingExpenseUpserts: expenses.map((expense: Expense) => expense.id),
+            pendingExpenseDeletes: [],
+          };
+        }
+
+        return persistedState;
+      },
     }
   )
 );
