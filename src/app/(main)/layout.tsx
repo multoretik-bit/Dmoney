@@ -13,7 +13,7 @@ import { convertAmount } from '@/lib/exchange';
 import { AddExpenseModal } from '@/components/expenses/add-expense-modal';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, setUser, pullData, pushData, wallets,
+  const { user, setUser, pullData, pushData, syncPendingWallets, wallets,
     categories, portfolios, folders, expenses, preferences,
     passiveIncomeSources, assets, subscriptions, runSubscriptionAutoCharges,
     isAuthModalOpen, setAuthModalOpen
@@ -104,6 +104,33 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     return () => clearTimeout(timeoutId);
   }, [user, categories, portfolios, folders, wallets, expenses, preferences, passiveIncomeSources, assets, subscriptions, pushData]);
+
+  // Offline edits stay in the persisted queue. Retry them as soon as the app
+  // comes online or returns to the foreground, without waiting for another edit.
+  useEffect(() => {
+    if (!user) return;
+
+    const flushPendingWallets = async () => {
+      setSyncStatus('syncing');
+      try {
+        await syncPendingWallets();
+        setSyncStatus('synced');
+      } catch {
+        setSyncStatus('error');
+      }
+    };
+    const handleOnline = () => void flushPendingWallets();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void flushPendingWallets();
+    };
+
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, syncPendingWallets]);
 
   // Real-time pull from Supabase with debounce
   useEffect(() => {
