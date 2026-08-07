@@ -1054,9 +1054,9 @@ export const useStore = create<UserState>()(
               const savedFingerprints = new Map(
                 walletsToSave.map(wallet => [wallet.id, walletSyncFingerprint(wallet)])
               );
-              const { error } = await supabase
-                .from('wallets')
-                .upsert(walletsToSave.map(wallet => walletToDatabaseRow(wallet, user.id)), { onConflict: 'id' });
+              const { error } = await supabase.rpc('upsert_wallets', {
+                p_wallets: walletsToSave.map(wallet => walletToDatabaseRow(wallet, user.id)),
+              });
               if (error) throw error;
 
               set(current => ({
