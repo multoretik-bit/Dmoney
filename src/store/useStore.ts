@@ -109,6 +109,23 @@ export interface Wallet {
   sortOrder?: number;
 }
 
+let walletSyncInFlight: Promise<void> | null = null;
+
+function walletSyncFingerprint(wallet: Wallet): string {
+  return JSON.stringify([
+    wallet.id,
+    wallet.portfolioId,
+    wallet.folderId || null,
+    wallet.name,
+    wallet.currency,
+    Number(wallet.balance || 0),
+    wallet.icon || null,
+    wallet.color || null,
+    wallet.targetAmount ?? null,
+    wallet.sortOrder || 0,
+  ]);
+}
+
 function walletToDatabaseRow(wallet: Wallet, userId: string) {
   return {
     id: wallet.id,
@@ -617,10 +634,23 @@ export const useStore = create<UserState>()(
         if (user) {
           await supabase.from('folders').delete().eq('id', id);
         }
-        set((state) => ({
-          folders: state.folders.filter(f => f.id !== id),
-          wallets: state.wallets.map(w => w.folderId === id ? { ...w, folderId: undefined } : w)
-        }));
+        set((state) => {
+          const affectedWalletIds = state.wallets
+            .filter(wallet => wallet.folderId === id)
+            .map(wallet => wallet.id);
+
+          return {
+            folders: state.folders.filter(f => f.id !== id),
+            wallets: state.wallets.map(w => w.folderId === id ? { ...w, folderId: undefined } : w),
+            pendingWalletUpserts: Array.from(new Set([
+              ...state.pendingWalletUpserts,
+              ...affectedWalletIds,
+            ])),
+          };
+        });
+
+        const latestState = useStore.getState();
+        if (latestState.user) await latestState.syncPendingWallets();
       },
 
       addWallet: (wallet) => {
@@ -726,24 +756,16 @@ export const useStore = create<UserState>()(
              return updatedSibling || w;
           });
 
-          set({ wallets: updatedWallets });
-          
-          if (state.user) {
-             const { error } = await supabase.from('wallets').upsert(updatedWithNewOrders.map(w => ({
-                id: w.id,
-                user_id: state.user!.id,
-                portfolio_id: w.portfolioId,
-                folder_id: w.folderId || null,
-                name: w.name,
-                currency: w.currency,
-                balance: w.balance,
-                icon: w.icon,
-                color: w.color,
-                target_amount: w.targetAmount,
-                sort_order: w.sortOrder || 0
-             })), { onConflict: 'id' });
-             if (error) console.error('❌ Sync error (updateWalletOrder):', error);
-          }
+          const changedIds = updatedWithNewOrders.map(wallet => wallet.id);
+          set(current => ({
+            wallets: updatedWallets,
+            pendingWalletUpserts: Array.from(new Set([
+              ...current.pendingWalletUpserts,
+              ...changedIds,
+            ])),
+          }));
+
+          if (state.user) await useStore.getState().syncPendingWallets();
         } finally {
           set({ isReordering: false });
         }
@@ -751,11 +773,16 @@ export const useStore = create<UserState>()(
       deleteWallet: async (id) => {
         const { user } = useStore.getState();
         if (user) {
-          await supabase.from('wallets').delete().eq('id', id);
+          // Wait for any older save before deleting, otherwise that save could
+          // finish later and recreate the wallet with an old balance.
+          await useStore.getState().syncPendingWallets();
+          const { error } = await supabase.from('wallets').delete().eq('id', id);
+          if (error) throw error;
         }
         set((state) => ({
           wallets: state.wallets.filter(w => w.id !== id),
-          expenses: state.expenses.filter(e => e.walletId !== id)
+          expenses: state.expenses.filter(e => e.walletId !== id),
+          pendingWalletUpserts: state.pendingWalletUpserts.filter(walletId => walletId !== id),
         }));
       },
 
@@ -1003,22 +1030,55 @@ export const useStore = create<UserState>()(
       },
 
       syncPendingWallets: async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        // Every wallet write shares one drain loop. This prevents an older
+        // request from landing after a newer one and restoring a stale balance.
+        if (!walletSyncInFlight) {
+          walletSyncInFlight = (async () => {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError) throw userError;
+            if (!user) return;
 
-        const state = useStore.getState();
-        const upsertIds = [...state.pendingWalletUpserts];
-        const walletsToSave = state.wallets.filter(wallet => upsertIds.includes(wallet.id));
-        if (walletsToSave.length === 0) return;
+            while (true) {
+              const state = useStore.getState();
+              const upsertIds = [...state.pendingWalletUpserts];
+              if (upsertIds.length === 0) return;
 
-        const { error } = await supabase
-          .from('wallets')
-          .upsert(walletsToSave.map(wallet => walletToDatabaseRow(wallet, user.id)), { onConflict: 'id' });
-        if (error) throw error;
+              const walletsToSave = state.wallets.filter(wallet => upsertIds.includes(wallet.id));
+              if (walletsToSave.length === 0) {
+                set(current => ({
+                  pendingWalletUpserts: current.pendingWalletUpserts.filter(id => !upsertIds.includes(id)),
+                }));
+                continue;
+              }
 
-        set(current => ({
-          pendingWalletUpserts: current.pendingWalletUpserts.filter(id => !upsertIds.includes(id)),
-        }));
+              const savedFingerprints = new Map(
+                walletsToSave.map(wallet => [wallet.id, walletSyncFingerprint(wallet)])
+              );
+              const { error } = await supabase
+                .from('wallets')
+                .upsert(walletsToSave.map(wallet => walletToDatabaseRow(wallet, user.id)), { onConflict: 'id' });
+              if (error) throw error;
+
+              set(current => ({
+                pendingWalletUpserts: current.pendingWalletUpserts.filter(id => {
+                  const savedFingerprint = savedFingerprints.get(id);
+                  if (!savedFingerprint) return true;
+
+                  const currentWallet = current.wallets.find(wallet => wallet.id === id);
+                  return currentWallet
+                    ? walletSyncFingerprint(currentWallet) !== savedFingerprint
+                    : false;
+                }),
+              }));
+              // If the wallet changed while the request was in flight, its ID
+              // remains pending and the loop immediately saves the newer value.
+            }
+          })().finally(() => {
+            walletSyncInFlight = null;
+          });
+        }
+
+        await walletSyncInFlight;
       },
 
       syncPendingExpenses: async () => {
@@ -1330,19 +1390,9 @@ export const useStore = create<UserState>()(
                   name: f.name,
                   color: f.color
                })), { onConflict: 'id' }),
-               supabase.from('wallets').upsert(state.wallets.map(w => ({
-                  id: w.id,
-                  user_id: user.id,
-                  portfolio_id: w.portfolioId,
-                  folder_id: w.folderId || null,
-                  name: w.name,
-                  currency: w.currency,
-                  balance: w.balance,
-                  icon: w.icon,
-                  color: w.color,
-                  target_amount: w.targetAmount,
-                  sort_order: w.sortOrder || 0
-               })), { onConflict: 'id' }),
+               // Wallets are intentionally excluded from this bulk push. They
+               // are saved by syncPendingWallets above, so a stale snapshot
+               // cannot overwrite a newer balance from this or another device.
                resilientUpsert(
                   'transactions',
                   state.expenses.map(e => expenseToDatabaseRow(e, user.id)),
