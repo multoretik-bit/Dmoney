@@ -7,7 +7,7 @@ import {
   ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
   Landmark, LayoutDashboard, Plus, ReceiptText, Sparkles, TrendingDown, WalletCards,
 } from 'lucide-react';
-import { useStore, Expense } from '@/store/useStore';
+import { useStore, DailyCapitalEntry, Expense } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,8 @@ import { SavingsGoalWidget } from './savings-goal-widget';
 import { getNextChargeDate } from './subscriptions-section';
 
 type ViewMode = 'personal' | 'work' | 'large';
+
+const MAX_HISTORY_BARS = 18;
 
 const VIEW_META: Record<ViewMode, { label: string; accent: string }> = {
   personal: { label: 'Личные', accent: '#60a5fa' },
@@ -29,6 +31,45 @@ function money(value: number, currency: string, digits = 0) {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   })} ${currency}`;
+}
+
+function selectSignificantHistoryPoints(entries: DailyCapitalEntry[], maxPoints: number) {
+  const sortedEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  if (sortedEntries.length <= maxPoints) return sortedEntries;
+
+  const lastIndex = sortedEntries.length - 1;
+  const middlePointBudget = Math.max(0, maxPoints - 2);
+  const candidates = [];
+
+  for (let index = 1; index < lastIndex; index++) {
+    const previous = sortedEntries[index - 1].overallTotal;
+    const current = sortedEntries[index].overallTotal;
+    const next = sortedEntries[index + 1].overallTotal;
+
+    // A large daily jump is important, while the deviation from neighbouring
+    // values keeps meaningful peaks and dips visible in the all-time trend.
+    const dailyChange = Math.abs(current - previous);
+    const turningPoint = Math.abs(current - ((previous + next) / 2));
+    candidates.push({ index, significance: dailyChange + turningPoint });
+  }
+
+  const selectedIndexes = new Set([
+    0,
+    lastIndex,
+    ...candidates
+      .sort((a, b) => b.significance - a.significance)
+      .slice(0, middlePointBudget)
+      .map(candidate => candidate.index),
+  ]);
+
+  return Array.from(selectedIndexes)
+    .sort((a, b) => a - b)
+    .map(index => sortedEntries[index]);
+}
+
+function formatHistoryDate(date: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  return format(new Date(year, month - 1, day), 'd MMM yyyy', { locale: ru });
 }
 
 export function ExpensesView() {
@@ -99,13 +140,23 @@ export function ExpensesView() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
 
-  const historyBars = useMemo(() => {
-    const points = (capitalHistory || []).slice(-18);
-    if (points.length < 2) return [];
+  const historyChart = useMemo(() => {
+    const allPoints = [...(capitalHistory || [])].sort((a, b) => a.date.localeCompare(b.date));
+    if (allPoints.length < 2) return null;
+
+    const points = selectSignificantHistoryPoints(allPoints, MAX_HISTORY_BARS);
     const values = points.map(point => point.overallTotal);
     const min = Math.min(...values);
     const range = Math.max(Math.max(...values) - min, 1);
-    return values.map(value => 28 + ((value - min) / range) * 72);
+    return {
+      firstDate: allPoints[0].date,
+      lastDate: allPoints[allPoints.length - 1].date,
+      bars: points.map(point => ({
+        date: point.date,
+        value: point.overallTotal,
+        height: 28 + ((point.overallTotal - min) / range) * 72,
+      })),
+    };
   }, [capitalHistory]);
 
   const openExpense = (expense?: Expense) => {
@@ -205,20 +256,28 @@ export function ExpensesView() {
               </select>
             </div>
 
-            <div className="flex items-end gap-1 h-16" aria-label="История общего капитала">
-              {historyBars.length > 0 ? historyBars.map((height, index) => (
-                <div
-                  key={index}
-                  className="flex-1 min-w-1 rounded-t-md bg-gradient-to-t from-blue-400/20 to-cyan-200/80"
-                  style={{ height: `${height}%`, opacity: 0.38 + (index / historyBars.length) * 0.62 }}
-                />
-              )) : (
-                <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-200/40 to-transparent relative">
-                  <span className="absolute left-0 -top-6 text-[10px] font-medium text-blue-100/40">
-                    Динамика появится после накопления истории
-                  </span>
-                </div>
-              )}
+            <div>
+              <div className="flex items-center justify-between mb-2 text-[9px] font-bold uppercase tracking-wider text-blue-100/35">
+                <span>{historyChart ? formatHistoryDate(historyChart.firstDate) : 'Первый замер'}</span>
+                <span>Рост за всё время</span>
+                <span>{historyChart ? formatHistoryDate(historyChart.lastDate) : 'Последний замер'}</span>
+              </div>
+              <div className="flex items-end gap-1 h-16" aria-label="Рост общего капитала за всё время">
+                {historyChart ? historyChart.bars.map((bar, index) => (
+                  <div
+                    key={`${bar.date}-${index}`}
+                    title={`${formatHistoryDate(bar.date)}: ${money(convertAmount(bar.value, baseCurrency, displayCurrency), displayCurrency, 1)}`}
+                    className="flex-1 min-w-1 rounded-t-md bg-gradient-to-t from-blue-400/20 to-cyan-200/80"
+                    style={{ height: `${bar.height}%`, opacity: 0.38 + (index / historyChart.bars.length) * 0.62 }}
+                  />
+                )) : (
+                  <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-200/40 to-transparent relative">
+                    <span className="absolute left-0 -top-6 text-[10px] font-medium text-blue-100/40">
+                      Динамика появится после второго замера капитала
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
