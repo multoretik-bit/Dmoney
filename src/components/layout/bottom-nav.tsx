@@ -28,8 +28,9 @@ export function MobileSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const {
     portfolios, wallets, assets, preferences, user, setUser,
-    selectedPortfolioId, setSelectedPortfolioId,
+    selectedPortfolioId, setSelectedPortfolioId, dashboardCurrency,
   } = useStore();
+  const displayCurrency = dashboardCurrency || preferences.baseCurrency;
 
   const sortedPortfolios = [...portfolios].sort((a, b) =>
     a.sortOrder !== b.sortOrder ? a.sortOrder - b.sortOrder : a.id.localeCompare(b.id)
@@ -37,10 +38,10 @@ export function MobileSidebar() {
 
   const getPortfolioBalance = (portfolioId: string) => wallets
     .filter(wallet => wallet.portfolioId === portfolioId)
-    .reduce((sum, wallet) => sum + convertAmount(wallet.balance, wallet.currency, preferences.baseCurrency), 0);
+    .reduce((sum, wallet) => sum + convertAmount(wallet.balance, wallet.currency, displayCurrency), 0);
 
   const assetsTotal = assets.reduce(
-    (sum, asset) => sum + convertAmount(asset.estimatedValue, asset.currency, preferences.baseCurrency),
+    (sum, asset) => sum + convertAmount(asset.estimatedValue, asset.currency, displayCurrency),
     0
   );
 
@@ -146,7 +147,7 @@ export function MobileSidebar() {
                     <span className="block text-xs font-bold text-white/70 truncate">{portfolio.name}</span>
                   </span>
                   <span className={cn('pr-3 text-[10px] font-black text-white/30 tabular-nums whitespace-nowrap transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}>
-                    {getPortfolioBalance(portfolio.id).toFixed(0)} {preferences.baseCurrency}
+                    {getPortfolioBalance(portfolio.id).toFixed(0)} {displayCurrency}
                   </span>
                 </button>
               );
@@ -165,7 +166,7 @@ export function MobileSidebar() {
               </span>
               <span className={cn('ml-2 min-w-0 flex-1 text-xs font-bold text-white/70 transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}>Активы</span>
               <span className={cn('pr-3 text-[10px] font-black text-white/30 tabular-nums whitespace-nowrap transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}>
-                {assetsTotal.toFixed(0)} {preferences.baseCurrency}
+                {assetsTotal.toFixed(0)} {displayCurrency}
               </span>
             </Link>
           </div>

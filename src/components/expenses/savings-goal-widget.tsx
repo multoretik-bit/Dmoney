@@ -5,6 +5,7 @@ import { useStore, currentMonthKey, SavingsGoalCategory, LongTermGoal, Wallet } 
 import { Award, ChevronDown, Check, ImagePlus, Medal, Plus, Target, Trash2, WalletCards, X } from 'lucide-react';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { generateUUID } from '@/lib/uuid';
+import { convertAmount } from '@/lib/exchange';
 
 const CATEGORIES: { key: SavingsGoalCategory; label: string; icon: string; color: string }[] = [
   { key: 'work', label: 'В работу', icon: '💼', color: '#f59e0b' },
@@ -36,7 +37,7 @@ function resizeRewardImage(file: File): Promise<string> {
   });
 }
 
-function SavingsGoalRow({ category, label, icon, color }: { category: SavingsGoalCategory; label: string; icon: string; color: string }) {
+function SavingsGoalRow({ category, label, icon, color, displayCurrency }: { category: SavingsGoalCategory; label: string; icon: string; color: string; displayCurrency: string }) {
   const { preferences, setSavingsGoalTarget, addSavingsProgress } = useStore();
   const { baseCurrency } = preferences;
   const month = currentMonthKey();
@@ -47,6 +48,8 @@ function SavingsGoalRow({ category, label, icon, color }: { category: SavingsGoa
 
   const target = goal?.target || 0;
   const saved = goal?.saved || 0;
+  const displayedTarget = convertAmount(target, baseCurrency, displayCurrency);
+  const displayedSaved = convertAmount(saved, baseCurrency, displayCurrency);
   const pct = target > 0 ? Math.min(100, (saved / target) * 100) : 0;
   const isComplete = target > 0 && saved >= target;
 
@@ -111,7 +114,7 @@ function SavingsGoalRow({ category, label, icon, color }: { category: SavingsGoa
             <span className="text-sm">{icon}</span> {label}
           </span>
           <span className="text-base font-black text-white tabular-nums truncate">
-            {saved.toFixed(0)} <span className="text-white/30 font-bold text-xs">/ {target.toFixed(0)} {baseCurrency}</span>
+            {displayedSaved.toFixed(0)} <span className="text-white/30 font-bold text-xs">/ {displayedTarget.toFixed(0)} {displayCurrency}</span>
           </span>
         </div>
         <button
@@ -169,10 +172,13 @@ function SavingsGoalRow({ category, label, icon, color }: { category: SavingsGoa
   );
 }
 
-function WalletGoalRow({ wallet }: { wallet: Wallet }) {
+function WalletGoalRow({ wallet, displayCurrency }: { wallet: Wallet; displayCurrency: string }) {
   const target = Number(wallet.targetAmount || 0);
   const balance = Number(wallet.balance || 0);
   const remaining = Math.max(0, target - balance);
+  const displayedTarget = convertAmount(target, wallet.currency, displayCurrency);
+  const displayedBalance = convertAmount(balance, wallet.currency, displayCurrency);
+  const displayedRemaining = convertAmount(remaining, wallet.currency, displayCurrency);
   const pct = target > 0 ? Math.min(100, (balance / target) * 100) : 0;
   const color = wallet.color || '#60a5fa';
 
@@ -186,13 +192,13 @@ function WalletGoalRow({ wallet }: { wallet: Wallet }) {
           <p className="text-sm font-black text-white/85 truncate">{wallet.name}</p>
           <p className="text-[10px] font-bold text-white/35 mt-0.5">
             {remaining > 0
-              ? `Осталось положить ${remaining.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} ${wallet.currency}`
+              ? `Осталось положить ${displayedRemaining.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} ${displayCurrency}`
               : 'Цель достигнута'}
           </p>
         </div>
         <span className="text-xs font-black text-white/70 tabular-nums">
-          {balance.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}
-          <span className="text-white/25"> / {target.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}</span>
+          {displayedBalance.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}
+          <span className="text-white/25"> / {displayedTarget.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {displayCurrency}</span>
         </span>
       </div>
       <div className="h-2 rounded-full bg-black/40 overflow-hidden">
@@ -205,9 +211,12 @@ function WalletGoalRow({ wallet }: { wallet: Wallet }) {
   );
 }
 
-function LongTermGoalRow({ goal }: { goal: LongTermGoal }) {
+function LongTermGoalRow({ goal, displayCurrency }: { goal: LongTermGoal; displayCurrency: string }) {
   const { updateLongTermGoal, deleteLongTermGoal } = useStore();
   const remaining = Math.max(0, goal.target - goal.saved);
+  const displayedTarget = convertAmount(goal.target, goal.currency, displayCurrency);
+  const displayedSaved = convertAmount(goal.saved, goal.currency, displayCurrency);
+  const displayedRemaining = convertAmount(remaining, goal.currency, displayCurrency);
   const pct = goal.target > 0 ? Math.min(100, (goal.saved / goal.target) * 100) : 0;
   const isComplete = goal.saved >= goal.target;
 
@@ -237,7 +246,7 @@ function LongTermGoalRow({ goal }: { goal: LongTermGoal }) {
           <p className="text-[10px] font-bold text-white/35 mt-0.5">
             {isComplete
               ? 'Цель достигнута'
-              : `Осталось накопить ${remaining.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} ${goal.currency}`}
+              : `Осталось накопить ${displayedRemaining.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} ${displayCurrency}`}
           </p>
         </div>
         <button
@@ -267,7 +276,7 @@ function LongTermGoalRow({ goal }: { goal: LongTermGoal }) {
       <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
         <span className={isComplete ? 'text-emerald-400' : 'text-white/30'}>{Math.round(pct)}%</span>
         <span className="text-white/45 tabular-nums">
-          {goal.saved.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} / {goal.target.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {goal.currency}
+          {displayedSaved.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} / {displayedTarget.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} {displayCurrency}
         </span>
       </div>
     </div>
@@ -333,8 +342,9 @@ function RewardsCollection() {
   );
 }
 
-export function SavingsGoalWidget({ showRewards = false }: { showRewards?: boolean }) {
+export function SavingsGoalWidget({ showRewards = false, displayCurrency }: { showRewards?: boolean; displayCurrency?: string }) {
   const { wallets, preferences, addLongTermGoal, addGoalReward } = useStore();
+  const resolvedDisplayCurrency = displayCurrency || preferences.baseCurrency;
   const walletGoals = useMemo(
     () => wallets.filter(wallet => Number(wallet.targetAmount || 0) > 0),
     [wallets]
@@ -454,7 +464,7 @@ export function SavingsGoalWidget({ showRewards = false }: { showRewards?: boole
       <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 px-1">Откладывание в этом месяце</span>
       <div className="flex flex-col gap-3">
         {CATEGORIES.map(c => (
-          <SavingsGoalRow key={c.key} category={c.key} label={c.label} icon={c.icon} color={c.color} />
+          <SavingsGoalRow key={c.key} category={c.key} label={c.label} icon={c.icon} color={c.color} displayCurrency={resolvedDisplayCurrency} />
         ))}
       </div>
 
@@ -462,7 +472,7 @@ export function SavingsGoalWidget({ showRewards = false }: { showRewards?: boole
         <>
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 px-1 mt-2">Цели на счетах</span>
           <div className="flex flex-col gap-3">
-            {walletGoals.map(wallet => <WalletGoalRow key={wallet.id} wallet={wallet} />)}
+            {walletGoals.map(wallet => <WalletGoalRow key={wallet.id} wallet={wallet} displayCurrency={resolvedDisplayCurrency} />)}
           </div>
         </>
       )}
@@ -481,7 +491,7 @@ export function SavingsGoalWidget({ showRewards = false }: { showRewards?: boole
       </div>
 
       <div className="flex flex-col gap-3">
-        {longTermGoals.map(goal => <LongTermGoalRow key={goal.id} goal={goal} />)}
+        {longTermGoals.map(goal => <LongTermGoalRow key={goal.id} goal={goal} displayCurrency={resolvedDisplayCurrency} />)}
         {longTermGoals.length === 0 && !isAdding && (
           <button
             onClick={() => setIsAdding(true)}

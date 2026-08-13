@@ -5,7 +5,7 @@ import { format, addMonths, subMonths } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import {
   ArrowUpRight, CalendarClock, ChevronLeft, ChevronRight,
-  LayoutDashboard, Plus, ReceiptText, Sparkles, TrendingDown, WalletCards,
+  Landmark, LayoutDashboard, Plus, ReceiptText, Sparkles, TrendingDown, WalletCards,
 } from 'lucide-react';
 import { useStore, Expense } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
@@ -35,12 +35,13 @@ export function ExpensesView() {
   const {
     expenses, preferences, categories, portfolios, wallets,
     subscriptions, passiveIncomeSources, capitalHistory,
+    dashboardCurrency, setDashboardCurrency,
   } = useStore();
   const { baseCurrency } = preferences;
+  const displayCurrency = dashboardCurrency || baseCurrency;
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('personal');
-  const [displayCurrency, setDisplayCurrency] = useState(baseCurrency);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const monthKey = format(currentMonth, 'yyyy-MM');
@@ -61,9 +62,17 @@ export function ExpensesView() {
     && (viewMode !== 'personal' || !excludedCategoryIds.has(expense.categoryId))
   ), [excludedCategoryIds, filteredExpenses, monthKey, viewMode]);
 
-  const totalWallets = wallets.reduce((sum, wallet) =>
-    sum + convertAmount(Number(wallet.balance || 0), wallet.currency, displayCurrency), 0);
-  const totalCapital = totalWallets;
+  const portfolioTotals = useMemo(() => portfolios.map(portfolio => {
+    const portfolioWallets = wallets.filter(wallet => wallet.portfolioId === portfolio.id);
+    return {
+      ...portfolio,
+      walletCount: portfolioWallets.length,
+      total: portfolioWallets.reduce((sum, wallet) =>
+        sum + convertAmount(Number(wallet.balance || 0), wallet.currency, displayCurrency), 0),
+    };
+  }), [displayCurrency, portfolios, wallets]);
+
+  const totalCapital = portfolioTotals.reduce((sum, portfolio) => sum + portfolio.total, 0);
 
   const upcoming = subscriptions
     .map(subscription => ({
@@ -186,7 +195,7 @@ export function ExpensesView() {
               </div>
               <select
                 value={displayCurrency}
-                onChange={event => setDisplayCurrency(event.target.value)}
+                onChange={event => setDashboardCurrency(event.target.value)}
                 aria-label="Валюта отображения"
                 className="px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-[11px] font-black text-blue-100 outline-none"
               >
@@ -261,10 +270,51 @@ export function ExpensesView() {
             </div>
           </div>
           <PassiveIncomeTab selectedCurrency={displayCurrency} compact />
+
+          <div className="mt-5 pt-5 border-t border-white/[0.07]">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <Landmark size={16} className="text-blue-300" />
+                <h3 className="text-sm font-black text-white">Все капиталы</h3>
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-300/70">
+                {displayCurrency}
+              </span>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-2.5">
+              {portfolioTotals.length === 0 ? (
+                <div className="sm:col-span-2 py-6 text-center text-xs text-white/30">
+                  Капиталы пока не созданы
+                </div>
+              ) : portfolioTotals.map(portfolio => (
+                <div
+                  key={portfolio.id}
+                  className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.025] border border-white/[0.055]"
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
+                    style={{ color: portfolio.color, background: `${portfolio.color}18` }}
+                  >
+                    {portfolio.icon || <Landmark size={17} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white/85 truncate">{portfolio.name}</p>
+                    <p className="text-[10px] text-white/35 mt-0.5">
+                      {portfolio.walletCount} {portfolio.walletCount === 1 ? 'счёт' : 'счетов'}
+                    </p>
+                  </div>
+                  <span className="text-sm font-black text-white tabular-nums text-right">
+                    {money(portfolio.total, displayCurrency, 1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="xl:col-span-5">
-          <SavingsGoalWidget />
+          <SavingsGoalWidget displayCurrency={displayCurrency} />
         </div>
       </section>
 

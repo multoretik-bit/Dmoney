@@ -16,8 +16,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const { user, setUser, pullData, pushData, syncPendingWallets, wallets,
     categories, portfolios, folders, expenses, preferences,
     passiveIncomeSources, assets, subscriptions, runSubscriptionAutoCharges,
-    isAuthModalOpen, setAuthModalOpen
+    isAuthModalOpen, setAuthModalOpen, dashboardCurrency,
   } = useStore();
+  const displayCurrency = dashboardCurrency || preferences.baseCurrency;
   const [scrolled, setScrolled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [isHydrated, setIsHydrated] = useState(false);
@@ -171,7 +172,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   };
 
   const totalBalance = (wallets || []).reduce((acc, w) =>
-    acc + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency), 0
+    acc + convertAmount(Number(w.balance || 0), w.currency, displayCurrency), 0
   );
 
   return (
@@ -243,7 +244,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             {/* Read-only balance indicator */}
             <div className="flex items-center gap-1.5 px-2 py-2">
               <span className="text-sm font-black text-blue-300 tracking-tight">
-                ${totalBalance.toFixed(1)}
+                {totalBalance.toFixed(1)} {displayCurrency}
               </span>
             </div>
           </div>
@@ -253,7 +254,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <div className="hidden lg:flex justify-end px-8 pt-6">
           <div className="flex items-center gap-1.5 px-2 py-2.5">
             <span className="text-sm font-black text-blue-300 tracking-tight tabular-nums">
-              {totalBalance.toFixed(1)} {preferences.baseCurrency}
+              {totalBalance.toFixed(1)} {displayCurrency}
             </span>
           </div>
         </div>

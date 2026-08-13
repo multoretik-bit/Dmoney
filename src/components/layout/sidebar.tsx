@@ -23,9 +23,9 @@ export function Sidebar() {
   const router = useRouter();
   const {
     portfolios, wallets, assets, preferences, user, setUser,
-    selectedPortfolioId, setSelectedPortfolioId,
+    selectedPortfolioId, setSelectedPortfolioId, dashboardCurrency,
   } = useStore();
-  const { baseCurrency } = preferences;
+  const displayCurrency = dashboardCurrency || preferences.baseCurrency;
 
   const sortedPortfolios = [...portfolios].sort((a, b) => {
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -35,11 +35,11 @@ export function Sidebar() {
   const getPortfolioBalance = (pId: string) =>
     wallets
       .filter(w => w.portfolioId === pId)
-      .reduce((sum, w) => sum + convertAmount(w.balance, w.currency, baseCurrency), 0);
+      .reduce((sum, w) => sum + convertAmount(w.balance, w.currency, displayCurrency), 0);
 
   const isCapitalsPage = pathname.startsWith('/wallets');
   const isAssetsPage = pathname.startsWith('/assets');
-  const assetsTotal = assets.reduce((sum, a) => sum + convertAmount(a.estimatedValue, a.currency, baseCurrency), 0);
+  const assetsTotal = assets.reduce((sum, a) => sum + convertAmount(a.estimatedValue, a.currency, displayCurrency), 0);
 
   const handleSelectPortfolio = (id: string) => {
     setSelectedPortfolioId(id);
@@ -139,7 +139,7 @@ export function Sidebar() {
                 </span>
               </div>
               <span className={cn('relative z-10 text-[11px] font-black flex-shrink-0 tabular-nums', isActive ? 'text-blue-300' : 'text-white/25')}>
-                ${getPortfolioBalance(p.id).toFixed(0)}
+                {getPortfolioBalance(p.id).toFixed(0)} {displayCurrency}
               </span>
             </button>
           );
@@ -179,7 +179,7 @@ export function Sidebar() {
             </span>
           </div>
           <span className={cn('relative z-10 text-[11px] font-black flex-shrink-0 tabular-nums', isAssetsPage ? 'text-amber-300' : 'text-white/25')}>
-            ${assetsTotal.toFixed(0)}
+            {assetsTotal.toFixed(0)} {displayCurrency}
           </span>
         </Link>
       </div>
