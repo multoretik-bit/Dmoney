@@ -18,14 +18,15 @@ let cachedCBR: CBRResponse | null = null;
 let lastFetch = 0;
 const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
 
-export async function fetchCBRRates(): Promise<CBRResponse | null> {
+export async function fetchCBRRates(signal?: AbortSignal): Promise<CBRResponse | null> {
   const now = Date.now();
   if (cachedCBR && (now - lastFetch < CACHE_DURATION)) {
     return cachedCBR;
   }
 
   try {
-    const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+    const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js', { signal });
+    if (!response.ok) throw new Error(`CBR request failed with ${response.status}`);
     const data = await response.json();
     cachedCBR = data;
     lastFetch = now;
