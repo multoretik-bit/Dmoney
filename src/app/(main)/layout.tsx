@@ -9,24 +9,46 @@ import { useStore } from '@/store/useStore';
 import { supabase } from '@/lib/supabase';
 import { CircleDollarSign, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { convertAmount } from '@/lib/exchange';
+import { convertAmount, fetchLatestRates, hydrateCachedRates } from '@/lib/exchange';
 import { AddExpenseModal } from '@/components/expenses/add-expense-modal';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, setUser, pullData, pushData, syncPendingWallets, wallets,
     categories, portfolios, folders, expenses, preferences,
     passiveIncomeSources, assets, subscriptions, runSubscriptionAutoCharges,
-    isAuthModalOpen, setAuthModalOpen, dashboardCurrency,
+    isAuthModalOpen, setAuthModalOpen, dashboardCurrency, bumpExchangeRatesRevision,
   } = useStore();
   const displayCurrency = dashboardCurrency || preferences.baseCurrency;
   const [scrolled, setScrolled] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [areExchangeRatesReady, setAreExchangeRatesReady] = useState(false);
+  const [exchangeRateRefreshFinished, setExchangeRateRefreshFinished] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const pushPendingRef = useRef(false);
 
   useEffect(() => {
-    setIsHydrated(true);
+    let active = true;
+
+    // Use the last successful rates (or the complete realistic fallback) for
+    // the first visible frame, then refresh and notify every money component.
+    hydrateCachedRates();
+    bumpExchangeRatesRevision();
+    setAreExchangeRatesReady(true);
+
+    void fetchLatestRates().finally(() => {
+      if (!active) return;
+      bumpExchangeRatesRevision();
+      setExchangeRateRefreshFinished(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [bumpExchangeRatesRevision]);
+
+  useEffect(() => {
+    if (!exchangeRateRefreshFinished) return;
+
     // Ask supported browsers not to evict DMoney's local session and queued
     // finance data under storage pressure. Browsers may safely decline.
     if (navigator.storage?.persist) {
@@ -35,7 +57,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     // Runs once per app load (guest or logged-in) — persisted state has
     // rehydrated from localStorage by the time this effect fires.
     runSubscriptionAutoCharges();
-  }, [runSubscriptionAutoCharges]);
+  }, [exchangeRateRefreshFinished, runSubscriptionAutoCharges]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -44,6 +66,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
+    if (!exchangeRateRefreshFinished) return;
+
     let active = true;
 
     const restoreSession = async () => {
@@ -81,7 +105,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       active = false;
       subscription.unsubscribe();
     };
-  }, [setUser, pullData]);
+  }, [exchangeRateRefreshFinished, setUser, pullData]);
 
   // Auto-push changes to Supabase.
   // pushPendingRef is set the instant any tracked state changes (synchronously,
@@ -174,6 +198,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const totalBalance = (wallets || []).reduce((acc, w) =>
     acc + convertAmount(Number(w.balance || 0), w.currency, displayCurrency), 0
   );
+
+  if (!areExchangeRatesReady) {
+    return (
+      <div className="min-h-screen bg-background text-slate-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <CircleDollarSign className="text-blue-400 animate-pulse" size={36} />
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-white/35">Подготавливаем курсы валют</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-slate-100 flex lg:flex-row flex-col pt-safe relative">

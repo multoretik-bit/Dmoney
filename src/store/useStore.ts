@@ -228,6 +228,7 @@ export interface UserPreferences {
 interface UserState {
   preferences: UserPreferences;
   dashboardCurrency: string;
+  exchangeRatesRevision: number;
   categories: Category[];
   portfolios: Portfolio[];
   folders: Folder[];
@@ -248,6 +249,7 @@ interface UserState {
   setUser: (user: User | null) => void;
   setAuthModalOpen: (open: boolean) => void;
   setDashboardCurrency: (currency: string) => void;
+  bumpExchangeRatesRevision: () => void;
   setSelectedPortfolioId: (id: string) => void;
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
   setSavingsGoalTarget: (category: SavingsGoalCategory, target: number) => void;
@@ -312,6 +314,7 @@ export const useStore = create<UserState>()(
         savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
       },
       dashboardCurrency: '',
+      exchangeRatesRevision: 0,
       categories: [
         { id: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Дом', icon: '🏠', color: '#8b5cf6', sortOrder: 0 },
         { id: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d', parentId: '3f6e8c1b-7a2d-4e9b-9c1a-1a2b3c4d5e6f', name: 'Оплата квартиры', icon: '🔑', color: '#8b5cf6', sortOrder: 0 },
@@ -338,6 +341,7 @@ export const useStore = create<UserState>()(
       setUser: (user) => set({ user }),
       setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
       setDashboardCurrency: (currency) => set({ dashboardCurrency: currency }),
+      bumpExchangeRatesRevision: () => set((state) => ({ exchangeRatesRevision: state.exchangeRatesRevision + 1 })),
       setSelectedPortfolioId: (id) => set({ selectedPortfolioId: id }),
       
       recordDailyCapital: () => {
