@@ -110,6 +110,7 @@ export interface Wallet {
 }
 
 let walletSyncInFlight: Promise<void> | null = null;
+let expenseSyncInFlight: Promise<void> | null = null;
 
 function walletSyncFingerprint(wallet: Wallet): string {
   return JSON.stringify([
@@ -177,10 +178,52 @@ function expenseToDatabaseRow(expense: Expense, userId: string) {
   };
 }
 
+function expenseSyncFingerprint(expense: Expense): string {
+  return JSON.stringify([
+    expense.id,
+    expense.originalAmount,
+    expense.originalCurrency,
+    expense.convertedAmount,
+    expense.walletAmount,
+    expense.exchangeRate,
+    expense.categoryId,
+    expense.walletId,
+    expense.date,
+    expense.isWork || false,
+    expense.isLarge || false,
+    expense.isSubscription || false,
+    expense.subscriptionNextChargeDate || null,
+  ]);
+}
+
 export interface DailyCapitalEntry {
   date: string;
   overallTotal: number;
   portfolioTotals: { [id: string]: number };
+  currency?: string;
+}
+
+function isDailyCapitalEntry(value: unknown): value is DailyCapitalEntry {
+  if (!value || typeof value !== 'object') return false;
+  const entry = value as Partial<DailyCapitalEntry>;
+  return /^\d{4}-\d{2}-\d{2}$/.test(entry.date || '')
+    && typeof entry.overallTotal === 'number'
+    && Number.isFinite(entry.overallTotal)
+    && !!entry.portfolioTotals
+    && typeof entry.portfolioTotals === 'object';
+}
+
+function mergeCapitalHistory(...histories: unknown[]): DailyCapitalEntry[] {
+  const byDate = new Map<string, DailyCapitalEntry>();
+
+  for (const history of histories) {
+    if (!Array.isArray(history)) continue;
+    for (const entry of history) {
+      if (isDailyCapitalEntry(entry)) byDate.set(entry.date, entry);
+    }
+  }
+
+  return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export type SavingsGoalCategory = 'work' | 'savings' | 'invest';
@@ -299,7 +342,7 @@ interface UserState {
   syncPendingWallets: () => Promise<void>;
   syncPendingExpenses: () => Promise<void>;
   transferFunds: (fromWalletId: string, toWalletId: string, amount: number) => Promise<void>;
-  pullData: () => Promise<void>;
+  pullData: () => Promise<boolean>;
   pushData: () => Promise<void>;
   updateCategoryOrder: (id: string, direction: 'up' | 'down') => Promise<void>;
   capitalHistory: DailyCapitalEntry[];
@@ -363,20 +406,11 @@ export const useStore = create<UserState>()(
         const newEntry: DailyCapitalEntry = {
           date: today,
           overallTotal: Number(overallTotal.toFixed(1)),
-          portfolioTotals
+          portfolioTotals,
+          currency: state.preferences.baseCurrency,
         };
-        
-        const history = [...(state.capitalHistory || [])];
-        const existingIndex = history.findIndex(e => e.date === today);
-        
-        if (existingIndex >= 0) {
-          history[existingIndex] = newEntry;
-        } else {
-          history.push(newEntry);
-        }
-        
-        history.sort((a, b) => a.date.localeCompare(b.date));
-        set({ capitalHistory: history });
+
+        set({ capitalHistory: mergeCapitalHistory(state.capitalHistory, [newEntry]) });
       },
 
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
@@ -1090,35 +1124,69 @@ export const useStore = create<UserState>()(
       },
 
       syncPendingExpenses: async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        // Use one drain loop for every transaction write. Without this lock an
+        // older request can finish after a newer edit and overwrite it, or an
+        // in-flight pull can observe an incomplete queue.
+        if (!expenseSyncInFlight) {
+          expenseSyncInFlight = (async () => {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError) throw userError;
+            if (!user) return;
 
-        const state = useStore.getState();
-        const upsertIds = [...state.pendingExpenseUpserts];
-        const deleteIds = [...state.pendingExpenseDeletes];
-        const expensesToSave = state.expenses.filter(expense => upsertIds.includes(expense.id));
+            while (true) {
+              const deleteIds = [...useStore.getState().pendingExpenseDeletes];
+              if (deleteIds.length > 0) {
+                const { error } = await supabase.from('transactions').delete().in('id', deleteIds);
+                if (error) throw error;
 
-        if (expensesToSave.length > 0) {
-          const result = await resilientUpsert(
-            'transactions',
-            expensesToSave.map(expense => expenseToDatabaseRow(expense, user.id)),
-            'id'
-          );
-          if (result.error) throw result.error;
+                set(current => ({
+                  pendingExpenseDeletes: current.pendingExpenseDeletes.filter(id => !deleteIds.includes(id)),
+                }));
+                continue;
+              }
 
-          set(current => ({
-            pendingExpenseUpserts: current.pendingExpenseUpserts.filter(id => !upsertIds.includes(id)),
-          }));
+              const state = useStore.getState();
+              const upsertIds = [...state.pendingExpenseUpserts];
+              if (upsertIds.length === 0) return;
+
+              const expensesToSave = state.expenses.filter(expense => upsertIds.includes(expense.id));
+              if (expensesToSave.length === 0) {
+                set(current => ({
+                  pendingExpenseUpserts: current.pendingExpenseUpserts.filter(id => !upsertIds.includes(id)),
+                }));
+                continue;
+              }
+
+              const savedFingerprints = new Map(
+                expensesToSave.map(expense => [expense.id, expenseSyncFingerprint(expense)])
+              );
+              const result = await resilientUpsert(
+                'transactions',
+                expensesToSave.map(expense => expenseToDatabaseRow(expense, user.id)),
+                'id'
+              );
+              if (result.error) throw result.error;
+
+              set(current => ({
+                pendingExpenseUpserts: current.pendingExpenseUpserts.filter(id => {
+                  const savedFingerprint = savedFingerprints.get(id);
+                  if (!savedFingerprint) return true;
+
+                  const currentExpense = current.expenses.find(expense => expense.id === id);
+                  return currentExpense
+                    ? expenseSyncFingerprint(currentExpense) !== savedFingerprint
+                    : false;
+                }),
+              }));
+              // Edits made while the request was in flight keep their IDs in
+              // the queue and are saved immediately on the next iteration.
+            }
+          })().finally(() => {
+            expenseSyncInFlight = null;
+          });
         }
 
-        if (deleteIds.length > 0) {
-          const { error } = await supabase.from('transactions').delete().in('id', deleteIds);
-          if (error) throw error;
-
-          set(current => ({
-            pendingExpenseDeletes: current.pendingExpenseDeletes.filter(id => !deleteIds.includes(id)),
-          }));
-        }
+        await expenseSyncInFlight;
       },
 
       transferFunds: async (fromWalletId, toWalletId, amount) => {
@@ -1156,7 +1224,7 @@ export const useStore = create<UserState>()(
 
       pullData: async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) return false;
 
         try {
           // Save every local balance and transaction before accepting the
@@ -1164,6 +1232,13 @@ export const useStore = create<UserState>()(
           // pull is aborted so newer local values can never be overwritten.
           await useStore.getState().syncPendingWallets();
           await useStore.getState().syncPendingExpenses();
+          const stateAtPullStart = useStore.getState();
+          const walletFingerprintsAtPullStart = new Map(
+            stateAtPullStart.wallets.map(wallet => [wallet.id, walletSyncFingerprint(wallet)])
+          );
+          const expenseFingerprintsAtPullStart = new Map(
+            stateAtPullStart.expenses.map(expense => [expense.id, expenseSyncFingerprint(expense)])
+          );
           console.log('🔄 Pulling data from Supabase...');
           // Fetch all in parallel
           const [cats, ports, folds, walls, exps, prefs, pis, asts, subs] = await Promise.all([
@@ -1211,10 +1286,8 @@ export const useStore = create<UserState>()(
             color: f.color
           })) });
 
-          const currentWallets = useStore.getState().wallets;
-          if (walls.data) set({ wallets: walls.data.map((w: any) => {
-            const existing = currentWallets.find(ew => ew.id === w.id);
-            return {
+          if (walls.data) {
+            const remoteWallets: Wallet[] = walls.data.map((w: any) => ({
               id: w.id,
               portfolioId: w.portfolio_id,
               folderId: w.folder_id,
@@ -1224,12 +1297,39 @@ export const useStore = create<UserState>()(
               icon: w.icon,
               color: w.color,
               targetAmount: w.target_amount,
-              sortOrder: w.sort_order ?? existing?.sortOrder ?? 0
-            };
-          }) });
+              sortOrder: w.sort_order ?? 0
+            }));
+
+            set(current => {
+              const pendingIds = new Set(current.pendingWalletUpserts);
+              const localById = new Map(current.wallets.map(wallet => [wallet.id, wallet]));
+              const changedSincePullStarted = (id: string) => {
+                const localWallet = localById.get(id);
+                const startingFingerprint = walletFingerprintsAtPullStart.get(id);
+                return localWallet
+                  ? walletSyncFingerprint(localWallet) !== startingFingerprint
+                  : walletFingerprintsAtPullStart.has(id);
+              };
+              const mergedWallets = remoteWallets
+                .filter(wallet => !(changedSincePullStarted(wallet.id) && !localById.has(wallet.id)))
+                .map(wallet => pendingIds.has(wallet.id) || changedSincePullStarted(wallet.id)
+                  ? (localById.get(wallet.id) || wallet)
+                  : wallet);
+              const remoteIds = new Set(remoteWallets.map(wallet => wallet.id));
+
+              for (const wallet of current.wallets) {
+                if (
+                  !remoteIds.has(wallet.id)
+                  && (pendingIds.has(wallet.id) || changedSincePullStarted(wallet.id))
+                ) mergedWallets.push(wallet);
+              }
+
+              return { wallets: mergedWallets };
+            });
+          }
 
           if (exps.data) {
-            set({ expenses: exps.data.map((e: any) => ({
+            const remoteExpenses: Expense[] = exps.data.map((e: any) => ({
                  id: e.id,
                  originalAmount: e.amount,
                  originalCurrency: e.currency,
@@ -1243,7 +1343,41 @@ export const useStore = create<UserState>()(
                  isLarge: e.is_large,
                  isSubscription: e.is_subscription,
                  subscriptionNextChargeDate: e.subscription_next_charge_date
-            })) });
+            }));
+
+            set(current => {
+              // A user can add/edit an expense while the server SELECT is in
+              // flight. Preserve those queued local rows instead of replacing
+              // the whole array with the older server snapshot.
+              const pendingUpserts = new Set(current.pendingExpenseUpserts);
+              const pendingDeletes = new Set(current.pendingExpenseDeletes);
+              const localById = new Map(current.expenses.map(expense => [expense.id, expense]));
+              const changedSincePullStarted = (id: string) => {
+                const localExpense = localById.get(id);
+                const startingFingerprint = expenseFingerprintsAtPullStart.get(id);
+                return localExpense
+                  ? expenseSyncFingerprint(localExpense) !== startingFingerprint
+                  : expenseFingerprintsAtPullStart.has(id);
+              };
+              const mergedExpenses = remoteExpenses
+                .filter(expense =>
+                  !pendingDeletes.has(expense.id)
+                  && !(changedSincePullStarted(expense.id) && !localById.has(expense.id))
+                )
+                .map(expense => pendingUpserts.has(expense.id) || changedSincePullStarted(expense.id)
+                  ? (localById.get(expense.id) || expense)
+                  : expense);
+              const remoteIds = new Set(remoteExpenses.map(expense => expense.id));
+
+              for (const expense of current.expenses) {
+                if (
+                  !remoteIds.has(expense.id)
+                  && (pendingUpserts.has(expense.id) || changedSincePullStarted(expense.id))
+                ) mergedExpenses.push(expense);
+              }
+
+              return { expenses: mergedExpenses };
+            });
           }
 
           if (pis.data) {
@@ -1306,16 +1440,24 @@ export const useStore = create<UserState>()(
                 : (currentPrefs.goalRewards || []),
             }});
             
-            if (prefs.data.capital_history) {
-              set({ capitalHistory: prefs.data.capital_history });
-            }
+            // Never replace a richer local timeline with an empty or older
+            // cloud snapshot. Past daily entries are immutable; today's value
+            // is recalculated from the freshly pulled wallets below.
+            set(current => ({
+              capitalHistory: mergeCapitalHistory(
+                prefs.data.capital_history,
+                current.capitalHistory
+              ),
+            }));
           }
 
           useStore.getState().recordDailyCapital();
           useStore.getState().runSubscriptionAutoCharges();
           console.log('✅ Data pulled successfully');
+          return true;
         } catch (error) {
           console.error('❌ Error pulling data:', error);
+          return false;
         }
       },
 
@@ -1401,11 +1543,9 @@ export const useStore = create<UserState>()(
                // Wallets are intentionally excluded from this bulk push. They
                // are saved by syncPendingWallets above, so a stale snapshot
                // cannot overwrite a newer balance from this or another device.
-               resilientUpsert(
-                  'transactions',
-                  state.expenses.map(e => expenseToDatabaseRow(e, user.id)),
-                  'id'
-               ),
+                // Transactions are intentionally excluded from the bulk push.
+                // syncPendingExpenses above owns all writes, so an older full
+                // state snapshot can never land after a newer transaction edit.
                resilientUpsert('passive_income_sources', state.passiveIncomeSources.map(s => ({
                   id: s.id,
                   user_id: user.id,

@@ -47,6 +47,7 @@ export function MobileSidebar() {
 
   const selectPortfolio = (id: string) => {
     setSelectedPortfolioId(id);
+    setIsOpen(false);
     router.push('/wallets');
   };
 
@@ -68,21 +69,23 @@ export function MobileSidebar() {
         />
       )}
 
-      <motion.aside
-        animate={{ width: isOpen ? 292 : 60 }}
-        transition={{ type: 'spring', stiffness: 420, damping: 38 }}
-        className="lg:hidden fixed left-0 top-0 bottom-0 z-[110] flex flex-col overflow-hidden border-r border-white/[0.08] bg-[#08101d]/95 backdrop-blur-2xl shadow-[18px_0_45px_-28px_rgba(0,0,0,0.95)]"
+      <button
+        onClick={() => setIsOpen(value => !value)}
+        aria-label={isOpen ? 'Свернуть меню' : 'Развернуть меню'}
+        aria-expanded={isOpen}
+        className="lg:hidden fixed top-3 left-3 z-[111] w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-400/15 text-blue-300 flex items-center justify-center backdrop-blur-xl shadow-lg active:scale-95 transition-all"
       >
-        <div className="h-[72px] flex items-center px-2 border-b border-white/[0.06] flex-shrink-0">
-          <button
-            onClick={() => setIsOpen(value => !value)}
-            aria-label={isOpen ? 'Свернуть меню' : 'Развернуть меню'}
-            aria-expanded={isOpen}
-            className="w-11 h-11 rounded-2xl bg-blue-500/12 text-blue-300 flex items-center justify-center hover:bg-blue-500/20 active:scale-95 transition-all flex-shrink-0"
-          >
-            {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-          </button>
-          <div className={cn('ml-3 min-w-0 transition-opacity duration-200', isOpen ? 'opacity-100' : 'opacity-0')}>
+        {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+      </button>
+
+      <motion.aside
+        initial={false}
+        animate={{ x: isOpen ? 0 : -292 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+        className="lg:hidden fixed left-0 top-0 bottom-0 z-[110] w-[292px] flex flex-col overflow-hidden border-r border-white/[0.08] bg-[#08101d]/95 backdrop-blur-2xl shadow-[18px_0_45px_-28px_rgba(0,0,0,0.95)]"
+      >
+        <div className="h-[72px] flex items-center pl-[68px] pr-3 border-b border-white/[0.06] flex-shrink-0">
+          <div className="min-w-0">
             <p className="text-base font-black text-white whitespace-nowrap">DMoney</p>
             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/25 whitespace-nowrap">Навигация</p>
           </div>
@@ -97,7 +100,7 @@ export function MobileSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  title={!isOpen ? item.label : undefined}
+                  onClick={() => setIsOpen(false)}
                   className={cn(
                     'relative h-11 rounded-2xl flex items-center overflow-hidden transition-colors',
                     isActive ? 'text-blue-300 bg-blue-500/12' : 'text-white/35 hover:text-white/80 hover:bg-white/[0.04]'
@@ -106,10 +109,7 @@ export function MobileSidebar() {
                   <span className="w-11 h-11 flex items-center justify-center flex-shrink-0">
                     <Icon size={19} strokeWidth={isActive ? 2.5 : 1.8} />
                   </span>
-                  <span className={cn(
-                    'ml-2 text-xs font-black whitespace-nowrap transition-opacity duration-200',
-                    isOpen ? 'opacity-100' : 'opacity-0'
-                  )}>
+                  <span className="ml-2 text-xs font-black whitespace-nowrap">
                     {item.label}
                   </span>
                 </Link>
@@ -119,7 +119,7 @@ export function MobileSidebar() {
 
           <div className="h-px bg-white/[0.06] my-3" />
 
-          <div className={cn('px-2 pb-2 transition-opacity duration-200', isOpen ? 'opacity-100' : 'opacity-0')}>
+          <div className="px-2 pb-2">
             <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/25 whitespace-nowrap">Мои капиталы</p>
           </div>
 
@@ -131,7 +131,6 @@ export function MobileSidebar() {
                 <button
                   key={portfolio.id}
                   onClick={() => selectPortfolio(portfolio.id)}
-                  title={!isOpen ? portfolio.name : undefined}
                   className={cn(
                     'h-12 rounded-2xl flex items-center overflow-hidden text-left transition-colors',
                     isActive ? 'bg-blue-500/12' : 'hover:bg-white/[0.04]'
@@ -143,10 +142,10 @@ export function MobileSidebar() {
                   >
                     {portfolio.icon}
                   </span>
-                  <span className={cn('ml-2 min-w-0 flex-1 transition-opacity duration-200', isOpen ? 'opacity-100' : 'opacity-0')}>
+                  <span className="ml-2 min-w-0 flex-1">
                     <span className="block text-xs font-bold text-white/70 truncate">{portfolio.name}</span>
                   </span>
-                  <span className={cn('pr-3 text-[10px] font-black text-white/30 tabular-nums whitespace-nowrap transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}>
+                  <span className="pr-3 text-[10px] font-black text-white/30 tabular-nums whitespace-nowrap">
                     {getPortfolioBalance(portfolio.id).toFixed(0)} {displayCurrency}
                   </span>
                 </button>
@@ -155,7 +154,7 @@ export function MobileSidebar() {
 
             <Link
               href="/assets"
-              title={!isOpen ? 'Активы' : undefined}
+              onClick={() => setIsOpen(false)}
               className={cn(
                 'h-12 rounded-2xl flex items-center overflow-hidden transition-colors',
                 pathname.startsWith('/assets') ? 'bg-amber-400/10' : 'hover:bg-white/[0.04]'
@@ -164,8 +163,8 @@ export function MobileSidebar() {
               <span className="w-11 h-11 rounded-xl bg-amber-500/12 text-amber-300 flex items-center justify-center flex-shrink-0">
                 <Gem size={18} />
               </span>
-              <span className={cn('ml-2 min-w-0 flex-1 text-xs font-bold text-white/70 transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}>Активы</span>
-              <span className={cn('pr-3 text-[10px] font-black text-white/30 tabular-nums whitespace-nowrap transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}>
+              <span className="ml-2 min-w-0 flex-1 text-xs font-bold text-white/70">Активы</span>
+              <span className="pr-3 text-[10px] font-black text-white/30 tabular-nums whitespace-nowrap">
                 {assetsTotal.toFixed(0)} {displayCurrency}
               </span>
             </Link>
@@ -176,11 +175,10 @@ export function MobileSidebar() {
           <div className="p-2 border-t border-white/[0.06] flex-shrink-0">
             <button
               onClick={logout}
-              title={!isOpen ? 'Выйти' : undefined}
               className="w-full h-11 rounded-2xl flex items-center overflow-hidden text-white/30 hover:text-rose-400 hover:bg-rose-400/5 transition-colors"
             >
               <span className="w-11 h-11 flex items-center justify-center flex-shrink-0"><LogOut size={18} /></span>
-              <span className={cn('ml-2 text-xs font-black whitespace-nowrap transition-opacity', isOpen ? 'opacity-100' : 'opacity-0')}>Выйти</span>
+              <span className="ml-2 text-xs font-black whitespace-nowrap">Выйти</span>
             </button>
           </div>
         )}

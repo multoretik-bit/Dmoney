@@ -12,9 +12,17 @@ import { cn } from '@/lib/utils';
 import { convertAmount, fetchLatestRates, hydrateCachedRates } from '@/lib/exchange';
 import { AddExpenseModal } from '@/components/expenses/add-expense-modal';
 
+function formatCompactAmount(value: number) {
+  if (!Number.isFinite(value)) return '—';
+  return value.toLocaleString('ru-RU', {
+    notation: 'compact',
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, setUser, pullData, pushData, syncPendingWallets, wallets,
-    categories, portfolios, folders, expenses, preferences,
+  const { user, setUser, pullData, pushData, syncPendingWallets, syncPendingExpenses, wallets,
+    categories, portfolios, folders, expenses, preferences, capitalHistory,
     passiveIncomeSources, assets, subscriptions, runSubscriptionAutoCharges,
     isAuthModalOpen, setAuthModalOpen, dashboardCurrency, bumpExchangeRatesRevision,
   } = useStore();
@@ -23,6 +31,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [areExchangeRatesReady, setAreExchangeRatesReady] = useState(false);
   const [exchangeRateRefreshFinished, setExchangeRateRefreshFinished] = useState(false);
+  const [isInitialPullComplete, setIsInitialPullComplete] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const pushPendingRef = useRef(false);
 
@@ -82,7 +91,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
 
       setUser(session?.user ?? null);
-      if (session?.user) await pullData();
+      if (session?.user) {
+        const pulled = await pullData();
+        if (active) setIsInitialPullComplete(pulled);
+      } else {
+        setIsInitialPullComplete(false);
+      }
     };
 
     void restoreSession();
@@ -92,12 +106,18 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       if (event === 'SIGNED_OUT') {
         setUser(null);
+        setIsInitialPullComplete(false);
         return;
       }
 
       if (session?.user) {
         setUser(session.user);
-        if (event === 'SIGNED_IN') void pullData();
+        if (event === 'SIGNED_IN') {
+          setIsInitialPullComplete(false);
+          void pullData().then(pulled => {
+            if (active) setIsInitialPullComplete(pulled);
+          });
+        }
       }
     });
 
@@ -112,7 +132,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // before the debounce timer even starts) so the realtime pull below knows
   // not to fetch-and-overwrite while a local edit hasn't reached the server yet.
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isInitialPullComplete) return;
     pushPendingRef.current = true;
 
     const timeoutId = setTimeout(async () => {
@@ -128,25 +148,30 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }, 2000);
 
     return () => clearTimeout(timeoutId);
-  }, [user, categories, portfolios, folders, wallets, expenses, preferences, passiveIncomeSources, assets, subscriptions, pushData]);
+  }, [user, isInitialPullComplete, categories, portfolios, folders, wallets, expenses, preferences, passiveIncomeSources, assets, subscriptions, capitalHistory, pushData]);
 
   // Offline edits stay in the persisted queue. Retry them as soon as the app
   // comes online or returns to the foreground, without waiting for another edit.
   useEffect(() => {
     if (!user) return;
 
-    const flushPendingWallets = async () => {
+    const flushPendingData = async () => {
       setSyncStatus('syncing');
       try {
         await syncPendingWallets();
+        await syncPendingExpenses();
+        if (!isInitialPullComplete) {
+          const pulled = await pullData();
+          setIsInitialPullComplete(pulled);
+        }
         setSyncStatus('synced');
       } catch {
         setSyncStatus('error');
       }
     };
-    const handleOnline = () => void flushPendingWallets();
+    const handleOnline = () => void flushPendingData();
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') void flushPendingWallets();
+      if (document.visibilityState === 'visible') void flushPendingData();
     };
 
     window.addEventListener('online', handleOnline);
@@ -155,7 +180,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, syncPendingWallets]);
+  }, [user, isInitialPullComplete, pullData, syncPendingWallets, syncPendingExpenses]);
 
   // Real-time pull from Supabase with debounce
   useEffect(() => {
@@ -217,15 +242,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Header — mobile only, desktop uses the sidebar for branding/sync/balance */}
         <header className={cn(
-          "lg:hidden fixed top-0 left-[60px] right-0 z-[100] transition-all duration-300 px-4 py-4 flex items-center justify-between",
+          "lg:hidden fixed top-0 left-0 right-0 z-[100] transition-all duration-300 pl-[68px] pr-3 py-4 flex items-center justify-between gap-2",
           scrolled
             ? "bg-[#060B14]/80 backdrop-blur-2xl border-b border-white/[0.06] py-3"
             : "bg-transparent"
         )}>
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex min-w-0 items-center gap-2">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              className="hidden min-[390px]:flex w-9 h-9 rounded-xl items-center justify-center flex-shrink-0"
               style={{
                 background: 'linear-gradient(135deg, #3b82f6 0%, #818cf8 100%)',
                 boxShadow: '0 0 20px rgba(59,130,246,0.4)',
@@ -234,7 +259,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <CircleDollarSign className="text-white" size={20} />
             </div>
             <span
-              className="text-xl font-black tracking-tighter"
+              className="text-lg min-[390px]:text-xl font-black tracking-tighter truncate"
               style={{
                 background: 'linear-gradient(135deg, #93c5fd 0%, #60a5fa 50%, #a78bfa 100%)',
                 WebkitBackgroundClip: 'text',
@@ -246,7 +271,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
             {/* Sync dot — mobile only */}
             {user && (
               <div
@@ -277,9 +302,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             )}
 
             {/* Read-only balance indicator */}
-            <div className="flex items-center gap-1.5 px-2 py-2">
-              <span className="text-sm font-black text-blue-300 tracking-tight">
-                {totalBalance.toFixed(1)} {displayCurrency}
+            <div
+              className="flex min-w-0 items-center gap-1 px-1 py-2"
+              title={`${totalBalance.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} ${displayCurrency}`}
+            >
+              <span className="truncate whitespace-nowrap text-xs min-[390px]:text-sm font-black text-blue-300 tracking-tight tabular-nums">
+                {formatCompactAmount(totalBalance)} {displayCurrency}
               </span>
             </div>
           </div>
@@ -294,7 +322,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
-        <main className="flex-1 w-full max-w-[1480px] mx-auto relative pb-24 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 pl-[76px] pr-4 lg:px-8">
+        <main className="flex-1 w-full max-w-[1480px] mx-auto relative pb-24 lg:pb-16 overflow-x-hidden pt-24 lg:pt-8 px-3 min-[390px]:px-4 lg:px-8">
           {children}
         </main>
 

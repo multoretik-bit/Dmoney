@@ -78,14 +78,14 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
     chartEntries.push({
       date: todayStr,
       overallTotal: totalInBase,
-      portfolioTotals: currentPortfolioTotals
+      portfolioTotals: currentPortfolioTotals,
+      currency: preferences.baseCurrency,
     });
   }
 
   // Sort entries chronologically
   chartEntries = chartEntries
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-90); // Keep a generous pool so "biggest jumps" has something to pick from
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   // Reduce to first day, last day, and the biggest day-over-day swings —
   // a clean milestone chart instead of a dense line through every single day.
@@ -96,15 +96,15 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
     if (chartEntries.length > 0) {
       setSelectedPointIdx(chartEntries.length - 1);
     }
-  }, [activeTab, capitalHistory]);
+  }, [activeTab, capitalHistory, chartEntries.length]);
 
   // Helper to convert history entry amount from base currency to selected currency
-  const getConvertedHistoryAmount = (amountInBase: number) => {
-    return convertAmount(amountInBase, preferences.baseCurrency, selectedCurrency);
+  const getConvertedHistoryAmount = (amount: number, sourceCurrency = preferences.baseCurrency) => {
+    return convertAmount(amount, sourceCurrency, selectedCurrency);
   };
 
   // Find min and max for chart scaling, based on what's actually plotted
-  const historyValues = chartPoints.map(e => getConvertedHistoryAmount(e.overallTotal));
+  const historyValues = chartPoints.map(e => getConvertedHistoryAmount(e.overallTotal, e.currency));
   const maxVal = Math.max(...historyValues, 1) * 1.05;
   const minVal = Math.min(...historyValues, 0) * 0.95;
   const range = maxVal - minVal || 1;
@@ -116,9 +116,10 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
     const x = chartPoints.length > 1
       ? (idx / (chartPoints.length - 1)) * (width - 30) + 15
       : width / 2;
-    const y = height - ((getConvertedHistoryAmount(e.overallTotal) - minVal) / range) * (height - 40) - 20;
+    const convertedValue = getConvertedHistoryAmount(e.overallTotal, e.currency);
+    const y = height - ((convertedValue - minVal) / range) * (height - 40) - 20;
     const originalIdx = chartEntries.findIndex(ce => ce.date === e.date);
-    return { x, y, value: getConvertedHistoryAmount(e.overallTotal), date: e.date, originalIdx };
+    return { x, y, value: convertedValue, date: e.date, originalIdx };
   });
 
   const pathD = chartPoints.length > 1
@@ -134,8 +135,9 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
   // Overall trend across the visible history window, for the badge under the total.
   let periodChangePct: number | null = null;
   if (chartEntries.length > 1) {
-    const first = getConvertedHistoryAmount(chartEntries[0].overallTotal);
-    const last = getConvertedHistoryAmount(chartEntries[chartEntries.length - 1].overallTotal);
+    const first = getConvertedHistoryAmount(chartEntries[0].overallTotal, chartEntries[0].currency);
+    const lastEntry = chartEntries[chartEntries.length - 1];
+    const last = getConvertedHistoryAmount(lastEntry.overallTotal, lastEntry.currency);
     if (first > 0) periodChangePct = ((last - first) / first) * 100;
   }
 
@@ -472,14 +474,14 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                               Детализация на {new Date(selectedEntry.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </span>
                             <span className="text-xs font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-                              {getConvertedHistoryAmount(selectedEntry.overallTotal).toFixed(1)} {selectedCurrency}
+                              {getConvertedHistoryAmount(selectedEntry.overallTotal, selectedEntry.currency).toFixed(1)} {selectedCurrency}
                             </span>
                           </div>
                           
                           <div className="space-y-2">
                             {portfolios.map(portfolio => {
                               const amountInBase = selectedEntry.portfolioTotals[portfolio.id] || 0;
-                              const amountInSelected = getConvertedHistoryAmount(amountInBase);
+                              const amountInSelected = getConvertedHistoryAmount(amountInBase, selectedEntry.currency);
                               
                               return (
                                 <div key={portfolio.id} className="flex justify-between items-center text-sm">
@@ -501,11 +503,11 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
                       <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1 mt-1">
                         {chartEntries.slice().reverse().map((entry, idx) => {
                           const originalIdx = chartEntries.length - 1 - idx;
-                          const amount = getConvertedHistoryAmount(entry.overallTotal);
+                          const amount = getConvertedHistoryAmount(entry.overallTotal, entry.currency);
                           const prevEntry = chartEntries[originalIdx - 1];
                           let pctChange = 0;
                           if (prevEntry) {
-                            const prevAmount = getConvertedHistoryAmount(prevEntry.overallTotal);
+                            const prevAmount = getConvertedHistoryAmount(prevEntry.overallTotal, prevEntry.currency);
                             if (prevAmount > 0) {
                               pctChange = ((amount - prevAmount) / prevAmount) * 100;
                             }

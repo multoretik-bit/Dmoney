@@ -27,6 +27,7 @@ const VIEW_META: Record<ViewMode, { label: string; accent: string }> = {
 };
 
 function money(value: number, currency: string, digits = 0) {
+  if (!Number.isFinite(value)) return `— ${currency}`;
   return `${value.toLocaleString('ru-RU', {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
@@ -145,19 +146,23 @@ export function ExpensesView() {
     if (allPoints.length < 2) return null;
 
     const points = selectSignificantHistoryPoints(allPoints, MAX_HISTORY_BARS);
-    const values = points.map(point => point.overallTotal);
+    const values = points.map(point => convertAmount(
+      point.overallTotal,
+      point.currency || baseCurrency,
+      displayCurrency
+    ));
     const min = Math.min(...values);
     const range = Math.max(Math.max(...values) - min, 1);
     return {
       firstDate: allPoints[0].date,
       lastDate: allPoints[allPoints.length - 1].date,
-      bars: points.map(point => ({
+      bars: points.map((point, index) => ({
         date: point.date,
-        value: point.overallTotal,
-        height: 28 + ((point.overallTotal - min) / range) * 72,
+        value: values[index],
+        height: 28 + ((values[index] - min) / range) * 72,
       })),
     };
-  }, [capitalHistory]);
+  }, [baseCurrency, capitalHistory, displayCurrency]);
 
   const openExpense = (expense?: Expense) => {
     setEditingExpense(expense || null);
@@ -230,7 +235,7 @@ export function ExpensesView() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-bold text-blue-100/75">Общий капитал</p>
-                <p className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black tracking-[-0.04em] text-white tabular-nums">
+                <p className="mt-3 text-[clamp(1.65rem,8vw,3rem)] font-black tracking-[-0.04em] text-white tabular-nums break-words">
                   {money(totalCapital, displayCurrency, 1)}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -266,7 +271,7 @@ export function ExpensesView() {
                 {historyChart ? historyChart.bars.map((bar, index) => (
                   <div
                     key={`${bar.date}-${index}`}
-                    title={`${formatHistoryDate(bar.date)}: ${money(convertAmount(bar.value, baseCurrency, displayCurrency), displayCurrency, 1)}`}
+                    title={`${formatHistoryDate(bar.date)}: ${money(bar.value, displayCurrency, 1)}`}
                     className="flex-1 min-w-1 rounded-t-md bg-gradient-to-t from-blue-400/20 to-cyan-200/80"
                     style={{ height: `${bar.height}%`, opacity: 0.38 + (index / historyChart.bars.length) * 0.62 }}
                   />
@@ -315,7 +320,7 @@ export function ExpensesView() {
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
         <div className="xl:col-span-7 rounded-[28px] p-5 lg:p-6 bg-[#0c1422]/95 border border-white/[0.075]">
-          <div className="flex items-center justify-between gap-4 mb-5">
+          <div className="flex items-start justify-between gap-3 mb-5">
             <div>
               <div className="flex items-center gap-2">
                 <Sparkles size={17} className="text-emerald-300" />
@@ -323,9 +328,9 @@ export function ExpensesView() {
               </div>
               <p className="text-[11px] text-white/35 mt-1">Источники, которые работают каждый месяц</p>
             </div>
-            <div className="text-right">
+            <div className="min-w-0 max-w-[48%] text-right">
               <p className="text-[10px] font-bold uppercase tracking-wider text-white/30">Всего в месяц</p>
-              <p className="text-xl font-black text-emerald-300 tabular-nums">{money(passiveTotal, displayCurrency, 1)}</p>
+              <p className="truncate text-base min-[390px]:text-xl font-black text-emerald-300 tabular-nums" title={money(passiveTotal, displayCurrency, 1)}>{money(passiveTotal, displayCurrency, 1)}</p>
             </div>
           </div>
           <PassiveIncomeTab selectedCurrency={displayCurrency} compact />
@@ -349,7 +354,7 @@ export function ExpensesView() {
               ) : portfolioTotals.map(portfolio => (
                 <div
                   key={portfolio.id}
-                  className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.025] border border-white/[0.055]"
+                  className="flex min-w-0 items-center gap-2.5 p-3 min-[390px]:p-3.5 rounded-2xl bg-white/[0.025] border border-white/[0.055]"
                 >
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
@@ -363,7 +368,10 @@ export function ExpensesView() {
                       {portfolio.walletCount} {portfolio.walletCount === 1 ? 'счёт' : 'счетов'}
                     </p>
                   </div>
-                  <span className="text-sm font-black text-white tabular-nums text-right">
+                  <span
+                    className="max-w-[48%] flex-shrink-0 truncate whitespace-nowrap text-xs min-[390px]:text-sm font-black text-white tabular-nums text-right"
+                    title={money(portfolio.total, displayCurrency, 1)}
+                  >
                     {money(portfolio.total, displayCurrency, 1)}
                   </span>
                 </div>
