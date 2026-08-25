@@ -390,6 +390,11 @@ export const useStore = create<UserState>()(
       recordDailyCapital: () => {
         const state = useStore.getState();
         const today = new Date().toLocaleDateString('sv');
+
+        // The dashboard is live, but the chart is a daily ledger. Once the
+        // current date has a snapshot, later expenses and rate refreshes must
+        // not rewrite that historical point.
+        if (state.capitalHistory.some(entry => entry.date === today)) return;
         
         const portfolioTotals: { [id: string]: number } = {};
         let overallTotal = 0;

@@ -104,7 +104,9 @@ export function ExpensesView() {
     && (viewMode !== 'personal' || !excludedCategoryIds.has(expense.categoryId))
   ), [excludedCategoryIds, filteredExpenses, monthKey, viewMode]);
 
-  const portfolioTotals = useMemo(() => portfolios.map(portfolio => {
+  // Currency rates live outside React state, so this intentionally recalculates
+  // on every store render (including exchangeRatesRevision updates).
+  const portfolioTotals = portfolios.map(portfolio => {
     const portfolioWallets = wallets.filter(wallet => wallet.portfolioId === portfolio.id);
     return {
       ...portfolio,
@@ -112,7 +114,7 @@ export function ExpensesView() {
       total: portfolioWallets.reduce((sum, wallet) =>
         sum + convertAmount(Number(wallet.balance || 0), wallet.currency, displayCurrency), 0),
     };
-  }), [displayCurrency, portfolios, wallets]);
+  });
 
   const totalCapital = portfolioTotals.reduce((sum, portfolio) => sum + portfolio.total, 0);
 
@@ -141,7 +143,7 @@ export function ExpensesView() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 3);
 
-  const historyChart = useMemo(() => {
+  const historyChart = (() => {
     const allPoints = [...(capitalHistory || [])].sort((a, b) => a.date.localeCompare(b.date));
     if (allPoints.length < 2) return null;
 
@@ -162,7 +164,7 @@ export function ExpensesView() {
         height: 28 + ((values[index] - min) / range) * 72,
       })),
     };
-  }, [baseCurrency, capitalHistory, displayCurrency]);
+  })();
 
   const openExpense = (expense?: Expense) => {
     setEditingExpense(expense || null);

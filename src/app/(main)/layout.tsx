@@ -37,21 +37,42 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     let active = true;
+    let refreshInFlight = false;
 
     // Use the last successful rates (or the complete realistic fallback) for
-    // the first visible frame, then refresh and notify every money component.
+    // the first visible frame, then refresh whenever the app starts, returns
+    // to the foreground, reconnects, or stays open for a long time.
     hydrateCachedRates();
     bumpExchangeRatesRevision();
     setAreExchangeRatesReady(true);
 
-    void fetchLatestRates().finally(() => {
-      if (!active) return;
-      bumpExchangeRatesRevision();
-      setExchangeRateRefreshFinished(true);
-    });
+    const refreshRates = async () => {
+      if (refreshInFlight) return;
+      refreshInFlight = true;
+      try {
+        await fetchLatestRates();
+        if (active) bumpExchangeRatesRevision();
+      } finally {
+        refreshInFlight = false;
+        if (active) setExchangeRateRefreshFinished(true);
+      }
+    };
+
+    const handleOnline = () => void refreshRates();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void refreshRates();
+    };
+    const intervalId = window.setInterval(() => void refreshRates(), 60 * 60 * 1000);
+
+    void refreshRates();
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [bumpExchangeRatesRevision]);
 
