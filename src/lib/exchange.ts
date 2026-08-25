@@ -68,6 +68,27 @@ export async function fetchLatestRates() {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
+    // Primary source: keyless market rates refreshed hourly. This keeps every
+    // live balance current while the daily chart remains a fixed snapshot.
+    try {
+      const liveResponse = await fetch('https://api.exchangerate.fun/latest?base=USD', {
+        signal: controller.signal,
+      });
+      if (liveResponse.ok) {
+        const liveData = await liveResponse.json();
+        if (isValidRates(liveData?.rates)) {
+          cachedRates = { ...FALLBACK_RATES, ...liveData.rates };
+          lastFetch = now;
+          persistRates();
+          return cachedRates;
+        }
+      }
+    } catch (error) {
+      console.warn('Live exchange-rate source unavailable, using daily fallback:', error);
+    }
+
+    // Fallbacks: the previous broad currency feed plus the official daily CBR
+    // quote for RUB. They keep conversions available if the live feed is down.
     const [erResponse, cbrData] = await Promise.all([
       fetch('https://open.er-api.com/v6/latest/USD', { signal: controller.signal }),
       fetchCBRRates(controller.signal),
