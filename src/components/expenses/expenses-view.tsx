@@ -235,23 +235,23 @@ export function ExpensesView() {
         <div className="xl:col-span-7 min-h-[270px] rounded-[28px] p-6 lg:p-8 relative overflow-hidden border border-blue-400/20 bg-[linear-gradient(145deg,#1747a6_0%,#102b66_46%,#0b1426_100%)] shadow-[0_24px_70px_-35px_rgba(37,99,235,0.75)]">
           <div className="absolute -top-28 -right-20 w-80 h-80 rounded-full bg-blue-300/10 blur-3xl" />
           <div className="relative z-10 h-full flex flex-col justify-between gap-8">
-            <div className="flex flex-col gap-5">
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <CapitalGoalButton currency={displayCurrency} />
-              <select
-                value={displayCurrency}
-                onChange={event => setDashboardCurrency(event.target.value)}
-                aria-label="Валюта отображения"
-                className="px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-[11px] font-black text-blue-100 outline-none"
-              >
-                {COMMON_CURRENCIES.map(currency => (
-                  <option key={currency} value={currency} className="bg-[#10234a]">{currency}</option>
-                ))}
-              </select>
-              </div>
-              <p aria-label="Общий капитал" className="text-[clamp(1.65rem,8vw,3rem)] font-black tracking-[-0.04em] text-white tabular-nums break-words">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <p aria-label="Общий капитал" className="min-w-0 text-[clamp(1.65rem,8vw,3rem)] font-black leading-tight tracking-[-0.04em] text-white tabular-nums break-words">
                 {money(totalCapital, displayCurrency, 1)}
               </p>
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <CapitalGoalButton currency={displayCurrency} />
+                <select
+                  value={displayCurrency}
+                  onChange={event => setDashboardCurrency(event.target.value)}
+                  aria-label="Валюта отображения"
+                  className="px-3 py-2 rounded-xl bg-black/20 border border-white/10 text-[11px] font-black text-blue-100 outline-none"
+                >
+                  {COMMON_CURRENCIES.map(currency => (
+                    <option key={currency} value={currency} className="bg-[#10234a]">{currency}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
