@@ -301,3 +301,5 @@ CREATE TRIGGER protect_wallet_balance_from_stale_clients
 BEFORE UPDATE ON public.wallets
 FOR EACH ROW
 EXECUTE FUNCTION public.reject_unversioned_wallet_balance_update();
+
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS capital_goal JSONB;

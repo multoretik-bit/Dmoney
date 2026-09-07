@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { AddExpenseModal } from './add-expense-modal';
 import { PassiveIncomeTab } from '@/components/ui/passive-income-tab';
 import { SavingsGoalWidget } from './savings-goal-widget';
+import { CapitalGoalButton, CapitalGoalProgress } from './capital-goal';
 import { getNextChargeDate } from './subscriptions-section';
 
 type ViewMode = 'personal' | 'work' | 'large';
@@ -234,23 +235,9 @@ export function ExpensesView() {
         <div className="xl:col-span-7 min-h-[270px] rounded-[28px] p-6 lg:p-8 relative overflow-hidden border border-blue-400/20 bg-[linear-gradient(145deg,#1747a6_0%,#102b66_46%,#0b1426_100%)] shadow-[0_24px_70px_-35px_rgba(37,99,235,0.75)]">
           <div className="absolute -top-28 -right-20 w-80 h-80 rounded-full bg-blue-300/10 blur-3xl" />
           <div className="relative z-10 h-full flex flex-col justify-between gap-8">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold text-blue-100/75">Общий капитал</p>
-                <p className="mt-3 text-[clamp(1.65rem,8vw,3rem)] font-black tracking-[-0.04em] text-white tabular-nums break-words">
-                  {money(totalCapital, displayCurrency, 1)}
-                </p>
-                <div className="flex flex-wrap items-center gap-2 mt-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-400/12 border border-emerald-300/15 text-[11px] font-bold text-emerald-300">
-                    <ArrowUpRight size={13} />
-                    {portfolios.length} капиталов
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.07] border border-white/10 text-[11px] font-bold text-white/60">
-                    <WalletCards size={13} />
-                    {wallets.length} счетов
-                  </span>
-                </div>
-              </div>
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <CapitalGoalButton currency={displayCurrency} />
               <select
                 value={displayCurrency}
                 onChange={event => setDashboardCurrency(event.target.value)}
@@ -261,15 +248,14 @@ export function ExpensesView() {
                   <option key={currency} value={currency} className="bg-[#10234a]">{currency}</option>
                 ))}
               </select>
+              </div>
+              <p aria-label="Общий капитал" className="text-[clamp(1.65rem,8vw,3rem)] font-black tracking-[-0.04em] text-white tabular-nums break-words">
+                {money(totalCapital, displayCurrency, 1)}
+              </p>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2 text-[9px] font-bold uppercase tracking-wider text-blue-100/35">
-                <span>{historyChart ? formatHistoryDate(historyChart.firstDate) : 'Первый замер'}</span>
-                <span>Рост за всё время</span>
-                <span>{historyChart ? formatHistoryDate(historyChart.lastDate) : 'Последний замер'}</span>
-              </div>
-              <div className="flex items-end gap-1 h-16" aria-label="Рост общего капитала за всё время">
+              <div className="flex items-end gap-1 h-16" aria-label="Динамика общего капитала">
                 {historyChart ? historyChart.bars.map((bar, index) => (
                   <div
                     key={`${bar.date}-${index}`}
@@ -285,6 +271,7 @@ export function ExpensesView() {
                   </div>
                 )}
               </div>
+              <CapitalGoalProgress totalCapital={totalCapital} currency={displayCurrency} />
             </div>
           </div>
         </div>

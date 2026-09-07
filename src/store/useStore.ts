@@ -258,7 +258,14 @@ export interface GoalReward {
   earnedAt: string;
 }
 
+export interface CapitalGoal {
+  target: number;
+  currency: string;
+  deadline: string;
+}
+
 export interface UserPreferences {
+  capitalGoal?: CapitalGoal | null;
   baseCurrency: string;
   savedColors: string[];
   workBudgetLimit?: number;
@@ -1440,6 +1447,7 @@ export const useStore = create<UserState>()(
               longTermGoals: prefs.data.long_term_goals !== undefined
                 ? (prefs.data.long_term_goals || [])
                 : (currentPrefs.longTermGoals || []),
+              capitalGoal: prefs.data.capital_goal !== undefined ? prefs.data.capital_goal : currentPrefs.capitalGoal,
               goalRewards: prefs.data.goal_rewards !== undefined
                 ? (prefs.data.goal_rewards || [])
                 : (currentPrefs.goalRewards || []),
@@ -1483,6 +1491,7 @@ export const useStore = create<UserState>()(
            savings_goals: state.preferences.savingsGoals || null,
            long_term_goals: state.preferences.longTermGoals || [],
            goal_rewards: state.preferences.goalRewards || [],
+           capital_goal: state.preferences.capitalGoal || null,
            capital_history: state.capitalHistory || [],
            updated_at: new Date().toISOString()
          };
