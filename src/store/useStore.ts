@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { convertAmount, getExchangeRate } from '@/lib/exchange';
 import { generateUUID } from '@/lib/uuid';
+import { getLiveCapitalHistory } from '@/lib/capital';
 
 export function currentMonthKey(): string {
   const d = new Date();
@@ -396,33 +397,11 @@ export const useStore = create<UserState>()(
       
       recordDailyCapital: () => {
         const state = useStore.getState();
-        const today = new Date().toLocaleDateString('sv');
-
-        // The dashboard is live, but the chart is a daily ledger. Once the
-        // current date has a snapshot, later expenses and rate refreshes must
-        // not rewrite that historical point.
-        if (state.capitalHistory.some(entry => entry.date === today)) return;
-        
-        const portfolioTotals: { [id: string]: number } = {};
-        let overallTotal = 0;
-        
-        state.portfolios.forEach(portfolio => {
-          const portfolioWallets = state.wallets.filter(w => w.portfolioId === portfolio.id);
-          const totalInBase = portfolioWallets.reduce((sum, w) => {
-            return sum + convertAmount(Number(w.balance || 0), w.currency, state.preferences.baseCurrency);
-          }, 0);
-          portfolioTotals[portfolio.id] = Number(totalInBase.toFixed(1));
-          overallTotal += totalInBase;
-        });
-        
-        const newEntry: DailyCapitalEntry = {
-          date: today,
-          overallTotal: Number(overallTotal.toFixed(1)),
-          portfolioTotals,
-          currency: state.preferences.baseCurrency,
-        };
-
-        set({ capitalHistory: mergeCapitalHistory(state.capitalHistory, [newEntry]) });
+        const capitalHistory = getLiveCapitalHistory(
+          state.capitalHistory, state.wallets, state.portfolios, state.preferences.baseCurrency,
+        );
+        if (JSON.stringify(capitalHistory) === JSON.stringify(state.capitalHistory)) return;
+        set({ capitalHistory });
       },
 
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),

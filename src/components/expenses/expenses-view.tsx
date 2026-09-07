@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useStore, DailyCapitalEntry, Expense } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
+import { getTotalCapital, getLiveCapitalHistory } from '@/lib/capital';
 import { COMMON_CURRENCIES } from '@/lib/currencies';
 import { cn } from '@/lib/utils';
 import { AddExpenseModal } from './add-expense-modal';
@@ -117,7 +118,7 @@ export function ExpensesView() {
     };
   });
 
-  const totalCapital = portfolioTotals.reduce((sum, portfolio) => sum + portfolio.total, 0);
+  const totalCapital = getTotalCapital(wallets, displayCurrency);
 
   const upcoming = subscriptions
     .map(subscription => ({
@@ -145,7 +146,7 @@ export function ExpensesView() {
     .slice(0, 3);
 
   const historyChart = (() => {
-    const allPoints = [...(capitalHistory || [])].sort((a, b) => a.date.localeCompare(b.date));
+    const allPoints = getLiveCapitalHistory(capitalHistory || [], wallets, portfolios, baseCurrency);
     if (allPoints.length < 2) return null;
 
     const points = selectSignificantHistoryPoints(allPoints, MAX_HISTORY_BARS);

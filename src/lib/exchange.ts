@@ -15,11 +15,11 @@ const FALLBACK_RATES: Record<string, number> = {
 
 let cachedRates: Record<string, number> = { ...FALLBACK_RATES };
 let lastFetch = 0;
-const CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
+const CACHE_DURATION = 1000 * 60; // Poll for newly published quotes every minute.
+let refreshInFlight: Promise<Record<string, number>> | null = null;
 const REQUEST_TIMEOUT = 8000;
 const STORAGE_KEY = 'dmoney-exchange-rates';
 
-import { fetchCBRRates } from './cbr';
 
 function isValidRates(value: unknown): value is Record<string, number> {
   if (!value || typeof value !== 'object') return false;
@@ -60,59 +60,48 @@ function persistRates() {
   }
 }
 
-export async function fetchLatestRates() {
-  const now = Date.now();
-  if (now - lastFetch < CACHE_DURATION) return cachedRates;
-
+async function fetchRateJson(url: string) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
   try {
-    // Primary source: keyless market rates refreshed hourly. This keeps every
-    // live balance current while the daily chart remains a fixed snapshot.
-    try {
-      const liveResponse = await fetch('https://api.exchangerate.fun/latest?base=USD', {
-        signal: controller.signal,
-      });
-      if (liveResponse.ok) {
-        const liveData = await liveResponse.json();
-        if (isValidRates(liveData?.rates)) {
-          cachedRates = { ...FALLBACK_RATES, ...liveData.rates };
-          lastFetch = now;
-          persistRates();
-          return cachedRates;
-        }
-      }
-    } catch (error) {
-      console.warn('Live exchange-rate source unavailable, using daily fallback:', error);
-    }
-
-    // Fallbacks: the previous broad currency feed plus the official daily CBR
-    // quote for RUB. They keep conversions available if the live feed is down.
-    const [erResponse, cbrData] = await Promise.all([
-      fetch('https://open.er-api.com/v6/latest/USD', { signal: controller.signal }),
-      fetchCBRRates(controller.signal),
-    ]);
-    if (!erResponse.ok) throw new Error(`Exchange-rate request failed with ${erResponse.status}`);
-
-    const data = await erResponse.json();
-    if (isValidRates(data?.rates)) {
-      cachedRates = { ...FALLBACK_RATES, ...data.rates };
-
-      const cbrUsd = cbrData?.Valute?.USD;
-      if (cbrUsd && cbrUsd.Nominal > 0 && cbrUsd.Value > 0) {
-        cachedRates.RUB = cbrUsd.Value / cbrUsd.Nominal;
-      }
-
-      lastFetch = now;
-      persistRates();
-    }
-  } catch (error) {
-    console.error('Failed to fetch rates:', error);
+    const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    if (!response.ok) throw new Error('Exchange-rate request failed: ' + response.status);
+    return await response.json();
   } finally {
     clearTimeout(timeoutId);
   }
-  return cachedRates;
+}
+
+export async function fetchLatestRates(force = false) {
+  if (refreshInFlight) return refreshInFlight;
+  if (!force && Date.now() - lastFetch < CACHE_DURATION) return cachedRates;
+
+  refreshInFlight = (async () => {
+    try {
+      const data = await fetchRateJson('https://api.exchangerate.fun/latest?base=USD');
+      if (!isValidRates(data?.rates)) throw new Error('Invalid exchange rates');
+      cachedRates = { ...FALLBACK_RATES, ...data.rates };
+      lastFetch = Date.now();
+      persistRates();
+    } catch (error) {
+      console.warn('Live exchange-rate source unavailable:', error);
+      // Keep the last successful quote during an outage; do not replace it
+      // with a daily fixing that makes the capital jump backwards in time.
+      if (lastFetch > 0) return cachedRates;
+      try {
+        // The fallback gets its own timeout, even if the primary timed out.
+        const data = await fetchRateJson('https://open.er-api.com/v6/latest/USD');
+        if (!isValidRates(data?.rates)) throw new Error('Invalid fallback rates');
+        cachedRates = { ...FALLBACK_RATES, ...data.rates };
+        lastFetch = Date.now();
+        persistRates();
+      } catch (fallbackError) {
+        console.warn('Exchange-rate fallback unavailable:', fallbackError);
+      }
+    }
+    return cachedRates;
+  })().finally(() => { refreshInFlight = null; });
+  return refreshInFlight;
 }
 
 export function getExchangeRate(fromCurrency: string, toCurrency: string): number {

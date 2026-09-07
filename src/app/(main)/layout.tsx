@@ -24,7 +24,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const { user, setUser, pullData, pushData, syncPendingWallets, syncPendingExpenses, wallets,
     categories, portfolios, folders, expenses, preferences, capitalHistory,
     passiveIncomeSources, assets, subscriptions, runSubscriptionAutoCharges,
-    isAuthModalOpen, setAuthModalOpen, dashboardCurrency, bumpExchangeRatesRevision,
+    isAuthModalOpen, setAuthModalOpen, dashboardCurrency, bumpExchangeRatesRevision, exchangeRatesRevision, recordDailyCapital,
   } = useStore();
   const displayCurrency = dashboardCurrency || preferences.baseCurrency;
   const [scrolled, setScrolled] = useState(false);
@@ -46,11 +46,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     bumpExchangeRatesRevision();
     setAreExchangeRatesReady(true);
 
-    const refreshRates = async () => {
+    const refreshRates = async (force = false) => {
       if (refreshInFlight) return;
       refreshInFlight = true;
       try {
-        await fetchLatestRates();
+        await fetchLatestRates(force);
         if (active) bumpExchangeRatesRevision();
       } finally {
         refreshInFlight = false;
@@ -58,13 +58,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
     };
 
-    const handleOnline = () => void refreshRates();
+    const handleOnline = () => void refreshRates(true);
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') void refreshRates();
+      if (document.visibilityState === 'visible') void refreshRates(true);
     };
-    const intervalId = window.setInterval(() => void refreshRates(), 60 * 60 * 1000);
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refreshRates();
+    }, 60 * 1000);
 
-    void refreshRates();
+    void refreshRates(true);
     window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -75,6 +77,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [bumpExchangeRatesRevision]);
+
+  useEffect(() => {
+    if (areExchangeRatesReady) recordDailyCapital();
+  }, [areExchangeRatesReady, wallets, portfolios, preferences.baseCurrency, exchangeRatesRevision, recordDailyCapital]);
 
   useEffect(() => {
     if (!exchangeRateRefreshFinished) return;

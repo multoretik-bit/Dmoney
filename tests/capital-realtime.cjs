@@ -1,0 +1,82 @@
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert/strict');
+const {createRequire} = require('module');
+const root = path.resolve(__dirname, '..') + path.sep;
+const req = createRequire(root+'package.json');
+const ts = req('typescript');
+const rates = rub => ({ USD:1, EUR:0.9, RUB:rub, KZT:450, THB:35, KGS:87, GBP:0.8, TRY:40, GEL:2.7 });
+function environment(fetcher) {
+ const cache = new Map();
+ function load(name) {
+  if (name === '@/lib/supabase') return {supabase:{auth:{getUser:async()=>({data:{user:null}})}}};
+  if (name === 'zustand/middleware') return {...req(name),persist:fn=>fn};
+  if (!name.startsWith('@/') && !name.startsWith('.')) return req(name);
+  const file = name.startsWith('@/') ? root+'src/'+name.slice(2)+'.ts' : root+'src/lib/'+name.replace('./','')+'.ts';
+  if (cache.has(file)) return cache.get(file).exports;
+  const mod={exports:{}}; cache.set(file,mod);
+  const js = ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText;
+  new Function('require','module','exports','fetch',js)(load,mod,mod.exports,fetcher);
+  return mod.exports;
+ }
+ return load;
+}
+(async()=>{
+ let rub=100, requests=0, fail=false;
+ const load=environment(async(url,options)=>{
+  requests++; assert.equal(options.cache,'no-store');
+  if(fail) throw new Error('Simulated offline');
+  return {ok:true,json:async()=>({rates:rates(rub)})};
+ });
+ const exchange=load('@/lib/exchange');
+ await Promise.all([exchange.fetchLatestRates(true),exchange.fetchLatestRates(true)]);
+ assert.equal(requests,1,'Concurrent consumers share one request');
+ const {getTotalCapital,getLiveCapitalHistory}=load('@/lib/capital');
+ const {useStore}=load('@/store/useStore');
+ const portfolios=[{id:'p',name:'Capital',color:'#fff',icon:'',sortOrder:0}];
+ const wallets=[{id:'usd',portfolioId:'p',name:'USD',currency:'USD',balance:100},{id:'rub',portfolioId:'not-loaded',name:'RUB',currency:'RUB',balance:5000}];
+ const history=[{date:'2000-01-01',overallTotal:15000,portfolioTotals:{p:10000},currency:'RUB'}];
+ useStore.setState({wallets,portfolios,expenses:[],user:null,preferences:{baseCurrency:'RUB',savedColors:[]},capitalHistory:history});
+ const total=()=>getTotalCapital(useStore.getState().wallets,'RUB');
+ assert.equal(total(),15000,'All wallets count, including unloaded portfolios');
+ const purchase={id:'buy',originalAmount:1000,originalCurrency:'RUB',convertedAmount:1000,walletAmount:1000,exchangeRate:1,categoryId:'food',walletId:'rub',date:new Date().toISOString()};
+ let notifications=0; const unsub=useStore.subscribe(()=>notifications++);
+ useStore.getState().addExpense(purchase);
+ assert.equal(total(),14000,'Purchase changes total synchronously before cloud sync');
+ assert.ok(notifications>0,'React store subscribers are notified');
+ let live=getLiveCapitalHistory(history,useStore.getState().wallets,portfolios,'RUB');
+ assert.equal(live.at(-1).overallTotal,14000);
+ useStore.getState().recordDailyCapital();
+ useStore.getState().updateExpense('buy',{...purchase,originalAmount:2000,convertedAmount:2000,walletAmount:2000});
+ assert.equal(total(),13000);
+ useStore.getState().recordDailyCapital();
+ assert.equal(useStore.getState().capitalHistory.at(-1).overallTotal,13000,'Today does not freeze at first snapshot');
+ assert.equal(useStore.getState().capitalHistory[0].overallTotal,15000,'Past days unchanged');
+ useStore.getState().deleteExpense('buy');
+ assert.equal(total(),15000,'Delete restores money immediately');
+ rub=120;
+ await exchange.fetchLatestRates();
+ assert.equal(requests,1,'Regular requests respect one-minute cache');
+ await exchange.fetchLatestRates(true);
+ assert.equal(total(),17000,'New USD quote reprices live capital');
+ useStore.getState().recordDailyCapital();
+ assert.equal(useStore.getState().capitalHistory.at(-1).overallTotal,17000);
+ const previous=useStore.getState().capitalHistory;
+ useStore.getState().recordDailyCapital();
+ assert.equal(useStore.getState().capitalHistory,previous,'Unchanged quotes do not trigger cloud writes');
+ fail=true; await exchange.fetchLatestRates(true);
+ assert.equal(total(),17000,'Network failure preserves last successful quote');
+ useStore.setState({wallets:[{...wallets[0],balance:0},{...wallets[1],balance:-100}]});
+ assert.equal(getLiveCapitalHistory(history,useStore.getState().wallets,portfolios,'RUB').at(-1).overallTotal,-100,'Zero and negative balances are plotted');
+ unsub();
+ let urls=[];
+ const fallback=environment(async(url,options)=>{
+  urls.push(url); assert.equal(options.signal.aborted,false);
+  if(url.includes('exchangerate.fun')) throw new Error('Simulated primary timeout');
+  return {ok:true,json:async()=>({rates:rates(110)})};
+ })('@/lib/exchange');
+ await fallback.fetchLatestRates(true);
+ assert.equal(urls.length,2);
+ assert.equal(fallback.convertAmount(1,'USD','RUB'),110,'Fallback gets independent request and signal');
+ console.log('PASS: immediate purchase/edit/delete, subscriber update, all wallets, live chart, preserved history, FX repricing, request deduplication/cache, offline quote retention, fallback, zero/negative balances.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

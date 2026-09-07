@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore, DailyCapitalEntry } from '@/store/useStore';
 import { convertAmount } from '@/lib/exchange';
+import { getTotalCapital, getLiveCapitalHistory } from '@/lib/capital';
 import { X, ChevronDown, TrendingUp, TrendingDown, Calendar, Info, Sprout } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -51,41 +52,9 @@ export function CapitalsModal({ isOpen, onClose }: CapitalsModalProps) {
     };
   });
 
-  const overallTotal = portfolioTotals.reduce((sum, p) => sum + p.total, 0);
+  const overallTotal = getTotalCapital(wallets, selectedCurrency);
 
-  // Generate chart data based on history
-  const todayStr = new Date().toLocaleDateString('sv');
-  let chartEntries = [...(capitalHistory || [])];
-  
-  // Make sure we have today's current value in chart data
-  const hasToday = chartEntries.some(e => e.date === todayStr);
-  if (!hasToday && overallTotal > 0) {
-    const currentPortfolioTotals: { [id: string]: number } = {};
-    portfolioTotals.forEach(p => {
-      // Calculate in base currency for history compatibility
-      const portfolioWallets = wallets.filter(w => w.portfolioId === p.id);
-      const totalInBase = portfolioWallets.reduce((sum, w) => {
-        return sum + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency);
-      }, 0);
-      currentPortfolioTotals[p.id] = totalInBase;
-    });
-
-    const totalInBase = portfolios.reduce((sum, portfolio) => {
-      const portfolioWallets = wallets.filter(w => w.portfolioId === portfolio.id);
-      return sum + portfolioWallets.reduce((s, w) => s + convertAmount(Number(w.balance || 0), w.currency, preferences.baseCurrency), 0);
-    }, 0);
-
-    chartEntries.push({
-      date: todayStr,
-      overallTotal: totalInBase,
-      portfolioTotals: currentPortfolioTotals,
-      currency: preferences.baseCurrency,
-    });
-  }
-
-  // Sort entries chronologically
-  chartEntries = chartEntries
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const chartEntries = getLiveCapitalHistory(capitalHistory || [], wallets, portfolios, preferences.baseCurrency);
 
   // Reduce to first day, last day, and the biggest day-over-day swings —
   // a clean milestone chart instead of a dense line through every single day.
