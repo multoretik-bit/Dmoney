@@ -8,9 +8,7 @@ import { generateUUID } from '@/lib/uuid';
 import { convertAmount } from '@/lib/exchange';
 
 const CATEGORIES: { key: SavingsGoalCategory; label: string; icon: string; color: string }[] = [
-  { key: 'work', label: 'В работу', icon: '💼', color: '#f59e0b' },
-  { key: 'savings', label: 'Откладывать', icon: '💰', color: '#60a5fa' },
-  { key: 'invest', label: 'Инвестировать', icon: '📈', color: '#8b5cf6' },
+  { key: 'savings', label: 'Отложить', icon: '💰', color: '#60a5fa' },
 ];
 
 function resizeRewardImage(file: File): Promise<string> {
@@ -39,134 +37,99 @@ function resizeRewardImage(file: File): Promise<string> {
 
 function SavingsGoalRow({ category, label, icon, color, displayCurrency }: { category: SavingsGoalCategory; label: string; icon: string; color: string; displayCurrency: string }) {
   const { preferences, setSavingsGoalTarget, addSavingsProgress } = useStore();
-  const { baseCurrency } = preferences;
-  const month = currentMonthKey();
-  const goal = preferences.savingsGoals?.[category]?.month === month ? preferences.savingsGoals?.[category] : null;
+  const [today, setToday] = useState(() => new Date());
+  const [mode, setMode] = useState<'target' | 'deposit' | null>(null);
+  const [input, setInput] = useState('');
+  const [error, setError] = useState('');
 
-  const [isEditingTarget, setIsEditingTarget] = useState(false);
-  const [targetInput, setTargetInput] = useState('');
+  useEffect(() => {
+    const refresh = () => setToday(new Date());
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
 
-  const target = goal?.target || 0;
-  const saved = goal?.saved || 0;
-  const displayedTarget = convertAmount(target, baseCurrency, displayCurrency);
-  const displayedSaved = convertAmount(saved, baseCurrency, displayCurrency);
-  const pct = target > 0 ? Math.min(100, (saved / target) * 100) : 0;
-  const isComplete = target > 0 && saved >= target;
+  const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const goal = preferences.savingsGoals?.[category];
+  const target = goal?.month === month ? goal.target : 0;
+  const saved = goal?.month === month ? goal.saved : 0;
+  const remaining = Math.max(0, target - saved);
+  const deadline = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const days = deadline.getDate() - today.getDate() + 1;
+  const pct = target > 0 ? Math.max(0, Math.min(100, saved / target * 100)) : 0;
+  const isComplete = target > 0 && remaining === 0;
+  const format = (amount: number) => convertAmount(amount, preferences.baseCurrency, displayCurrency).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const daily = Math.ceil(convertAmount(remaining, preferences.baseCurrency, displayCurrency) / days * 100) / 100;
+  const dayLabel = days % 10 === 1 && days % 100 !== 11 ? 'день' : days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 12 || days % 100 > 14) ? 'дня' : 'дней';
 
-  const handleSetTarget = () => {
-    const val = parseFloat(targetInput);
-    if (!isNaN(val) && val > 0) setSavingsGoalTarget(category, val);
-    setIsEditingTarget(false);
-    setTargetInput('');
+  const open = (nextMode: 'target' | 'deposit') => {
+    setMode(nextMode);
+    setInput(nextMode === 'target' && target > 0 ? String(convertAmount(target, preferences.baseCurrency, displayCurrency)) : '');
+    setError('');
   };
-
-  const handleAdd = () => {
-    const val = prompt(`Сколько отложили «${label.toLowerCase()}» в этот раз?`, '');
-    if (val === null) return;
-    const amount = parseFloat(val);
-    if (!isNaN(amount) && amount !== 0) addSavingsProgress(category, amount);
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const amount = Number(input.replace(/\s/g, '').replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('Введите сумму больше нуля');
+      return;
+    }
+    const baseAmount = convertAmount(amount, displayCurrency, preferences.baseCurrency);
+    if (mode === 'target') setSavingsGoalTarget(category, baseAmount);
+    else if (mode === 'deposit') addSavingsProgress(category, baseAmount);
+    setMode(null);
+    setInput('');
+    setError('');
   };
-
-  if (!goal || target <= 0) {
-    return (
-      <div className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-dashed border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>
-        <span className="text-xs font-black uppercase tracking-widest flex items-center gap-2" style={{ color }}>
-          <span className="text-base">{icon}</span> {label}
-        </span>
-        {isEditingTarget ? (
-          <div className="flex items-center gap-2">
-            <input
-              autoFocus
-              type="number"
-              value={targetInput}
-              onChange={(e) => setTargetInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSetTarget()}
-              placeholder="Сумма"
-              className="bg-black/30 px-3 py-2 rounded-xl text-white font-bold border border-white/10 outline-none w-24 text-center"
-            />
-            <button onClick={handleSetTarget} className="px-3 py-2 bg-white text-black rounded-xl font-black text-[10px] uppercase">
-              OK
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setIsEditingTarget(true)}
-            className="px-4 py-2 bg-accent/20 text-accent rounded-xl font-black text-[9px] uppercase tracking-widest flex-shrink-0"
-          >
-            Установить цель
-          </button>
-        )}
-      </div>
-    );
-  }
 
   return (
-    <div
-      className="p-4 rounded-2xl flex flex-col gap-3 transition-colors duration-500"
-      style={{
-        background: isComplete ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isComplete ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.06)'}`,
-      }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-0.5 min-w-0">
-          <span className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color }}>
-            <span className="text-sm">{icon}</span> {label}
-          </span>
-          <span className="text-base font-black text-white tabular-nums truncate">
-            {displayedSaved.toFixed(0)} <span className="text-white/30 font-bold text-xs">/ {displayedTarget.toFixed(0)} {displayCurrency}</span>
-          </span>
-        </div>
-        <button
-          onClick={handleAdd}
-          className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-90 flex-shrink-0"
-          title="Добавить сумму"
-        >
-          <Plus size={16} strokeWidth={3} />
+    <div className="p-4 sm:p-5 rounded-2xl flex flex-col gap-4 border" style={{ background: isComplete ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.03)', borderColor: isComplete ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)' }}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-xs font-black uppercase tracking-widest flex items-center gap-2" style={{ color }}><span className="text-xl">{icon}</span>{label}</span>
+        <button onClick={() => open(target > 0 ? 'deposit' : 'target')} className="px-4 py-2.5 rounded-xl bg-accent/20 text-accent text-xs font-black hover:bg-accent/30 transition-colors">
+          {target > 0 ? 'Отложить сумму' : 'Выбрать сумму'}
         </button>
       </div>
-
-      <div className="h-2 rounded-full bg-black/40 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${pct}%`,
-            background: isComplete ? 'linear-gradient(90deg, #10b981, #34d399)' : `linear-gradient(90deg, ${color}, ${color}aa)`,
-            boxShadow: isComplete ? '0 0 10px rgba(16,185,129,0.6)' : `0 0 10px ${color}66`,
-          }}
-        />
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-2xl font-black text-white tabular-nums">{format(saved)} <span className="text-xs text-white/40">/ {format(target)} {displayCurrency}</span></p>
+        <span className="text-xs font-bold text-white/50 tabular-nums">{Math.round(pct)}%</span>
       </div>
-
-      <div className="flex items-center justify-between">
-        {isComplete ? (
-          <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-400">
-            <Check size={11} strokeWidth={3} /> Выполнено!
-          </span>
-        ) : (
-          <span className="text-[9px] font-black uppercase tracking-widest text-white/30">{Math.round(pct)}% из 100%</span>
-        )}
-        <button
-          onClick={() => { setIsEditingTarget(true); setTargetInput(target.toString()); }}
-          className="text-[8px] font-bold text-white/20 hover:text-white/50 uppercase tracking-widest"
-        >
-          Изменить цель
-        </button>
+      <div role="progressbar" aria-label="Наполнение месячной копилки" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="h-4 rounded-full bg-black/40 overflow-hidden border border-white/5">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: isComplete ? 'linear-gradient(90deg, #10b981, #34d399)' : `linear-gradient(90deg, ${color}, #93c5fd)`, boxShadow: `0 0 16px ${color}55` }} />
       </div>
-
-      {isEditingTarget && (
-        <div className="flex items-center gap-2">
-          <input
-            autoFocus
-            type="number"
-            value={targetInput}
-            onChange={(e) => setTargetInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSetTarget()}
-            className="bg-black/30 px-3 py-2 rounded-xl text-white font-bold border border-white/10 outline-none flex-1 text-center"
-          />
-          <button onClick={handleSetTarget} className="px-3 py-2 bg-white text-black rounded-xl font-black text-[10px] uppercase">
-            OK
-          </button>
+      {target > 0 ? (
+        <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
+          <div className="rounded-xl bg-black/20 p-3">
+            <p className="text-[10px] font-bold text-white/40">Примерно в день</p>
+            <p className="mt-1 text-lg font-black text-blue-300 tabular-nums">{daily.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} {displayCurrency}</p>
+          </div>
+          <div className="rounded-xl bg-black/20 p-3">
+            <p className="text-[10px] font-bold text-white/40">Осталось накопить</p>
+            <p className="mt-1 text-lg font-black text-white tabular-nums">{format(remaining)} {displayCurrency}</p>
+          </div>
         </div>
+      ) : <p className="text-xs text-white/45">Выберите, сколько хотите накопить до конца месяца, и пополняйте копилку.</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className={isComplete ? 'text-emerald-400 font-bold' : 'text-white/50'}>
+          {isComplete ? <><Check size={13} className="inline mr-1" />Копилка наполнена!</> : `${days} ${dayLabel}, включая сегодня · до ${deadline.toLocaleDateString('ru-RU')}`}
+        </span>
+        {target > 0 && <button onClick={() => open('target')} className="text-white/40 hover:text-white">Изменить цель</button>}
+      </div>
+      {mode && (
+        <form onSubmit={submit} className="flex flex-col gap-2 border-t border-white/10 pt-3">
+          <label htmlFor="monthly-savings-amount" className="text-xs font-bold text-white/65">{mode === 'target' ? 'Цель на этот месяц' : 'Сколько отложить'} ({displayCurrency})</label>
+          <div className="flex flex-wrap gap-2">
+            <input id="monthly-savings-amount" autoFocus inputMode="decimal" value={input} onChange={event => { setInput(event.target.value); setError(''); }} placeholder="Сумма" aria-invalid={!!error} aria-describedby={error ? 'monthly-savings-error' : undefined} className="min-w-0 flex-1 w-24 bg-black/30 px-3 py-2 rounded-xl text-white font-bold border border-white/10 outline-none focus:border-blue-400" />
+            <button type="submit" className="px-3 py-2 bg-accent text-white rounded-xl text-xs font-bold">{mode === 'target' ? 'Сохранить' : 'Добавить'}</button>
+            <button type="button" onClick={() => setMode(null)} aria-label="Отмена" className="p-2 text-white/50 hover:text-white"><X size={18} /></button>
+          </div>
+          {error && <p id="monthly-savings-error" role="alert" className="text-xs text-rose-400">{error}</p>}
+        </form>
       )}
     </div>
   );
