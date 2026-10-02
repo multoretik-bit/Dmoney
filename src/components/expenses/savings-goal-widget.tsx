@@ -36,7 +36,7 @@ function resizeRewardImage(file: File): Promise<string> {
 }
 
 function SavingsGoalRow({ category, label, icon, color, displayCurrency }: { category: SavingsGoalCategory; label: string; icon: string; color: string; displayCurrency: string }) {
-  const { preferences, setSavingsGoalTarget, addSavingsProgress } = useStore();
+  const { preferences, setSavingsGoalTarget, addSavingsProgress, pendingSavings, user } = useStore();
   const [today, setToday] = useState(() => new Date());
   const [mode, setMode] = useState<'target' | 'deposit' | null>(null);
   const [input, setInput] = useState('');
@@ -120,6 +120,9 @@ function SavingsGoalRow({ category, label, icon, color, displayCurrency }: { cat
         </span>
         {target > 0 && <button onClick={() => open('target')} className="text-white/40 hover:text-white">Изменить цель</button>}
       </div>
+      {target > 0 && <p role="status" className="text-[10px] text-white/35">
+        {!user ? 'Сохранено на устройстве · войдите в аккаунт для синхронизации' : pendingSavings ? 'Сохранено на устройстве · ожидает сохранения в облаке' : 'Сохранено в облаке'}
+      </p>}
       {mode && (
         <form onSubmit={submit} className="flex flex-col gap-2 border-t border-white/10 pt-3">
           <label htmlFor="monthly-savings-amount" className="text-xs font-bold text-white/65">{mode === 'target' ? 'Цель на этот месяц' : 'Сколько отложить'} ({displayCurrency})</label>

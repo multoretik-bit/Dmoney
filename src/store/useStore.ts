@@ -276,7 +276,12 @@ export interface UserPreferences {
   goalRewards?: GoalReward[];
 }
 
+let savingsSyncInFlight: Promise<void> | null = null;
+
 interface UserState {
+  pendingSavings: { userId: string | null; revision: string; goals: SavingsGoals } | null;
+  savingsRevision: string;
+  syncPendingSavings: () => Promise<void>;
   preferences: UserPreferences;
   dashboardCurrency: string;
   exchangeRatesRevision: number;
@@ -364,6 +369,8 @@ export const useStore = create<UserState>()(
         baseCurrency: 'USD',
         savedColors: ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1'],
       },
+      pendingSavings: null,
+      savingsRevision: '',
       dashboardCurrency: '',
       exchangeRatesRevision: 0,
       categories: [
@@ -406,42 +413,55 @@ export const useStore = create<UserState>()(
 
       updatePreferences: (prefs) => set((state) => ({ preferences: { ...state.preferences, ...prefs } })),
 
-      setSavingsGoalTarget: (category, target) => set((state) => {
-        const month = currentMonthKey();
-        const current = state.preferences.savingsGoals?.[category];
-        return {
-          preferences: {
-            ...state.preferences,
-            savingsGoals: {
-              ...state.preferences.savingsGoals,
-              [category]: {
-                month,
-                target,
-                saved: current && current.month === month ? current.saved : 0,
-              },
-            },
-          },
-        };
-      }),
-
-      addSavingsProgress: (category, amount) => set((state) => {
-        const month = currentMonthKey();
-        const current = state.preferences.savingsGoals?.[category];
-        const sameMonth = current && current.month === month;
-        return {
-          preferences: {
-            ...state.preferences,
-            savingsGoals: {
-              ...state.preferences.savingsGoals,
-              [category]: {
-                month,
-                target: sameMonth ? current!.target : 0,
-                saved: Math.max(0, (sameMonth ? current!.saved : 0) + amount),
-              },
-            },
-          },
-        };
-      }),
+      setSavingsGoalTarget: (category, target) => {
+        if (!Number.isFinite(target) || target <= 0) return;
+        set(state => {
+          const month = currentMonthKey();
+          const current = state.preferences.savingsGoals?.[category];
+          const goals = { ...state.preferences.savingsGoals, [category]: {
+            month, target, saved: current?.month === month ? current.saved : 0,
+          } };
+          const revision = generateUUID();
+          return { preferences: { ...state.preferences, savingsGoals: goals }, savingsRevision: revision,
+            pendingSavings: { userId: state.user?.id || null, revision, goals } };
+        });
+        void useStore.getState().syncPendingSavings().catch(error => console.error('Savings remain queued locally:', error));
+      },
+      addSavingsProgress: (category, amount) => {
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        set(state => {
+          const month = currentMonthKey();
+          const current = state.preferences.savingsGoals?.[category];
+          if (!current || current.month !== month || current.target <= 0) return state;
+          const goals = { ...state.preferences.savingsGoals, [category]: {
+            ...current, saved: current.saved + amount,
+          } };
+          const revision = generateUUID();
+          return { preferences: { ...state.preferences, savingsGoals: goals }, savingsRevision: revision,
+            pendingSavings: { userId: state.user?.id || null, revision, goals } };
+        });
+        void useStore.getState().syncPendingSavings().catch(error => console.error('Savings remain queued locally:', error));
+      },
+      syncPendingSavings: async () => {
+        if (savingsSyncInFlight) return savingsSyncInFlight;
+        savingsSyncInFlight = (async () => {
+          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          if (authError) throw authError;
+          if (!user) return;
+          while (true) {
+            const pending = useStore.getState().pendingSavings;
+            if (!pending || (pending.userId && pending.userId !== user.id)) return;
+            // Claim guest edits before sending so they cannot migrate to a different account on retry.
+            if (!pending.userId) set({ pendingSavings: { ...pending, userId: user.id } });
+            const { error } = await supabase.from('user_preferences').upsert({
+              user_id: user.id, savings_goals: pending.goals, updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+            if (error) throw error;
+            set(state => state.pendingSavings?.revision === pending.revision ? { pendingSavings: null } : state);
+          }
+        })();
+        try { await savingsSyncInFlight; } finally { savingsSyncInFlight = null; }
+      },
       addLongTermGoal: (goal) => set((state) => ({
         preferences: {
           ...state.preferences,
@@ -1223,6 +1243,7 @@ export const useStore = create<UserState>()(
           // pull is aborted so newer local values can never be overwritten.
           await useStore.getState().syncPendingWallets();
           await useStore.getState().syncPendingExpenses();
+          await useStore.getState().syncPendingSavings();
           const stateAtPullStart = useStore.getState();
           const walletFingerprintsAtPullStart = new Map(
             stateAtPullStart.wallets.map(wallet => [wallet.id, walletSyncFingerprint(wallet)])
@@ -1420,7 +1441,9 @@ export const useStore = create<UserState>()(
               savedColors: prefs.data.saved_colors || currentPrefs.savedColors || [],
               workBudgetLimit: prefs.data.work_budget_limit !== undefined ? (prefs.data.work_budget_limit || 0) : currentPrefs.workBudgetLimit,
               largeBudgetLimit: prefs.data.large_budget_limit !== undefined ? (prefs.data.large_budget_limit || 0) : currentPrefs.largeBudgetLimit,
-              savingsGoals: prefs.data.savings_goals !== undefined
+              savingsGoals: (useStore.getState().pendingSavings || useStore.getState().savingsRevision !== stateAtPullStart.savingsRevision)
+                ? currentPrefs.savingsGoals
+                : prefs.data.savings_goals !== undefined
                 ? prefs.data.savings_goals
                 : (prefs.data.savings_goal ? { savings: prefs.data.savings_goal } : currentPrefs.savingsGoals),
               longTermGoals: prefs.data.long_term_goals !== undefined
@@ -1459,6 +1482,7 @@ export const useStore = create<UserState>()(
 
          await useStore.getState().syncPendingWallets();
          await useStore.getState().syncPendingExpenses();
+         await useStore.getState().syncPendingSavings();
          const state = useStore.getState();
           
          const prefDataWithAll = {
@@ -1467,7 +1491,6 @@ export const useStore = create<UserState>()(
            saved_colors: state.preferences.savedColors,
            work_budget_limit: state.preferences.workBudgetLimit || 0,
            large_budget_limit: state.preferences.largeBudgetLimit || 0,
-           savings_goals: state.preferences.savingsGoals || null,
            long_term_goals: state.preferences.longTermGoals || [],
            goal_rewards: state.preferences.goalRewards || [],
            capital_goal: state.preferences.capitalGoal || null,

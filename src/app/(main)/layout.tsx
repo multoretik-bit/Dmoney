@@ -21,7 +21,7 @@ function formatCompactAmount(value: number) {
 }
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const { user, setUser, pullData, pushData, syncPendingWallets, syncPendingExpenses, wallets,
+  const { user, setUser, pullData, pushData, syncPendingWallets, syncPendingExpenses, syncPendingSavings, wallets,
     categories, portfolios, folders, expenses, preferences, capitalHistory,
     passiveIncomeSources, assets, subscriptions, runSubscriptionAutoCharges,
     isAuthModalOpen, setAuthModalOpen, dashboardCurrency, bumpExchangeRatesRevision, exchangeRatesRevision, recordDailyCapital,
@@ -187,6 +187,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       try {
         await syncPendingWallets();
         await syncPendingExpenses();
+        await syncPendingSavings();
         if (!isInitialPullComplete) {
           const pulled = await pullData();
           setIsInitialPullComplete(pulled);
@@ -207,7 +208,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, isInitialPullComplete, pullData, syncPendingWallets, syncPendingExpenses]);
+  }, [user, isInitialPullComplete, pullData, syncPendingWallets, syncPendingExpenses, syncPendingSavings]);
 
   // Real-time pull from Supabase with debounce
   useEffect(() => {
